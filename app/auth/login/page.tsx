@@ -11,35 +11,31 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Login attempt started");
     setLoading(true);
 
-    try {
-      console.log("Creating Supabase client...");
-      const supabase = createClient();
-      console.log("Calling signInWithPassword...");
-      
-      const result = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const formData = new FormData(e.currentTarget);
+    const emailValue = formData.get("email") as string;
+    const passwordValue = formData.get("password") as string;
 
-      console.log("Login result:", result);
-
-      if (result.error) {
-        console.error("Login error:", result.error);
-        alert(result.error.message);
-        setLoading(false);
-      } else {
-        console.log("Login successful, redirecting...");
-        window.location.href = "/dashboard";
-      }
-    } catch (err: any) {
-      console.error("Exception:", err);
-      alert(err.message || "Login failed");
+    if (!emailValue || !passwordValue) {
+      alert("Please enter email and password");
       setLoading(false);
+      return;
+    }
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: emailValue,
+      password: passwordValue,
+    });
+
+    if (error) {
+      alert(error.message);
+      setLoading(false);
+    } else {
+      window.location.href = "/dashboard";
     }
   };
 
@@ -55,6 +51,7 @@ export default function LoginPage() {
             </label>
             <input
               type="email"
+              name="email"
               id="email"
               required
               autoComplete="email"
@@ -69,6 +66,7 @@ export default function LoginPage() {
             </label>
             <input
               type="password"
+              name="password"
               id="password"
               required
               autoComplete="current-password"
