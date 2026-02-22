@@ -78,7 +78,13 @@ export default async function BrandSpaceDetailPage({
         </Link>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex gap-4 flex-wrap">
+        <Link
+          href={`/brand-spaces/${params.id}/edit`}
+          className="px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          Edit brand info
+        </Link>
         <Link
           href="/brand-spaces"
           className="px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"

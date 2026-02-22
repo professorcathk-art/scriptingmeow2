@@ -2,6 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generateBrandbook } from "@/lib/ai/gemini";
 
+function omit<T extends Record<string, unknown>>(obj: T, key: keyof T): Omit<T, typeof key> {
+  const { [key]: _, ...rest } = obj;
+  return rest;
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -54,8 +59,7 @@ export async function POST(request: Request) {
 
     const generatedBrandbook = await generateBrandbook(brandData);
 
-    // Create brandbook structure
-    const brandbook = {
+    const brandbookPayload = {
       brand_space_id: brandSpaceId,
       brand_name: brandSpace.name,
       brand_type: brandSpace.brand_type,
@@ -70,7 +74,36 @@ export async function POST(request: Request) {
       dos_and_donts: generatedBrandbook.dosAndDonts,
     };
 
-    return NextResponse.json(brandbook);
+    const { data: existing } = await supabase
+      .from("brandbooks")
+      .select("id")
+      .eq("brand_space_id", brandSpaceId)
+      .single();
+
+    if (existing) {
+      const { data: updated, error: updateErr } = await supabase
+        .from("brandbooks")
+        .update(omit(brandbookPayload, "brand_space_id"))
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (updateErr) {
+        console.error("Error updating brandbook:", updateErr);
+        return NextResponse.json(brandbookPayload);
+      }
+      return NextResponse.json(updated);
+    }
+
+    const { data: inserted, error: insertErr } = await supabase
+      .from("brandbooks")
+      .insert(brandbookPayload)
+      .select()
+      .single();
+    if (insertErr) {
+      console.error("Error inserting brandbook:", insertErr);
+      return NextResponse.json(brandbookPayload);
+    }
+    return NextResponse.json(inserted);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Error generating brandbook:", error);

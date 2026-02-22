@@ -201,9 +201,9 @@ export async function generatePost(
   brandbook: {
     brandPersonality: string;
     toneOfVoice: string;
-    visualStyle: any;
-    captionStructure: any;
-    dosAndDonts: any;
+    visualStyle: unknown;
+    captionStructure: unknown;
+    dosAndDonts: unknown;
   },
   contentIdea: string,
   language: string,
@@ -219,8 +219,6 @@ export async function generatePost(
   visualDescription: string;
   imageUrl?: string;
 }> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
   const prompt = `You are creating an Instagram post for a brand following their brandbook.
 
 Brandbook:
@@ -249,22 +247,33 @@ Generate a complete Instagram post in JSON format:
 
 Return ONLY valid JSON, no markdown formatting or additional text.`;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const post = JSON.parse(cleanedText);
-    
-    // Generate image using the visual description
-    const { generateImageWithImagen } = await import('./imagen');
-    const imageUrl = await generateImageWithImagen(post.visualDescription);
-    post.imageUrl = imageUrl;
-    
-    return post;
-  } catch (error) {
-    console.error('Error generating post:', error);
-    throw new Error('Failed to generate post');
+  let lastError: unknown = null;
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+        safetySettings: [...DEFAULT_SAFETY],
+      });
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const text = safeGetText(response);
+
+      if (text) {
+        const cleanedText = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        const match = cleanedText.match(/\{[\s\S]*\}/);
+        const jsonStr = match ? match[0] : cleanedText;
+        const post = JSON.parse(jsonStr);
+        const { generateImageWithImagen } = await import("./imagen");
+        post.imageUrl = await generateImageWithImagen(post.visualDescription);
+        return post;
+      }
+      lastError = new Error("Empty or blocked response");
+    } catch (err) {
+      console.warn(`[generatePost] Model ${modelName} failed:`, err);
+      lastError = err;
+    }
   }
+  const msg = lastError instanceof Error ? lastError.message : "Unknown error";
+  throw new Error(`Failed to generate post: ${msg}`);
 }
