@@ -45,6 +45,8 @@ export interface Brandbook {
     mood: string;
     image_style: string;
     layout_tendencies: string;
+    typographySpec?: string;
+    layoutStyleDetail?: string;
   };
   caption_structure: {
     hook_patterns: string[];

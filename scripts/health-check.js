@@ -22,9 +22,26 @@ try {
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const { execSync } = require('child_process');
 
 async function healthCheck() {
   console.log('🔍 Starting health check...\n');
+
+  // Check 0: TypeScript & build (catch type errors before deploy)
+  console.log('0. Running type check and build...');
+  try {
+    execSync('npm run build', {
+      stdio: 'pipe',
+      cwd: path.join(__dirname, '..'),
+      timeout: 120000,
+    });
+    console.log('   ✅ Build passed (types valid, no compile errors)');
+  } catch (err) {
+    const msg = err.stderr?.toString() || err.stdout?.toString() || err.message;
+    console.log('   ❌ Build failed:', msg.split('\n').slice(-5).join('\n'));
+    console.log('\n⚠️  Fix build errors before deploying.');
+    process.exit(1);
+  }
 
   // Check 1: Health endpoint
   try {
