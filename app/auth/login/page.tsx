@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
-    console.log("Form submitted", { email, password });
 
     if (!email || !password) {
       setError("Please enter email and password");
@@ -25,28 +25,26 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
-      console.log("Supabase client created");
-      
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       });
 
-      console.log("Auth response", { data, error: authError });
-
-      if (authError) {
-        setError(authError.message);
+      if (signInError) {
+        setError(signInError.message);
         setLoading(false);
-      } else if (data?.session) {
-        console.log("Login successful, redirecting...");
-        window.location.href = "/dashboard";
+        return;
+      }
+
+      if (data.session) {
+        router.push("/dashboard");
+        router.refresh();
       } else {
         setError("Login failed - no session created");
         setLoading(false);
       }
     } catch (err: any) {
-      console.error("Login exception", err);
-      setError(err.message || "Login failed");
+      setError(err.message || "An error occurred");
       setLoading(false);
     }
   };
@@ -58,12 +56,12 @@ export default function LoginPage() {
         <h2 className="text-xl font-semibold text-center mb-6">Sign In</h2>
         
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
