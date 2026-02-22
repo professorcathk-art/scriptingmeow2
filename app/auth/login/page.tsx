@@ -14,9 +14,8 @@ export default function LoginPage() {
     const form = document.querySelector('form') as HTMLFormElement;
     if (form) {
       console.log("Form found, attaching test listener");
-      const testHandler = (e: SubmitEvent) => {
+      const testHandler = () => {
         console.log("NATIVE FORM SUBMIT EVENT FIRED");
-        e.preventDefault(); // Prevent default to let React handle it
       };
       form.addEventListener('submit', testHandler);
       return () => form.removeEventListener('submit', testHandler);
