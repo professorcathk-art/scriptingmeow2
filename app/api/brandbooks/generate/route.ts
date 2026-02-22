@@ -33,20 +33,22 @@ export async function POST(request: Request) {
       .select("image_url")
       .eq("brand_space_id", brandSpaceId);
 
-    // Use brand details from the form if available
+    // Use brand details from request (sessionStorage) or fall back to DB (brand_details column)
+    const stored = brandDetails ?? (brandSpace as { brand_details?: Record<string, unknown> }).brand_details;
+
+    function toArray(val: unknown): string[] {
+      if (Array.isArray(val)) return val.filter((v) => typeof v === "string" && v.trim());
+      if (typeof val === "string") return val.split("\n").map((l) => l.trim()).filter(Boolean);
+      return [];
+    }
+
     const brandData = {
       name: brandSpace.name,
       type: brandSpace.brand_type,
-      targetAudiences: brandDetails?.targetAudiences
-        ? brandDetails.targetAudiences.split("\n").filter((l: string) => l.trim())
-        : [],
-      painPoints: brandDetails?.painPoints
-        ? brandDetails.painPoints.split("\n").filter((l: string) => l.trim())
-        : [],
-      desiredOutcomes: brandDetails?.desiredOutcomes
-        ? brandDetails.desiredOutcomes.split("\n").filter((l: string) => l.trim())
-        : [],
-      valueProposition: brandDetails?.valueProposition || "",
+      targetAudiences: toArray(stored?.targetAudiences),
+      painPoints: toArray(stored?.painPoints),
+      desiredOutcomes: toArray(stored?.desiredOutcomes),
+      valueProposition: (typeof stored?.valueProposition === "string" ? stored.valueProposition : "") || "",
       referenceImages: referenceImages?.map((img) => img.image_url) || [],
     };
 

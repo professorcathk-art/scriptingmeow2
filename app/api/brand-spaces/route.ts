@@ -42,7 +42,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create brand space
+    const brandDetails = {
+      targetAudiences: targetAudiences || "",
+      painPoints: painPoints || "",
+      desiredOutcomes: desiredOutcomes || "",
+      valueProposition: valueProposition || "",
+    };
+
     const { data: brandSpace, error } = await supabase
       .from("brand_spaces")
       .insert({
@@ -53,31 +59,24 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    // Store brand details in a temporary table or JSON field for brandbook generation
-    // For now, we'll store it as metadata in the brand_space table
-    if (brandSpace && (targetAudiences || painPoints || desiredOutcomes || valueProposition)) {
-      await supabase
-        .from("brand_spaces")
-        .update({
-          // Store as JSON in a custom field - in production, you might want a separate table
-          // For now, we'll pass this data when generating the brandbook
-        })
-        .eq("id", brandSpace.id);
-    }
-
     if (error) {
       console.error("Error creating brand space:", error);
       return NextResponse.json({ error: "Failed to create brand space" }, { status: 500 });
     }
 
+    if (brandSpace && Object.values(brandDetails).some(Boolean)) {
+      const { error: updateErr } = await supabase
+        .from("brand_spaces")
+        .update({ brand_details: brandDetails })
+        .eq("id", brandSpace.id);
+      if (updateErr) {
+        console.warn("Could not persist brand_details (column may not exist):", updateErr.message);
+      }
+    }
+
     return NextResponse.json({
       ...brandSpace,
-      brandDetails: {
-        targetAudiences,
-        painPoints,
-        desiredOutcomes,
-        valueProposition,
-      },
+      brandDetails: brandDetails,
     });
   } catch (error) {
     console.error("Error in POST /api/brand-spaces:", error);

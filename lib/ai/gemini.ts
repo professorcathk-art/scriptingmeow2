@@ -1,6 +1,25 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import {
+  GoogleGenerativeAI,
+  HarmCategory,
+  HarmBlockThreshold,
+} from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"] as const;
+
+const DEFAULT_SAFETY = [
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+] as const;
+
+function safeGetText(response: { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }): string | null {
+  if (!response.candidates?.length) return null;
+  const part = response.candidates[0].content?.parts?.[0];
+  return part?.text?.trim() || null;
+}
 
 // Image generation using Gemini's image generation capabilities
 export async function generateImage(prompt: string): Promise<string> {
@@ -70,8 +89,6 @@ export async function generateBrandbook(
     throw new Error("GEMINI_API_KEY is not configured");
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
   const audiences = brandData.targetAudiences?.length
     ? brandData.targetAudiences.join(", ")
     : "General audience";
@@ -123,56 +140,61 @@ Create a comprehensive brandbook in JSON format with the following structure:
 
 Return ONLY valid JSON, no markdown formatting or additional text.`;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+  let lastError: unknown = null;
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+        safetySettings: [...DEFAULT_SAFETY],
+      });
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const text = safeGetText(response);
 
-    if (!text) {
-      throw new Error("Empty response from AI");
+      if (text) {
+        const cleanedText = text
+          .replace(/```json\n?/g, "")
+          .replace(/```\n?/g, "")
+          .trim();
+        const match = cleanedText.match(/\{[\s\S]*\}/);
+        const jsonStr = match ? match[0] : cleanedText;
+        const brandbook = JSON.parse(jsonStr);
+        return {
+          brandPersonality: brandbook.brandPersonality || "",
+          toneOfVoice: brandbook.toneOfVoice || "",
+          visualStyle: {
+            colors: Array.isArray(brandbook.visualStyle?.colors) ? brandbook.visualStyle.colors : [],
+            mood: brandbook.visualStyle?.mood || "",
+            imageStyle: brandbook.visualStyle?.imageStyle || "",
+            layoutTendencies: brandbook.visualStyle?.layoutTendencies || "",
+          },
+          captionStructure: {
+            hookPatterns: Array.isArray(brandbook.captionStructure?.hookPatterns)
+              ? brandbook.captionStructure.hookPatterns
+              : [],
+            bodyPatterns: Array.isArray(brandbook.captionStructure?.bodyPatterns)
+              ? brandbook.captionStructure.bodyPatterns
+              : [],
+            ctaPatterns: Array.isArray(brandbook.captionStructure?.ctaPatterns)
+              ? brandbook.captionStructure.ctaPatterns
+              : [],
+            hashtagStyle: brandbook.captionStructure?.hashtagStyle || "",
+          },
+          dosAndDonts: {
+            dos: Array.isArray(brandbook.dosAndDonts?.dos) ? brandbook.dosAndDonts.dos : [],
+            donts: Array.isArray(brandbook.dosAndDonts?.donts) ? brandbook.dosAndDonts.donts : [],
+          },
+        };
+      }
+      lastError = new Error("Empty or blocked response");
+    } catch (err) {
+      console.warn(`[generateBrandbook] Model ${modelName} failed:`, err);
+      lastError = err;
     }
-
-    // Clean up the response (remove markdown code blocks if present)
-    const cleanedText = text
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
-      .trim();
-    const match = cleanedText.match(/\{[\s\S]*\}/);
-    const jsonStr = match ? match[0] : cleanedText;
-    const brandbook = JSON.parse(jsonStr);
-
-    // Ensure required fields exist with defaults
-    return {
-      brandPersonality: brandbook.brandPersonality || "",
-      toneOfVoice: brandbook.toneOfVoice || "",
-      visualStyle: {
-        colors: Array.isArray(brandbook.visualStyle?.colors) ? brandbook.visualStyle.colors : [],
-        mood: brandbook.visualStyle?.mood || "",
-        imageStyle: brandbook.visualStyle?.imageStyle || "",
-        layoutTendencies: brandbook.visualStyle?.layoutTendencies || "",
-      },
-      captionStructure: {
-        hookPatterns: Array.isArray(brandbook.captionStructure?.hookPatterns)
-          ? brandbook.captionStructure.hookPatterns
-          : [],
-        bodyPatterns: Array.isArray(brandbook.captionStructure?.bodyPatterns)
-          ? brandbook.captionStructure.bodyPatterns
-          : [],
-        ctaPatterns: Array.isArray(brandbook.captionStructure?.ctaPatterns)
-          ? brandbook.captionStructure.ctaPatterns
-          : [],
-        hashtagStyle: brandbook.captionStructure?.hashtagStyle || "",
-      },
-      dosAndDonts: {
-        dos: Array.isArray(brandbook.dosAndDonts?.dos) ? brandbook.dosAndDonts.dos : [],
-        donts: Array.isArray(brandbook.dosAndDonts?.donts) ? brandbook.dosAndDonts.donts : [],
-      },
-    };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error generating brandbook:", error);
-    throw new Error(`Failed to generate brandbook: ${msg}`);
   }
+  const msg = lastError instanceof Error ? lastError.message : "Unknown error";
+  throw new Error(`Failed to generate brandbook: ${msg}`);
 }
 
 export async function generatePost(
