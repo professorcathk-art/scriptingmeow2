@@ -14,6 +14,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     console.log("🟢 LoginPage mounted - React is working");
+    
+    // Test if form element exists
+    const form = document.querySelector('form');
+    console.log("🟢 Form element found:", !!form);
+    if (form) {
+      console.log("🟢 Form has onSubmit:", typeof (form as any).onsubmit);
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
