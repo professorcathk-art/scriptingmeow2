@@ -131,38 +131,58 @@ export function CreatePostForm({
   const handleGenerateDraft = async () => {
     setLoading(true);
     setDraft(null);
-    try {
-      const response = await fetch("/api/posts/draft", {
+    const payload = {
+      brandSpaceId: formData.brandSpaceId,
+      postType: formData.postType,
+      format: formData.format,
+      language: effectiveLanguage,
+      contentIdea: formData.contentIdea,
+      contentFramework: formData.contentFramework,
+      postStyle: formData.postStyle,
+    };
+    const doFetch = () =>
+      fetch("/api/posts/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brandSpaceId: formData.brandSpaceId,
-          postType: formData.postType,
-          format: formData.format,
-          language: effectiveLanguage,
-          contentIdea: formData.contentIdea,
-          contentFramework: formData.contentFramework,
-          postStyle: formData.postStyle,
-        }),
+        body: JSON.stringify(payload),
       });
+    let lastError: Error | null = null;
+    try {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await doFetch();
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        const msg = err.details || err.error || "Failed to generate draft";
-        throw new Error(msg);
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            const msg = err.details || err.error || "Failed to generate draft";
+            throw new Error(msg);
+          }
+
+          const data = await response.json();
+          setDraft({
+            caption: data.caption || { hook: "", body: "", cta: "", hashtags: [] },
+            visualAdvice: data.visualAdvice || "",
+          });
+          setStep(4);
+          return;
+        } catch (error: unknown) {
+          lastError = error instanceof Error ? error : new Error(String(error));
+          const isNetworkError =
+            lastError.message === "Failed to fetch" ||
+            lastError.message.includes("ERR_CONNECTION") ||
+            lastError.message.includes("NetworkError");
+          if (isNetworkError && attempt === 0) {
+            await new Promise((r) => setTimeout(r, 2000));
+            continue;
+          }
+          break;
+        }
       }
-
-      const data = await response.json();
-      setDraft({
-        caption: data.caption || { hook: "", body: "", cta: "", hashtags: [] },
-        visualAdvice: data.visualAdvice || "",
-      });
-      setStep(4);
-    } catch (error: unknown) {
-      console.error("Error generating draft:", error);
-      alert(
-        error instanceof Error ? error.message : "Failed to generate draft. Please try again."
-      );
+      const msg =
+        lastError?.message === "Failed to fetch" || lastError?.message?.includes("ERR_CONNECTION")
+          ? "Connection failed. The AI may be slow or the request timed out. Please try again."
+          : lastError?.message || "Failed to generate draft. Please try again.";
+      alert(msg);
     } finally {
       setLoading(false);
     }
@@ -499,7 +519,10 @@ export function CreatePostForm({
                     : "border-white/10 text-zinc-400 hover:text-zinc-100 hover:border-indigo-500/30 hover:bg-zinc-800/50"
                 }`}
               >
-                {label} <span className={formData.contentFramework === value ? "text-indigo-300/80" : "text-zinc-500"}>({zh})</span>
+                {label}{" "}
+                <span className={formData.contentFramework === value ? "text-indigo-300/80" : "text-zinc-500"}>
+                  ({zh})
+                </span>
               </button>
             ))}
           </div>

@@ -364,36 +364,30 @@ Return ONLY valid JSON, no markdown.`;
     : GEMINI_MODELS;
   let lastError: unknown = null;
   for (const modelName of modelOrder) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            temperature: attempt === 0 ? 0.7 : 0.5,
-            maxOutputTokens: 2048,
-          },
-          safetySettings: [...DEFAULT_SAFETY],
-        });
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = safeGetText(response);
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+        safetySettings: [...DEFAULT_SAFETY],
+      });
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const text = safeGetText(response);
 
-        if (text) {
-          const parsed = parsePostJson(text);
-          if (parsed) {
-            return {
-              caption: parsed.caption,
-              visualDescription: parsed.nanoBananaPrompt,
-              nanoBananaPrompt: parsed.nanoBananaPrompt,
-            };
-          }
+      if (text) {
+        const parsed = parsePostJson(text);
+        if (parsed) {
+          return {
+            caption: parsed.caption,
+            visualDescription: parsed.nanoBananaPrompt,
+            nanoBananaPrompt: parsed.nanoBananaPrompt,
+          };
         }
-        lastError = new Error("Empty or blocked response");
-      } catch (err) {
-        console.warn(`[generatePost] Model ${modelName} attempt ${attempt + 1} failed:`, err);
-        lastError = err;
       }
-      if (attempt === 0) await new Promise((r) => setTimeout(r, 1000));
+      lastError = new Error("Empty or blocked response");
+    } catch (err) {
+      console.warn(`[generatePost] Model ${modelName} failed:`, err);
+      lastError = err;
     }
   }
   const msg = lastError instanceof Error ? lastError.message : "Unknown error";
