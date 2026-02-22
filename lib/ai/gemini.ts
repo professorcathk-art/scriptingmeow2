@@ -6,7 +6,7 @@ import {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"] as const;
+const GEMINI_MODELS = ["gemini-3-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"] as const;
 
 const DEFAULT_SAFETY = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
@@ -46,7 +46,7 @@ export async function generateImage(prompt: string): Promise<string> {
     // or use a service like DALL-E, Midjourney, etc.
     
     // Using Gemini to generate a detailed image prompt, then we'll need an actual image generation service
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     
     const imagePrompt = `Create a detailed, Instagram-ready image description for: ${prompt}
     
@@ -329,7 +329,7 @@ Output JSON with two parts:
 Return ONLY valid JSON, no markdown.`;
 
   const modelOrder = preferPro
-    ? (["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
+    ? (["gemini-3-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"] as const)
     : GEMINI_MODELS;
   let lastError: unknown = null;
   for (const modelName of modelOrder) {
