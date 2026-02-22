@@ -329,7 +329,7 @@ Output JSON with two parts:
 Return ONLY valid JSON, no markdown.`;
 
   const modelOrder = preferPro
-    ? (["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"] as const)
+    ? (["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
     : GEMINI_MODELS;
   let lastError: unknown = null;
   for (const modelName of modelOrder) {
