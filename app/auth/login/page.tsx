@@ -15,9 +15,9 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const emailValue = formData.get("email") as string;
-    const passwordValue = formData.get("password") as string;
+    // Use state values directly - they should be set by onChange
+    const emailValue = email.trim();
+    const passwordValue = password.trim();
 
     if (!emailValue || !passwordValue) {
       alert("Please enter email and password");
@@ -25,17 +25,25 @@ export default function LoginPage() {
       return;
     }
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email: emailValue,
-      password: passwordValue,
-    });
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailValue,
+        password: passwordValue,
+      });
 
-    if (error) {
-      alert(error.message);
+      if (error) {
+        alert(error.message);
+        setLoading(false);
+      } else if (data.session) {
+        window.location.href = "/dashboard";
+      } else {
+        alert("Login failed - no session");
+        setLoading(false);
+      }
+    } catch (err: any) {
+      alert(err.message || "Login failed");
       setLoading(false);
-    } else {
-      window.location.href = "/dashboard";
     }
   };
 
