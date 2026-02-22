@@ -14,7 +14,7 @@ export function createClient() {
             return { name, value: rest.join('=') };
           });
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
           cookiesToSet.forEach(({ name, value, options }) => {
             let cookieString = `${name}=${value}; path=/`;
             if (options?.maxAge) cookieString += `; max-age=${options.maxAge}`;
