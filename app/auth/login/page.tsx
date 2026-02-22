@@ -13,22 +13,31 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Login attempt started");
     setLoading(true);
 
     try {
+      console.log("Creating Supabase client...");
       const supabase = createClient();
+      console.log("Calling signInWithPassword...");
+      
       const result = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log("Login result:", result);
+
       if (result.error) {
+        console.error("Login error:", result.error);
         alert(result.error.message);
         setLoading(false);
       } else {
-        router.push("/dashboard");
+        console.log("Login successful, redirecting...");
+        window.location.href = "/dashboard";
       }
     } catch (err: any) {
+      console.error("Exception:", err);
       alert(err.message || "Login failed");
       setLoading(false);
     }
