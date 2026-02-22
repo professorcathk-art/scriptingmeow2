@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generatePost } from "@/lib/ai/gemini";
 import { PLAN_LIMITS } from "@/types/database";
+import { uploadPostPlaceholder } from "@/lib/storage";
 
 export async function POST(request: Request) {
   try {
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
       format
     );
 
-    // Create post record
+    // Create post record (visual_url set after upload)
     const { data: post, error: postError } = await supabase
       .from("generated_posts")
       .insert({
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
         format,
         language,
         content_idea: contentIdea,
-        visual_url: generatedPost.imageUrl,
+        visual_url: null,
         caption: generatedPost.caption,
         status: "generated",
         credits_used: creditsNeeded,
@@ -104,6 +105,17 @@ export async function POST(request: Request) {
       console.error("Error creating post:", postError);
       return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
     }
+
+    // Upload placeholder to Supabase Storage (or use data URL fallback)
+    const visualUrl = await uploadPostPlaceholder(
+      generatedPost.visualDescription,
+      post.id,
+      user.id
+    );
+    await supabase
+      .from("generated_posts")
+      .update({ visual_url: visualUrl })
+      .eq("id", post.id);
 
     // Deduct credits (skip when unlimited for testing)
     if (!unlimitedCredits) {
@@ -125,7 +137,7 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json(post);
+    return NextResponse.json({ ...post, visual_url: visualUrl });
   } catch (error) {
     console.error("Error generating post:", error);
     return NextResponse.json(

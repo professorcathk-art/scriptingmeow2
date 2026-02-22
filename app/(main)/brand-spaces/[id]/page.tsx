@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { DeleteBrandButton } from "@/components/brand-spaces/delete-brand-button";
 
 export default async function BrandSpaceDetailPage({
   params,
@@ -91,6 +92,7 @@ export default async function BrandSpaceDetailPage({
         >
           Back to Brand Spaces
         </Link>
+        <DeleteBrandButton brandSpaceId={params.id} brandName={brandSpace.name} />
       </div>
     </div>
   );

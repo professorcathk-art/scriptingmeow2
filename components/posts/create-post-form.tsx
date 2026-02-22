@@ -46,9 +46,31 @@ export function CreatePostForm({
     postType: "single-image" as PostType,
     format: "square" as PostFormat,
     language: "English",
+    customLanguage: "",
     contentIdea: "",
     variations: 1,
   });
+
+  const LANGUAGE_OPTIONS = [
+    "English",
+    "Traditional Chinese",
+    "Simplified Chinese",
+    "Spanish",
+    "French",
+    "German",
+    "Japanese",
+    "Korean",
+    "Portuguese",
+    "Italian",
+    "Dutch",
+    "Bilingual (English + Chinese)",
+    "Other",
+  ];
+
+  const effectiveLanguage =
+    formData.language === "Other" && formData.customLanguage.trim()
+      ? formData.customLanguage.trim()
+      : formData.language;
 
   const creditsNeeded = formData.variations;
   const canGenerate = userCredits >= creditsNeeded;
@@ -64,7 +86,10 @@ export function CreatePostForm({
       const response = await fetch("/api/posts/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          language: effectiveLanguage,
+        }),
       });
 
       if (!response.ok) {
@@ -269,18 +294,31 @@ export function CreatePostForm({
             Language *
           </label>
           <select
-            required
+            required={formData.language !== "Other"}
             value={formData.language}
             onChange={(e) =>
               setFormData({ ...formData, language: e.target.value })
             }
             className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
           >
-            <option value="English">English</option>
-            <option value="Traditional Chinese">Traditional Chinese</option>
-            <option value="Simplified Chinese">Simplified Chinese</option>
-            <option value="Bilingual">Bilingual (English + Chinese)</option>
+            {LANGUAGE_OPTIONS.map((lang) => (
+              <option key={lang} value={lang}>
+                {lang}
+              </option>
+            ))}
           </select>
+          {formData.language === "Other" && (
+            <input
+              type="text"
+              required
+              value={formData.customLanguage}
+              onChange={(e) =>
+                setFormData({ ...formData, customLanguage: e.target.value })
+              }
+              placeholder="Enter your language"
+              className="mt-2 w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+            />
+          )}
         </div>
 
         <div>
@@ -335,7 +373,10 @@ export function CreatePostForm({
           <button
             type="button"
             onClick={() => setStep(3)}
-            disabled={!formData.contentIdea}
+            disabled={
+              !formData.contentIdea ||
+              (formData.language === "Other" && !formData.customLanguage.trim())
+            }
             className="flex-1 px-4 py-2.5 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
             Next: Variations

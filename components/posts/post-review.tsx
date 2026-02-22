@@ -12,6 +12,7 @@ export function PostReview({ post }: PostReviewProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [caption, setCaption] = useState(post.caption);
+  const [imageError, setImageError] = useState(false);
 
   const handleSave = async () => {
     setLoading(true);
@@ -72,14 +73,17 @@ export function PostReview({ post }: PostReviewProps) {
         <div className="glass-elevated p-6 rounded-2xl">
           <h2 className="text-xl font-semibold text-white mb-4">Visual Preview</h2>
           <div className="aspect-square bg-white/5 rounded-xl flex items-center justify-center overflow-hidden">
-            {post.visual_url ? (
+            {post.visual_url && !imageError ? (
               <img
                 src={post.visual_url}
                 alt="Post visual"
                 className="w-full h-full object-cover rounded-lg"
+                onError={() => setImageError(true)}
               />
             ) : (
-              <span className="text-zinc-500">Visual will be generated</span>
+              <span className="text-zinc-500 text-sm">
+                {imageError ? "Image failed to load" : "Visual will be generated"}
+              </span>
             )}
           </div>
         </div>
