@@ -14,49 +14,36 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("🔵 FORM SUBMIT CALLED");
+    console.log("FORM SUBMIT CALLED");
     setError("");
     setLoading(true);
 
-    console.log("🔵 Email:", email);
-    console.log("🔵 Password length:", password.length);
-
     if (!email || !password) {
-      console.log("🔴 Validation failed");
       setError("Please enter email and password");
       setLoading(false);
       return;
     }
 
     try {
-      console.log("🔵 Creating Supabase client...");
       const supabase = createClient();
-      console.log("🔵 Calling signInWithPassword...");
-      
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       });
 
-      console.log("🔵 Response:", { hasData: !!data, hasSession: !!data?.session, error: signInError?.message });
-
       if (signInError) {
-        console.error("🔴 Error:", signInError);
         setError(signInError.message);
         setLoading(false);
         return;
       }
 
       if (data?.session) {
-        console.log("🟢 SUCCESS - Redirecting...");
         window.location.href = "/dashboard";
       } else {
-        console.error("🔴 No session");
-        setError("Login failed");
+        setError("Login failed - no session created");
         setLoading(false);
       }
     } catch (err: any) {
-      console.error("🔴 Exception:", err);
       setError(err.message || "An error occurred");
       setLoading(false);
     }
@@ -87,10 +74,7 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 value={email}
-                onChange={(e) => {
-                  console.log("🔵 Email onChange:", e.target.value);
-                  setEmail(e.target.value);
-                }}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -106,10 +90,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => {
-                  console.log("🔵 Password onChange:", e.target.value.length, "chars");
-                  setPassword(e.target.value);
-                }}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
