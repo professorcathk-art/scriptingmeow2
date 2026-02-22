@@ -11,22 +11,22 @@ export default function LoginPage({
   const error = searchParams.error;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
-        <h1 className="text-3xl font-bold text-center mb-6">ScriptingMeow</h1>
-        <h2 className="text-xl font-semibold text-center mb-6">Sign In</h2>
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4">
+      <div className="max-w-md w-full glass-elevated p-8 rounded-2xl">
+        <h1 className="text-2xl font-bold text-center text-white mb-2">ScriptingMeow</h1>
+        <h2 className="text-lg font-medium text-center text-zinc-400 mb-6">Sign In</h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-sm">
             {error}
           </div>
         )}
 
         <LoginForm />
 
-        <p className="text-center text-sm text-gray-600 mt-4">
+        <p className="text-center text-sm text-zinc-500 mt-4">
           Don&apos;t have an account?{" "}
-          <Link href="/auth/signup" className="text-blue-600 hover:text-blue-700">
+          <Link href="/auth/signup" className="text-violet-400 hover:text-violet-300">
             Sign up
           </Link>
         </p>

@@ -1,0 +1,79 @@
+"use client";
+
+import { PLAN_LIMITS, type PlanTier } from "@/types/database";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
+
+interface CreditRingProps {
+  planTier: PlanTier;
+  creditsRemaining: number;
+  creditsResetDate: string;
+  className?: string;
+}
+
+export function CreditRing({
+  planTier,
+  creditsRemaining,
+  creditsResetDate,
+  className,
+}: CreditRingProps) {
+  const limit = PLAN_LIMITS[planTier].monthly_credits;
+  const percentage = Math.min((creditsRemaining / limit) * 100, 100);
+  const circumference = 2 * Math.PI * 36;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const isLow = percentage < 20;
+  const isCritical = percentage < 10;
+
+  return (
+    <div className={cn("flex items-center gap-4", className)}>
+      <div className="relative w-20 h-20">
+        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+          <circle
+            cx="40"
+            cy="40"
+            r="36"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="6"
+            className="text-white/10"
+          />
+          <circle
+            cx="40"
+            cy="40"
+            r="36"
+            fill="none"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            className={cn(
+              "transition-all duration-500",
+              isCritical
+                ? "stroke-red-500"
+                : isLow
+                ? "stroke-amber-500"
+                : "stroke-violet-500"
+            )}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-lg font-bold text-white">{creditsRemaining}</span>
+        </div>
+      </div>
+      <div>
+        <p className="text-sm font-medium text-white">
+          {planTier === "free" ? "Free" : planTier === "basic" ? "Basic" : "Pro"} Plan
+        </p>
+        <p className="text-xs text-zinc-500">
+          Resets {new Date(creditsResetDate).toLocaleDateString()}
+        </p>
+        <Link
+          href="/billing"
+          className="text-xs text-violet-400 hover:text-violet-300 mt-0.5 inline-block"
+        >
+          Upgrade
+        </Link>
+      </div>
+    </div>
+  );
+}

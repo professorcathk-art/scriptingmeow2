@@ -2,6 +2,25 @@
  * Health check script to verify all functionality
  */
 
+const fs = require('fs');
+const path = require('path');
+
+// Load .env.local if it exists
+try {
+  const envPath = path.join(__dirname, '..', '.env.local');
+  if (fs.existsSync(envPath)) {
+    const envFile = fs.readFileSync(envPath, 'utf8');
+    envFile.split('\n').forEach((line) => {
+      const match = line.match(/^([^#=]+)=(.*)$/);
+      if (match && !process.env[match[1].trim()]) {
+        process.env[match[1].trim()] = match[2].trim().replace(/^["']|["']$/g, '');
+      }
+    });
+  }
+} catch {
+  // .env.local might not exist
+}
+
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 async function healthCheck() {
@@ -47,7 +66,7 @@ async function healthCheck() {
     try {
       const { GoogleGenerativeAI } = require('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
       const result = await model.generateContent('Say "Hello"');
       const response = await result.response;
       console.log('   ✅ Gemini API working');

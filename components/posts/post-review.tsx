@@ -60,18 +60,18 @@ export function PostReview({ post }: PostReviewProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Review Your Post</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-white mb-2">Review Your Post</h1>
+        <p className="text-zinc-400">
           Brand: {post.brand_spaces?.name || "Unknown"}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg border">
-          <h2 className="text-xl font-semibold mb-4">Visual Preview</h2>
-          <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="glass-elevated p-6 rounded-2xl">
+          <h2 className="text-xl font-semibold text-white mb-4">Visual Preview</h2>
+          <div className="aspect-square bg-white/5 rounded-xl flex items-center justify-center overflow-hidden">
             {post.visual_url ? (
               <img
                 src={post.visual_url}
@@ -79,18 +79,18 @@ export function PostReview({ post }: PostReviewProps) {
                 className="w-full h-full object-cover rounded-lg"
               />
             ) : (
-              <span className="text-gray-400">Visual will be generated</span>
+              <span className="text-zinc-500">Visual will be generated</span>
             )}
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg border">
+        <div className="glass-elevated p-6 rounded-2xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Caption</h2>
+            <h2 className="text-xl font-semibold text-white">Caption</h2>
             <button
               onClick={handleRegenerate}
               disabled={loading}
-              className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+              className="text-sm text-violet-400 hover:text-violet-300 disabled:opacity-50"
             >
               Regenerate
             </button>
@@ -98,7 +98,7 @@ export function PostReview({ post }: PostReviewProps) {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-zinc-400 mb-1">
                 Hook
               </label>
               <textarea
@@ -106,13 +106,13 @@ export function PostReview({ post }: PostReviewProps) {
                 onChange={(e) =>
                   setCaption({ ...caption, hook: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                 rows={2}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-zinc-400 mb-1">
                 Body
               </label>
               <textarea
@@ -120,13 +120,13 @@ export function PostReview({ post }: PostReviewProps) {
                 onChange={(e) =>
                   setCaption({ ...caption, body: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                 rows={4}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-zinc-400 mb-1">
                 Call to Action
               </label>
               <textarea
@@ -134,13 +134,13 @@ export function PostReview({ post }: PostReviewProps) {
                 onChange={(e) =>
                   setCaption({ ...caption, cta: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                 rows={2}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-zinc-400 mb-1">
                 Hashtags
               </label>
               <input
@@ -152,7 +152,7 @@ export function PostReview({ post }: PostReviewProps) {
                     hashtags: e.target.value.split(" ").filter((h) => h.trim()),
                   })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                 placeholder="#hashtag1 #hashtag2"
               />
             </div>
@@ -163,14 +163,14 @@ export function PostReview({ post }: PostReviewProps) {
       <div className="flex gap-4">
         <button
           onClick={() => router.back()}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="flex-1 px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
         >
           Back
         </button>
         <button
           onClick={handleSave}
           disabled={loading}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="flex-1 px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {loading ? "Saving..." : "Save to Library"}
         </button>

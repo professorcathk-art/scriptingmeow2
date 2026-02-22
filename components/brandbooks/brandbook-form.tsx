@@ -36,7 +36,8 @@ export function BrandbookForm({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate brandbook");
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.details || errData.error || "Failed to generate brandbook");
       }
 
       const data = await response.json();

@@ -70,9 +70,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json(brandbook);
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Error generating brandbook:", error);
     return NextResponse.json(
-      { error: "Failed to generate brandbook" },
+      {
+        error: "Failed to generate brandbook",
+        details: process.env.NODE_ENV === "development" ? message : undefined,
+      },
       { status: 500 }
     );
   }

@@ -66,21 +66,38 @@ export async function generateBrandbook(
     donts: string[];
   };
 }> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const audiences = brandData.targetAudiences?.length
+    ? brandData.targetAudiences.join(", ")
+    : "General audience";
+  const painPoints = brandData.painPoints?.length
+    ? brandData.painPoints.join(", ")
+    : "General challenges";
+  const outcomes = brandData.desiredOutcomes?.length
+    ? brandData.desiredOutcomes.join(", ")
+    : "General goals";
+  const valueProp = brandData.valueProposition || "Unique value to customers";
 
   const prompt = `You are a brand strategist creating a comprehensive brandbook for an Instagram-focused brand.
 
 Brand Information:
 - Name: ${brandData.name}
 - Type: ${brandData.type}
-- Target Audiences: ${brandData.targetAudiences.join(', ')}
-- Audience Pain Points: ${brandData.painPoints.join(', ')}
-- Desired Outcomes: ${brandData.desiredOutcomes.join(', ')}
-- Value Proposition: ${brandData.valueProposition}
+- Target Audiences: ${audiences}
+- Audience Pain Points: ${painPoints}
+- Desired Outcomes: ${outcomes}
+- Value Proposition: ${valueProp}
 
-${brandData.referenceImages && brandData.referenceImages.length > 0
-  ? `Reference Images: The brand has uploaded ${brandData.referenceImages.length} reference images that should inform the visual style.`
-  : ''}
+${
+  brandData.referenceImages && brandData.referenceImages.length > 0
+    ? `Reference Images: The brand has uploaded ${brandData.referenceImages.length} reference images that should inform the visual style.`
+    : ""
+}
 
 Create a comprehensive brandbook in JSON format with the following structure:
 {
@@ -110,15 +127,51 @@ Return ONLY valid JSON, no markdown formatting or additional text.`;
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    
+
+    if (!text) {
+      throw new Error("Empty response from AI");
+    }
+
     // Clean up the response (remove markdown code blocks if present)
-    const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const brandbook = JSON.parse(cleanedText);
-    
-    return brandbook;
+    const cleanedText = text
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
+    const match = cleanedText.match(/\{[\s\S]*\}/);
+    const jsonStr = match ? match[0] : cleanedText;
+    const brandbook = JSON.parse(jsonStr);
+
+    // Ensure required fields exist with defaults
+    return {
+      brandPersonality: brandbook.brandPersonality || "",
+      toneOfVoice: brandbook.toneOfVoice || "",
+      visualStyle: {
+        colors: Array.isArray(brandbook.visualStyle?.colors) ? brandbook.visualStyle.colors : [],
+        mood: brandbook.visualStyle?.mood || "",
+        imageStyle: brandbook.visualStyle?.imageStyle || "",
+        layoutTendencies: brandbook.visualStyle?.layoutTendencies || "",
+      },
+      captionStructure: {
+        hookPatterns: Array.isArray(brandbook.captionStructure?.hookPatterns)
+          ? brandbook.captionStructure.hookPatterns
+          : [],
+        bodyPatterns: Array.isArray(brandbook.captionStructure?.bodyPatterns)
+          ? brandbook.captionStructure.bodyPatterns
+          : [],
+        ctaPatterns: Array.isArray(brandbook.captionStructure?.ctaPatterns)
+          ? brandbook.captionStructure.ctaPatterns
+          : [],
+        hashtagStyle: brandbook.captionStructure?.hashtagStyle || "",
+      },
+      dosAndDonts: {
+        dos: Array.isArray(brandbook.dosAndDonts?.dos) ? brandbook.dosAndDonts.dos : [],
+        donts: Array.isArray(brandbook.dosAndDonts?.donts) ? brandbook.dosAndDonts.donts : [],
+      },
+    };
   } catch (error) {
-    console.error('Error generating brandbook:', error);
-    throw new Error('Failed to generate brandbook');
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error generating brandbook:", error);
+    throw new Error(`Failed to generate brandbook: ${msg}`);
   }
 }
 
