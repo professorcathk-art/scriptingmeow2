@@ -89,8 +89,9 @@ export function CreatePostForm({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<{
-    caption: { hook: string; body: string; cta: string; hashtags: string[] };
+    imageTextOnImage: string;
     visualAdvice: string;
+    igCaption: string;
   } | null>(null);
   const [formData, setFormData] = useState({
     brandSpaceId: "",
@@ -165,8 +166,9 @@ export function CreatePostForm({
 
           const data = await response.json();
           setDraft({
-            caption: data.caption || { hook: "", body: "", cta: "", hashtags: [] },
-            visualAdvice: data.visualAdvice || "",
+            imageTextOnImage: data.imageTextOnImage ?? "",
+            visualAdvice: data.visualAdvice ?? "",
+            igCaption: data.igCaption ?? "",
           });
           setStep(4);
           return;
@@ -218,8 +220,9 @@ export function CreatePostForm({
           variations: formData.variations,
           contentFramework: formData.contentFramework,
           postStyle: formData.postStyle,
-          confirmedCaption: draft.caption,
+          confirmedImageTextOnImage: draft.imageTextOnImage,
           confirmedVisualAdvice: draft.visualAdvice,
+          confirmedIgCaption: draft.igCaption,
         }),
       });
 
@@ -713,70 +716,22 @@ export function CreatePostForm({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Caption (可編輯)
+              Text on Image (可編輯) — Markdown for header/subheader/body
             </label>
-            <div className="space-y-2">
-              <div>
-                <span className="text-xs text-zinc-500">Hook:</span>
-                <textarea
-                  value={draft.caption.hook}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      caption: { ...draft.caption, hook: e.target.value },
-                    })
-                  }
-                  className="w-full mt-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <span className="text-xs text-zinc-500">Body:</span>
-                <textarea
-                  value={draft.caption.body}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      caption: { ...draft.caption, body: e.target.value },
-                    })
-                  }
-                  className="w-full mt-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                  rows={4}
-                />
-              </div>
-              <div>
-                <span className="text-xs text-zinc-500">CTA:</span>
-                <input
-                  type="text"
-                  value={draft.caption.cta}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      caption: { ...draft.caption, cta: e.target.value },
-                    })
-                  }
-                  className="w-full mt-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                />
-              </div>
-              <div>
-                <span className="text-xs text-zinc-500">Hashtags (comma-separated):</span>
-                <input
-                  type="text"
-                  value={Array.isArray(draft.caption.hashtags) ? draft.caption.hashtags.join(", ") : ""}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      caption: {
-                        ...draft.caption,
-                        hashtags: e.target.value.split(",").map((h) => h.trim()).filter(Boolean),
-                      },
-                    })
-                  }
-                  className="w-full mt-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                  placeholder="#hashtag1 #hashtag2"
-                />
-              </div>
-            </div>
+            <p className="text-xs text-zinc-500 mb-1">
+              {formData.postStyle === "immersive-photo"
+                ? "Minimal or no text. Leave blank for pure image."
+                : "Text that will be rendered on the image. Use ## for header, ### for subheader."}
+            </p>
+            <textarea
+              value={draft.imageTextOnImage}
+              onChange={(e) =>
+                setDraft({ ...draft, imageTextOnImage: e.target.value })
+              }
+              className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+              rows={3}
+              placeholder={formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "## Headline\n### Subheader\nBody text..."}
+            />
           </div>
 
           <div>
@@ -789,9 +744,29 @@ export function CreatePostForm({
                 setDraft({ ...draft, visualAdvice: e.target.value })
               }
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-              rows={6}
+              rows={5}
               placeholder="AI-generated visual description for the image..."
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              IG Caption (可編輯) — Max 400 chars, max 3 hashtags
+            </label>
+            <textarea
+              value={draft.igCaption}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  igCaption: e.target.value.slice(0, 400),
+                })
+              }
+              className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+              rows={5}
+              maxLength={400}
+              placeholder="Full caption for Instagram post..."
+            />
+            <p className="text-xs text-zinc-500 mt-1">{draft.igCaption.length}/400</p>
           </div>
         </div>
 

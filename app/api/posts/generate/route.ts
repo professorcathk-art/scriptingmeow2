@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generatePost } from "@/lib/ai/gemini";
 import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
+import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
 
 export const maxDuration = 60;
@@ -36,8 +37,10 @@ export async function POST(request: Request) {
     variations,
     postStyle,
     contentFramework,
-    confirmedCaption,
+    confirmedImageTextOnImage,
     confirmedVisualAdvice,
+    confirmedIgCaption,
+    confirmedCaption,
   } = body as {
     brandSpaceId?: string;
     postType?: string;
@@ -47,8 +50,10 @@ export async function POST(request: Request) {
     variations?: number;
     postStyle?: string;
     contentFramework?: string;
-    confirmedCaption?: { hook: string; body: string; cta: string; hashtags: string[] };
+    confirmedImageTextOnImage?: string;
     confirmedVisualAdvice?: string;
+    confirmedIgCaption?: string;
+    confirmedCaption?: { hook: string; body: string; cta: string; hashtags: string[] };
   };
 
   if (!brandSpaceId) {
@@ -88,12 +93,29 @@ export async function POST(request: Request) {
     }
 
     // Use confirmed draft or generate new
-    let caption: { hook: string; body: string; cta: string; hashtags: string[] };
+    let caption: { igCaption: string } | { hook: string; body: string; cta: string; hashtags: string[] };
     let imagePrompt: string;
+    let imageTextOnImage: string;
 
-    if (confirmedCaption && confirmedVisualAdvice) {
-      caption = confirmedCaption;
-      imagePrompt = confirmedVisualAdvice.trim();
+    const hasConfirmedDraft =
+      confirmedVisualAdvice !== undefined ||
+      confirmedIgCaption !== undefined ||
+      (confirmedCaption && (confirmedCaption.hook || confirmedCaption.body || confirmedCaption.cta));
+    if (hasConfirmedDraft) {
+      const igCaptionFromConfirmed =
+        confirmedIgCaption !== undefined
+          ? (confirmedIgCaption ?? "").trim()
+          : confirmedCaption
+            ? [confirmedCaption.hook, confirmedCaption.body, confirmedCaption.cta]
+                .filter(Boolean)
+                .join("\n\n") +
+              (Array.isArray(confirmedCaption.hashtags) && confirmedCaption.hashtags.length
+                ? "\n\n" + confirmedCaption.hashtags.join(" ")
+                : "")
+            : "";
+      caption = { igCaption: igCaptionFromConfirmed.slice(0, 400) };
+      imageTextOnImage = (confirmedImageTextOnImage ?? "").trim();
+      imagePrompt = (confirmedVisualAdvice ?? "").trim();
     } else {
       const generatedPost = await generatePost(
         {
@@ -111,8 +133,10 @@ export async function POST(request: Request) {
         false,
         contentFramework
       );
-      caption = generatedPost.caption;
+      caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, 400) };
+      imageTextOnImage = generatedPost.imageTextOnImage ?? "";
       imagePrompt =
+        generatedPost.visualAdvice?.trim() ||
         generatedPost.nanoBananaPrompt?.trim() ||
         generatedPost.visualDescription ||
         "";
@@ -133,6 +157,14 @@ export async function POST(request: Request) {
       const mood = vs?.mood || "engaging";
       imagePrompt = `Professional Instagram post. Style: ${style}. Mood: ${mood}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
     }
+
+    const fullImagePrompt = buildImagePrompt({
+      brandbook,
+      visualAdvice: imagePrompt,
+      imageTextOnImage: imageTextOnImage || undefined,
+      postStyle: postStyle || undefined,
+      contentIdea: contentIdea || undefined,
+    });
 
     // Check credits
     const { data: userProfile } = await supabase
@@ -158,7 +190,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create post record (visual_url set after upload)
     const { data: post, error: postError } = await supabase
       .from("generated_posts")
       .insert({
@@ -184,7 +215,7 @@ export async function POST(request: Request) {
     let visualUrl: string;
     const aspectRatio =
       format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
-    const imageBuffer = await generateImageWithNanoBanana(imagePrompt, { aspectRatio });
+    const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, { aspectRatio });
 
     if (imageBuffer) {
       visualUrl = await uploadPostImage(imageBuffer, post.id, user.id);

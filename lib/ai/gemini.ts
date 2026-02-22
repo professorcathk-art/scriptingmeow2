@@ -94,29 +94,27 @@ function safeGetText(response: { candidates?: Array<{ content?: { parts?: Array<
   return textPart?.text?.trim() || null;
 }
 
+export type DraftOutput = {
+  imageTextOnImage: string;
+  visualAdvice: string;
+  igCaption: string;
+};
+
 /** Parse JSON from model output, fixing common issues. */
-function parsePostJson(text: string): { caption: { hook: string; body: string; cta: string; hashtags: string[] }; nanoBananaPrompt: string } | null {
+function parsePostJson(text: string): DraftOutput | null {
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
   let jsonStr = match ? match[0] : cleaned;
-  // Fix trailing commas (invalid in strict JSON)
   jsonStr = jsonStr.replace(/,(\s*[}\]])/g, "$1");
-  // Fix unescaped newlines inside strings (replace with space)
   jsonStr = jsonStr.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, (_, inner) =>
     `"${inner.replace(/\r?\n/g, " ")}"`
   );
   try {
     const post = JSON.parse(jsonStr);
-    const caption = post.caption || { hook: "", body: "", cta: "", hashtags: [] };
-    const nanoBananaPrompt = post.nanoBananaPrompt || post.visualDescription || "";
     return {
-      caption: {
-        hook: String(caption.hook ?? ""),
-        body: String(caption.body ?? ""),
-        cta: String(caption.cta ?? ""),
-        hashtags: Array.isArray(caption.hashtags) ? caption.hashtags.map(String) : [],
-      },
-      nanoBananaPrompt: String(nanoBananaPrompt),
+      imageTextOnImage: String(post.imageTextOnImage ?? post.imageText ?? "").trim(),
+      visualAdvice: String(post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
+      igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, 400),
     };
   } catch {
     return null;
@@ -369,6 +367,14 @@ function truncate(s: string, max: number): string {
   return t.length <= max ? t : t.slice(0, max) + "...";
 }
 
+const LAYOUT_TEXT_GUIDE: Record<string, string> = {
+  "immersive-photo": "No text or minimal text (one short tagline max). Leave imageTextOnImage blank or very short.",
+  editorial: "Magazine layout: header (bold headline), subheader (supporting line), mainBody (2-4 sentences). Use markdown: ## Header, ### Subheader, body text.",
+  "text-heavy": "One big bold headline. imageTextOnImage: single impactful line.",
+  "tweet-card": "Quote card style. imageTextOnImage: the key quote or statement to display.",
+  "split-screen": "Split layout. imageTextOnImage: key text for the text half (headline + 1-2 lines).",
+};
+
 export async function generatePost(
   brandbook: {
     brandPersonality: string;
@@ -384,16 +390,7 @@ export async function generatePost(
   postStyle?: string,
   preferPro?: boolean,
   contentFramework?: string
-): Promise<{
-  caption: {
-    hook: string;
-    body: string;
-    cta: string;
-    hashtags: string[];
-  };
-  visualDescription: string;
-  nanoBananaPrompt?: string;
-}> {
+): Promise<DraftOutput & { caption?: { hook: string; body: string; cta: string; hashtags: string[] }; visualDescription?: string; nanoBananaPrompt?: string }> {
   const idea = truncate(contentIdea, 400);
   const vs = brandbook.visualStyle as {
     primaryColor?: string;
@@ -409,16 +406,23 @@ export async function generatePost(
   const style = vs?.imageStyle || vs?.image_style || "professional";
   const personality = truncate(brandbook.brandPersonality, 200);
   const tone = truncate(brandbook.toneOfVoice, 150);
+  const layout = postStyle || "immersive-photo";
+  const textGuide = LAYOUT_TEXT_GUIDE[layout] || LAYOUT_TEXT_GUIDE["immersive-photo"];
+  const aspectNote = format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
 
   const prompt = `IG post. Brand: ${personality}. Tone: ${tone}. Style: ${style}. Colors: ${colors || "professional palette"}.
 
 Brief: ${idea}
-Lang: ${language}. Format: ${format}. Layout: ${postStyle || "immersive-photo"}. Goal: ${contentFramework || "educational-value"}.
+Lang: ${language}. Format: ${format}. Layout: ${layout}. Goal: ${contentFramework || "educational-value"}.
 
 Output JSON only:
-{"caption":{"hook":"","body":"","cta":"","hashtags":[]},"nanoBananaPrompt":""}
-- caption: hook (1-2 lines), body (3-5 sentences), cta, hashtags array
-- nanoBananaPrompt: image gen prompt. Scene, composition, colors ${colors || ""}, mood, ${format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1"}. Specific, visual, Instagram-ready.`;
+{"imageTextOnImage":"","visualAdvice":"","igCaption":""}
+
+1. imageTextOnImage: Text to RENDER ON THE IMAGE. ${textGuide} This will be drawn on the image by the AI. Use markdown for structure (## for header, ### for subheader). If no text on image, use "".
+
+2. visualAdvice: 視覺建議. Scene, composition, colors ${colors || ""}, mood, aspect ${aspectNote}. Describe the VISUAL (photo/illustration style). If imageTextOnImage has content, mention "with text overlay" and describe placement (e.g. "text in top third, editorial layout").
+
+3. igCaption: Full IG caption for the post. Max 400 chars. Include max 3 hashtags at the end. Engaging, on-brand.`;
 
   const modelOrder = preferPro
     ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
@@ -452,9 +456,9 @@ Output JSON only:
           const parsed = parsePostJson(text);
           if (parsed) {
             return {
-              caption: parsed.caption,
-              visualDescription: parsed.nanoBananaPrompt,
-              nanoBananaPrompt: parsed.nanoBananaPrompt,
+              ...parsed,
+              visualDescription: parsed.visualAdvice,
+              nanoBananaPrompt: parsed.visualAdvice,
             };
           }
         }
@@ -465,17 +469,15 @@ Output JSON only:
       }
     }
   }
-  const fallbackCaption = {
-    hook: contentIdea.slice(0, 100) + (contentIdea.length > 100 ? "..." : ""),
-    body: contentIdea,
-    cta: "Follow for more.",
-    hashtags: ["#instagram", "#content"],
+  const fallback: DraftOutput = {
+    imageTextOnImage: "",
+    visualAdvice: `Professional Instagram post image. ${contentIdea}. Clean, modern style. High-quality, scroll-stopping visual. ${format === "portrait" ? "Portrait 4:5." : format === "story" || format === "reel-cover" ? "Vertical 9:16." : "Square 1:1."}`,
+    igCaption: `${contentIdea.slice(0, 200)}${contentIdea.length > 200 ? "..." : ""}\n\nFollow for more.\n\n#instagram #content`,
   };
-  const fallbackPrompt = `Professional Instagram post image. ${contentIdea}. Clean, modern style. High-quality, scroll-stopping visual. ${format === "portrait" ? "Portrait 4:5." : format === "story" || format === "reel-cover" ? "Vertical 9:16." : "Square 1:1."}`;
   console.warn("[generatePost] All models failed, using fallback");
   return {
-    caption: fallbackCaption,
-    visualDescription: fallbackPrompt,
-    nanoBananaPrompt: fallbackPrompt,
+    ...fallback,
+    visualDescription: fallback.visualAdvice,
+    nanoBananaPrompt: fallback.visualAdvice,
   };
 }

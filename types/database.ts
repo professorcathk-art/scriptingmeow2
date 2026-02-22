@@ -78,12 +78,9 @@ export interface GeneratedPost {
   language: string;
   content_idea: string;
   visual_url?: string;
-  caption: {
-    hook: string;
-    body: string;
-    cta: string;
-    hashtags: string[];
-  };
+  caption:
+    | { igCaption: string }
+    | { hook: string; body: string; cta: string; hashtags: string[] };
   status: PostStatus;
   tags?: string[];
   credits_used: number;

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generatePost } from "@/lib/ai/gemini";
 import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
+import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
 
 export async function POST(
@@ -43,7 +44,8 @@ export async function POST(
       );
     }
 
-    // Regenerate post
+    const postStyle = (post as { post_style?: string }).post_style;
+
     const generatedPost = await generatePost(
       {
         brandPersonality: brandbook.brand_personality,
@@ -55,11 +57,12 @@ export async function POST(
       post.content_idea,
       post.language,
       post.post_type,
-      post.format
+      post.format,
+      postStyle
     );
 
-    // Use Nano Banana-ready prompt from AI, or build from visualDescription + brandbook
-    const imagePrompt =
+    const visualAdvice =
+      generatedPost.visualAdvice?.trim() ||
       generatedPost.nanoBananaPrompt?.trim() ||
       (() => {
         const vs = brandbook.visual_style as {
@@ -74,29 +77,38 @@ export async function POST(
           : vs?.colors?.join(", ") || "";
         const style = vs?.imageStyle || "professional";
         const mood = vs?.mood || "engaging";
-        return `${generatedPost.visualDescription}. Style: ${style}. Mood: ${mood}.${colors ? ` Use these exact colors: ${colors}.` : ""} High-quality, Instagram-ready, scroll-stopping visual.`;
+        return `Professional Instagram post. Style: ${style}. Mood: ${mood}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
       })();
+
+    const fullImagePrompt = buildImagePrompt({
+      brandbook,
+      visualAdvice,
+      imageTextOnImage: generatedPost.imageTextOnImage ?? undefined,
+      postStyle: postStyle || undefined,
+      contentIdea: post.content_idea || undefined,
+    });
 
     const aspectRatio =
       post.format === "portrait" ? "4:5" : post.format === "story" || post.format === "reel-cover" ? "9:16" : "1:1";
-    const imageBuffer = await generateImageWithNanoBanana(imagePrompt, { aspectRatio });
+    const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, { aspectRatio });
 
     let visualUrl: string;
     if (imageBuffer) {
       visualUrl = await uploadPostImage(imageBuffer, params.id, user.id);
     } else {
       visualUrl = await uploadPostPlaceholder(
-        generatedPost.visualDescription,
+        generatedPost.visualAdvice || generatedPost.visualDescription || "Post image",
         params.id,
         user.id
       );
     }
 
-    // Update post
+    const caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, 400) };
+
     const { data: updatedPost, error } = await supabase
       .from("generated_posts")
       .update({
-        caption: generatedPost.caption,
+        caption,
         visual_url: visualUrl,
         updated_at: new Date().toISOString(),
       })

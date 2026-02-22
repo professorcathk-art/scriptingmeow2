@@ -8,26 +8,25 @@ interface PostReviewProps {
   post: GeneratedPost & { brand_spaces?: { name: string }; format?: string };
 }
 
-/** Build full caption as one block for copy-paste (hook, body, cta, hashtags). */
-function captionToParagraph(c: { hook: string; body: string; cta: string; hashtags: string[] }): string {
-  const parts = [c.hook, c.body, c.cta].filter(Boolean);
-  const hashtags = Array.isArray(c.hashtags) ? c.hashtags.filter(Boolean) : [];
+type CaptionShape =
+  | { igCaption: string }
+  | { hook: string; body: string; cta: string; hashtags: string[] };
+
+/** Build full caption as one block for copy-paste. Supports both new (igCaption) and legacy (hook/body/cta/hashtags) formats. */
+function captionToParagraph(c: CaptionShape): string {
+  if (c && "igCaption" in c && typeof (c as { igCaption?: string }).igCaption === "string") {
+    return (c as { igCaption: string }).igCaption;
+  }
+  const old = c as { hook: string; body: string; cta: string; hashtags: string[] };
+  const parts = [old.hook, old.body, old.cta].filter(Boolean);
+  const hashtags = Array.isArray(old.hashtags) ? old.hashtags.filter(Boolean) : [];
   const hashtagStr = hashtags.length ? hashtags.join(" ") : "";
   return [...parts, hashtagStr].filter(Boolean).join("\n\n");
 }
 
-/** Parse one-block caption back to structured parts. */
-function paragraphToCaption(text: string): { hook: string; body: string; cta: string; hashtags: string[] } {
-  const hashtagMatch = text.match(/\n(#[\w\u4e00-\u9fff]+(?:\s+#[\w\u4e00-\u9fff]+)*)\s*$/);
-  const hashtags = hashtagMatch
-    ? hashtagMatch[1].split(/\s+/).filter(Boolean)
-    : [];
-  const main = hashtagMatch ? text.slice(0, hashtagMatch.index).trim() : text.trim();
-  const blocks = main.split(/\n\n+/).filter(Boolean);
-  const hook = blocks[0] || "";
-  const cta = blocks.length >= 3 ? blocks[blocks.length - 1] || "" : "";
-  const body = blocks.length >= 2 ? blocks.slice(1, blocks.length - (blocks.length >= 3 ? 1 : 0)).join("\n\n") : "";
-  return { hook, body, cta, hashtags };
+/** Parse one-block caption back. New format: single igCaption. Legacy: hook, body, cta, hashtags. */
+function paragraphToCaption(text: string): CaptionShape {
+  return { igCaption: text.trim() };
 }
 
 export function PostReview({ post: initialPost }: PostReviewProps) {

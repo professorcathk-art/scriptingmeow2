@@ -6,7 +6,7 @@ import Link from "next/link";
 type Phase = "input" | "loading" | "reveal";
 
 interface DemoResult {
-  caption: { hook: string; body: string; cta: string; hashtags: string[] };
+  caption: { igCaption?: string; hook?: string; body?: string; cta?: string; hashtags?: string[] };
   visualUrl?: string;
   visualDescription: string;
   brandDescription: string;
@@ -213,25 +213,31 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
                 Caption
               </h3>
               <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-zinc-500 mb-1">Hook</p>
-                  <p className="text-white">{result.caption.hook}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-zinc-500 mb-1">Body</p>
-                  <p className="text-zinc-300 text-sm">{result.caption.body}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-zinc-500 mb-1">CTA</p>
-                  <p className="text-white text-sm">{result.caption.cta}</p>
-                </div>
-                {result.caption.hashtags?.length > 0 && (
-                  <div>
-                    <p className="text-xs text-zinc-500 mb-1">Hashtags</p>
-                    <p className="text-cyan-400 text-sm">
-                      {result.caption.hashtags.join(" ")}
-                    </p>
-                  </div>
+                {result.caption.igCaption ? (
+                  <p className="text-white whitespace-pre-wrap text-sm">{result.caption.igCaption}</p>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs text-zinc-500 mb-1">Hook</p>
+                      <p className="text-white">{result.caption.hook}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 mb-1">Body</p>
+                      <p className="text-zinc-300 text-sm">{result.caption.body}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 mb-1">CTA</p>
+                      <p className="text-white text-sm">{result.caption.cta}</p>
+                    </div>
+                    {Array.isArray(result.caption.hashtags) && result.caption.hashtags.length > 0 && (
+                      <div>
+                        <p className="text-xs text-zinc-500 mb-1">Hashtags</p>
+                        <p className="text-cyan-400 text-sm">
+                          {result.caption.hashtags.join(" ")}
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

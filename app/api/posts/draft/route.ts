@@ -98,8 +98,9 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({
-      caption: generatedPost.caption,
-      visualAdvice: generatedPost.nanoBananaPrompt || generatedPost.visualDescription,
+      imageTextOnImage: generatedPost.imageTextOnImage ?? "",
+      visualAdvice: generatedPost.visualAdvice ?? generatedPost.nanoBananaPrompt ?? generatedPost.visualDescription ?? "",
+      igCaption: generatedPost.igCaption ?? "",
     });
   } catch (error) {
     console.error("[posts/draft] Error:", error);
