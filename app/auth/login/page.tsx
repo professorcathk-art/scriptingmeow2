@@ -13,13 +13,10 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    alert(`Attempting login with: ${email}`);
     setLoading(true);
 
-    // Use state values directly - they should be set by onChange
-    const emailValue = email.trim();
-    const passwordValue = password.trim();
-
-    if (!emailValue || !passwordValue) {
+    if (!email || !password) {
       alert("Please enter email and password");
       setLoading(false);
       return;
@@ -28,21 +25,21 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailValue,
-        password: passwordValue,
+        email,
+        password,
       });
 
       if (error) {
-        alert(error.message);
+        alert(`Error: ${error.message}`);
         setLoading(false);
-      } else if (data.session) {
+      } else if (data?.session) {
         window.location.href = "/dashboard";
       } else {
-        alert("Login failed - no session");
+        alert("No session created");
         setLoading(false);
       }
     } catch (err: any) {
-      alert(err.message || "Login failed");
+      alert(`Exception: ${err.message}`);
       setLoading(false);
     }
   };
@@ -59,7 +56,6 @@ export default function LoginPage() {
             </label>
             <input
               type="email"
-              name="email"
               id="email"
               required
               autoComplete="email"
@@ -74,7 +70,6 @@ export default function LoginPage() {
             </label>
             <input
               type="password"
-              name="password"
               id="password"
               required
               autoComplete="current-password"
