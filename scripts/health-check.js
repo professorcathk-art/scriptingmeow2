@@ -27,8 +27,24 @@ const { execSync } = require('child_process');
 async function healthCheck() {
   console.log('🔍 Starting health check...\n');
 
-  // Check 0: TypeScript & build (catch type errors before deploy)
-  console.log('0. Running type check and build...');
+  // Check 0a: Lint
+  console.log('0a. Running lint...');
+  try {
+    execSync('npm run lint', {
+      stdio: 'pipe',
+      cwd: path.join(__dirname, '..'),
+      timeout: 30000,
+    });
+    console.log('   ✅ Lint passed');
+  } catch (err) {
+    const msg = err.stderr?.toString() || err.stdout?.toString() || err.message;
+    console.log('   ❌ Lint failed:', msg.split('\n').slice(-3).join('\n'));
+    console.log('\n⚠️  Fix lint errors before deploying.');
+    process.exit(1);
+  }
+
+  // Check 0b: TypeScript & build (catch type errors before deploy)
+  console.log('0b. Running type check and build...');
   try {
     execSync('npm run build', {
       stdio: 'pipe',
@@ -80,16 +96,30 @@ async function healthCheck() {
   // Check 3: Gemini API (if available)
   if (process.env.GEMINI_API_KEY) {
     console.log('\n3. Testing Gemini API connection...');
-    try {
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-      const result = await model.generateContent('Say "Hello"');
-      const response = await result.response;
-      console.log('   ✅ Gemini API working');
-      console.log('   Response:', response.text().substring(0, 50));
-    } catch (error) {
-      console.log('   ❌ Gemini API test failed:', error.message);
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro'];
+    let geminiOk = false;
+    for (const modelName of modelsToTry) {
+      try {
+        const { GoogleGenerativeAI } = require('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: { maxOutputTokens: 50 },
+        });
+        const result = await model.generateContent('Reply with exactly: OK');
+        const response = await result.response;
+        const text = response.text();
+        if (text && text.trim()) {
+          console.log(`   ✅ Gemini API working (${modelName})`);
+          geminiOk = true;
+          break;
+        }
+      } catch (error) {
+        console.log(`   ⚠️  ${modelName}:`, error.message?.slice(0, 80));
+      }
+    }
+    if (!geminiOk) {
+      console.log('   ❌ All Gemini models failed. Check API key and quota.');
     }
   }
 

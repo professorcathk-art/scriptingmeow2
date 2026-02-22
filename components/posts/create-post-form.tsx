@@ -140,12 +140,17 @@ export function CreatePostForm({
       contentFramework: formData.contentFramework,
       postStyle: formData.postStyle,
     };
-    const doFetch = () =>
-      fetch("/api/posts/draft", {
+    const DRAFT_TIMEOUT_MS = 55000;
+    const doFetch = () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), DRAFT_TIMEOUT_MS);
+      return fetch("/api/posts/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
+    };
     let lastError: Error | null = null;
     try {
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -170,7 +175,9 @@ export function CreatePostForm({
           const isNetworkError =
             lastError.message === "Failed to fetch" ||
             lastError.message.includes("ERR_CONNECTION") ||
-            lastError.message.includes("NetworkError");
+            lastError.message.includes("NetworkError") ||
+            lastError.message === "The operation was aborted." ||
+            lastError.name === "AbortError";
           if (isNetworkError && attempt === 0) {
             await new Promise((r) => setTimeout(r, 2000));
             continue;
@@ -179,8 +186,11 @@ export function CreatePostForm({
         }
       }
       const msg =
-        lastError?.message === "Failed to fetch" || lastError?.message?.includes("ERR_CONNECTION")
-          ? "Connection failed. The AI may be slow or the request timed out. Please try again."
+        lastError?.message === "Failed to fetch" ||
+        lastError?.message?.includes("ERR_CONNECTION") ||
+        lastError?.message === "The operation was aborted." ||
+        lastError?.name === "AbortError"
+          ? "Request timed out or connection failed. Try a shorter description (under 400 chars) and try again."
           : lastError?.message || "Failed to generate draft. Please try again.";
       alert(msg);
     } finally {
@@ -484,18 +494,22 @@ export function CreatePostForm({
 
         <div>
           <label className="block text-sm font-medium text-zinc-400 mb-2">
-            Describe the post you want to create *
+            Describe the post you want to create * (max 500 chars for faster generation)
           </label>
           <textarea
             required
+            maxLength={500}
             value={formData.contentIdea}
             onChange={(e) =>
               setFormData({ ...formData, contentIdea: e.target.value })
             }
             className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            rows={6}
-            placeholder="e.g., Announce our new product launch, share a customer testimonial, or create an educational carousel about..."
+            rows={5}
+            placeholder="e.g., Announce our new product launch, share a customer testimonial..."
           />
+          <p className="text-xs text-zinc-500 mt-1">
+            {formData.contentIdea.length}/500
+          </p>
         </div>
 
         <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">

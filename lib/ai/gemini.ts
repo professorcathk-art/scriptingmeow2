@@ -286,6 +286,11 @@ Return ONLY valid JSON, no markdown.`;
   throw new Error(`Failed to generate brandbook: ${msg}`);
 }
 
+function truncate(s: string, max: number): string {
+  const t = String(s || "").trim();
+  return t.length <= max ? t : t.slice(0, max) + "...";
+}
+
 export async function generatePost(
   brandbook: {
     brandPersonality: string;
@@ -311,72 +316,43 @@ export async function generatePost(
   visualDescription: string;
   nanoBananaPrompt?: string;
 }> {
+  const idea = truncate(contentIdea, 400);
   const vs = brandbook.visualStyle as {
     primaryColor?: string;
     secondaryColor1?: string;
-    secondaryColor2?: string;
     colors?: string[];
     mood?: string;
     imageStyle?: string;
-    image_style?: string; // DB snake_case
-    layoutStyle?: string;
-    vibe?: string[];
+    image_style?: string;
   } | null;
   const colors = vs?.primaryColor
-    ? [vs.primaryColor, vs.secondaryColor1, vs.secondaryColor2].filter(Boolean).join(", ")
-    : Array.isArray(vs?.colors) ? vs.colors.join(", ") : "";
-  const vibeStr = Array.isArray(vs?.vibe) ? vs.vibe.join(", ") : vs?.mood || "";
+    ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
+    : Array.isArray(vs?.colors) ? vs.colors.slice(0, 3).join(", ") : "";
+  const style = vs?.imageStyle || vs?.image_style || "professional";
+  const personality = truncate(brandbook.brandPersonality, 200);
+  const tone = truncate(brandbook.toneOfVoice, 150);
 
-  const prompt = `You are an expert IG content strategist and copywriter. Create an Instagram post that follows the brandbook strictly.
+  const prompt = `IG post. Brand: ${personality}. Tone: ${tone}. Style: ${style}. Colors: ${colors || "professional palette"}.
 
-Brandbook:
-- Personality: ${brandbook.brandPersonality}
-- Tone of Voice: ${brandbook.toneOfVoice}
-- Visual Style: ${JSON.stringify(brandbook.visualStyle)}
-- Caption Structure: ${JSON.stringify(brandbook.captionStructure)}
-- Do's and Don'ts: ${JSON.stringify(brandbook.dosAndDonts)}
+Brief: ${idea}
+Lang: ${language}. Format: ${format}. Layout: ${postStyle || "immersive-photo"}. Goal: ${contentFramework || "educational-value"}.
 
-Post Brief:
-- Content Idea: ${contentIdea}
-- Language: ${language}
-- Post Type: ${postType}
-- Format: ${format}
-- Content Framework (內容架構): ${contentFramework || "educational-value"} — educational-value=教育/乾貨, engagement-relatable=互動/共鳴, promotional-proof=宣傳/轉換, storytelling=品牌故事
-- Visual Layout (視覺排版): ${postStyle || "immersive-photo"} — editorial=雜誌排版 (split image/text), text-heavy=醒目大字 (bold typography), immersive-photo=純圖/極簡文字, tweet-card=推文/語錄 (quote/message), split-screen=圖文分割 (vertical split)
-
-Output JSON with two parts:
-
-1. "caption": {
-  "hook": "Strong, scroll-stopping hook (1-2 lines). Direct, curiosity-driven or emotionally resonant.",
-  "body": "Main content (3-5 sentences). Use second person 'you'. Clear value, no fluff.",
-  "cta": "Clear call-to-action. Invite to save, comment, or follow.",
-  "hashtags": ["5-10 relevant hashtags"]
-}
-
-2. "nanoBananaPrompt": A complete, detailed prompt for AI image generation (Nano Banana / Gemini). This will be used to generate the post visual. Requirements:
-- Describe the SCENE and COMPOSITION in detail (what is shown, layout, framing)
-- Include EXACT brand colors: ${colors || "use a cohesive, professional palette"}
-- Specify the MOOD and VIBE: ${vibeStr || "professional, engaging"}
-- Match the IMAGE STYLE from brandbook: ${vs?.imageStyle || vs?.image_style || "professional"}
-- For single-image: one cohesive visual. For carousel: describe the cover/first slide
-- Output dimensions: ${format === "portrait" ? "1080x1350px (4:5)" : format === "story" || format === "reel-cover" ? "1080x1920px (9:16)" : "1080x1080px (1:1 square)"}
-- If text overlay: describe placement, size, and style
-- Be specific: "A [style] [type of image] featuring [subject]. [Composition details]. Colors: [Hex codes]. [Mood]. Instagram-ready, high quality."
-- Do NOT use generic phrases. Be concrete and visual.
-
-Return ONLY valid JSON, no markdown.`;
+Output JSON only:
+{"caption":{"hook":"","body":"","cta":"","hashtags":[]},"nanoBananaPrompt":""}
+- caption: hook (1-2 lines), body (3-5 sentences), cta, hashtags array
+- nanoBananaPrompt: image gen prompt. Scene, composition, colors ${colors || ""}, mood, ${format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1"}. Specific, visual, Instagram-ready.`;
 
   const modelOrder = preferPro
-    ? (["gemini-3-pro-preview", "gemini-2.5-flash", "gemini-2.5-pro"] as const)
+    ? (["gemini-2.5-flash", "gemini-3-pro-preview", "gemini-2.5-pro"] as const)
     : GEMINI_MODELS;
-  const safetySettingsList = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
+  const safetyOrder = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
   let lastError: unknown = null;
   for (const modelName of modelOrder) {
-    for (const safetySettings of safetySettingsList) {
+    for (const safetySettings of safetyOrder) {
       try {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+          generationConfig: { temperature: 0.6, maxOutputTokens: 1024 },
           safetySettings: [...safetySettings],
         });
         const result = await model.generateContent(prompt);
