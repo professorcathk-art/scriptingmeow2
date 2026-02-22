@@ -24,14 +24,6 @@ export default function LoginPage() {
     }
 
     try {
-      // Check env vars
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error("Supabase configuration missing. Please check environment variables.");
-      }
-
       const supabase = createClient();
       
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -46,7 +38,8 @@ export default function LoginPage() {
       }
 
       if (data?.session) {
-        // Force full page reload to ensure cookies are set
+        // Wait a moment for cookies to be set, then redirect
+        await new Promise(resolve => setTimeout(resolve, 100));
         window.location.href = "/dashboard";
       } else {
         setError("Login failed - no session created");
