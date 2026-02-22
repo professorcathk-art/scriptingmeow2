@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -12,12 +12,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    console.log("🟢 LoginPage mounted - React is working");
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("🔵 Form submitted", { email, password: "***" });
     setError("");
     setLoading(true);
-
-    console.log("🔵 Form submitted", { email, password: "***" });
 
     if (!email || !password) {
       setError("Please enter email and password");
@@ -51,7 +54,6 @@ export default function LoginPage() {
       if (data?.session) {
         console.log("🟢 Login successful! Session:", data.session);
         console.log("🟢 Redirecting to dashboard...");
-        // Use window.location for full page reload to ensure cookies are set
         window.location.href = "/dashboard";
       } else {
         console.error("🔴 No session in response");
@@ -90,7 +92,10 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  console.log("🔵 Email changed");
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -106,7 +111,10 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  console.log("🔵 Password changed");
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -114,6 +122,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
+              onClick={() => console.log("🔵 Button clicked")}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Signing in..." : "Sign In"}
