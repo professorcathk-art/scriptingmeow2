@@ -167,7 +167,7 @@ export function CreateBrandSpaceForm() {
     return (
       <form onSubmit={(e) => { e.preventDefault(); setStep(3); }} className="space-y-6 glass-elevated p-6 rounded-2xl">
         <div>
-          <h2 className="text-xl font-semibold mb-4">Tell us about your brand</h2>
+          <h2 className="text-xl font-semibold text-zinc-100 mb-4">Tell us about your brand</h2>
         </div>
 
         <div>

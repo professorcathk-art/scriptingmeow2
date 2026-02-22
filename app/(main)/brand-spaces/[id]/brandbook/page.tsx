@@ -41,10 +41,10 @@ export default async function BrandbookPage({
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <h1 className="text-3xl font-bold text-zinc-100 mb-2">
         Brandbook for {brandSpace.name}
       </h1>
-      <p className="text-gray-600 mb-6">
+      <p className="text-zinc-400 mb-6">
         Your AI-generated brandbook guides all future post generations.
       </p>
       <BrandbookForm

@@ -77,16 +77,21 @@ export function BrandbookForm({
     }
   };
 
+  const inputClass =
+    "w-full px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50";
+  const labelClass = "block text-sm font-medium text-zinc-400 mb-1";
+
   if (!brandbook) {
     return (
-      <div className="bg-white p-8 rounded-lg border text-center">
-        <p className="text-gray-600 mb-6">
-          Generate your brandbook to get started. AI will analyze your brand information and create a comprehensive guide.
+      <div className="bg-zinc-900/50 p-8 rounded-2xl border border-white/10 text-center">
+        <p className="text-zinc-400 mb-6">
+          Generate your brandbook to get started. AI will analyze your brand
+          information and create a comprehensive guide.
         </p>
         <button
           onClick={handleGenerateBrandbook}
           disabled={generating}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {generating ? "Generating..." : "Generate Brandbook with AI"}
         </button>
@@ -96,13 +101,13 @@ export function BrandbookForm({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border">
+      <div className="bg-zinc-900/50 p-6 rounded-2xl border border-white/10">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Brandbook</h2>
+          <h2 className="text-xl font-semibold text-zinc-100">Brandbook</h2>
           <button
             onClick={handleGenerateBrandbook}
             disabled={generating}
-            className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+            className="text-sm text-violet-400 hover:text-violet-300 disabled:opacity-50"
           >
             {generating ? "Regenerating..." : "Regenerate with AI"}
           </button>
@@ -110,37 +115,41 @@ export function BrandbookForm({
 
         <div className="space-y-6">
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Brand Personality</h3>
+            <h3 className="font-semibold text-zinc-100 mb-2">Brand Personality</h3>
             <textarea
               value={brandbook.brand_personality}
               onChange={(e) =>
                 setBrandbook({ ...brandbook, brand_personality: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className={inputClass}
               rows={3}
             />
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Tone of Voice</h3>
+            <h3 className="font-semibold text-zinc-100 mb-2">Tone of Voice</h3>
             <textarea
               value={brandbook.tone_of_voice}
               onChange={(e) =>
                 setBrandbook({ ...brandbook, tone_of_voice: e.target.value })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className={inputClass}
               rows={3}
             />
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Visual Style</h3>
+            <h3 className="font-semibold text-zinc-100 mb-2">Visual Style</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm text-gray-700 mb-1">Colors</label>
+                <label className={labelClass}>Colors</label>
                 <input
                   type="text"
-                  value={Array.isArray(brandbook.visual_style?.colors) ? brandbook.visual_style.colors.join(", ") : ""}
+                  value={
+                    Array.isArray(brandbook.visual_style?.colors)
+                      ? brandbook.visual_style.colors.join(", ")
+                      : ""
+                  }
                   onChange={(e) =>
                     setBrandbook({
                       ...brandbook,
@@ -150,75 +159,95 @@ export function BrandbookForm({
                       },
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                   placeholder="e.g., #FF5733, #33C3F0, #FFC300"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-700 mb-1">Mood</label>
+                <label className={labelClass}>Mood</label>
                 <input
                   type="text"
                   value={brandbook.visual_style?.mood || ""}
                   onChange={(e) =>
                     setBrandbook({
                       ...brandbook,
-                      visual_style: { ...brandbook.visual_style, mood: e.target.value },
+                      visual_style: {
+                        ...brandbook.visual_style,
+                        mood: e.target.value,
+                      },
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-700 mb-1">Image Style</label>
+                <label className={labelClass}>Image Style</label>
                 <input
                   type="text"
                   value={brandbook.visual_style?.image_style || ""}
                   onChange={(e) =>
                     setBrandbook({
                       ...brandbook,
-                      visual_style: { ...brandbook.visual_style, image_style: e.target.value },
+                      visual_style: {
+                        ...brandbook.visual_style,
+                        image_style: e.target.value,
+                      },
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Do&apos;s and Don&apos;ts</h3>
+            <h3 className="font-semibold text-zinc-100 mb-2">
+              Do&apos;s and Don&apos;ts
+            </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-700 mb-1">Do&apos;s</label>
+                <label className={labelClass}>Do&apos;s</label>
                 <textarea
-                  value={Array.isArray(brandbook.dos_and_donts?.dos) ? brandbook.dos_and_donts.dos.join("\n") : ""}
+                  value={
+                    Array.isArray(brandbook.dos_and_donts?.dos)
+                      ? brandbook.dos_and_donts.dos.join("\n")
+                      : ""
+                  }
                   onChange={(e) =>
                     setBrandbook({
                       ...brandbook,
                       dos_and_donts: {
                         ...brandbook.dos_and_donts,
-                        dos: e.target.value.split("\n").filter((l) => l.trim()),
+                        dos: e.target.value
+                          .split("\n")
+                          .filter((l) => l.trim()),
                       },
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                   rows={5}
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-700 mb-1">Don&apos;ts</label>
+                <label className={labelClass}>Don&apos;ts</label>
                 <textarea
-                  value={Array.isArray(brandbook.dos_and_donts?.donts) ? brandbook.dos_and_donts.donts.join("\n") : ""}
+                  value={
+                    Array.isArray(brandbook.dos_and_donts?.donts)
+                      ? brandbook.dos_and_donts.donts.join("\n")
+                      : ""
+                  }
                   onChange={(e) =>
                     setBrandbook({
                       ...brandbook,
                       dos_and_donts: {
                         ...brandbook.dos_and_donts,
-                        donts: e.target.value.split("\n").filter((l) => l.trim()),
+                        donts: e.target.value
+                          .split("\n")
+                          .filter((l) => l.trim()),
                       },
                     })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className={inputClass}
                   rows={5}
                 />
               </div>
@@ -229,14 +258,14 @@ export function BrandbookForm({
         <div className="mt-6 flex gap-4">
           <button
             onClick={() => router.back()}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="flex-1 px-4 py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={loading}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="flex-1 px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
             {loading ? "Saving..." : "Save Brandbook"}
           </button>

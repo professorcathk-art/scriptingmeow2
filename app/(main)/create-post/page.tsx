@@ -27,15 +27,15 @@ export default async function CreatePostPage() {
   if (!brandSpaces || brandSpaces.length === 0) {
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+        <h1 className="text-3xl font-bold text-zinc-100 mb-4">
           Create Your First Brand Space
         </h1>
-        <p className="text-gray-600 mb-6">
+        <p className="text-zinc-400 mb-6">
           You need to create a Brand Space before generating posts.
         </p>
         <a
           href="/brand-spaces/new"
-          className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="inline-block px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity"
         >
           Create Brand Space
         </a>
@@ -45,7 +45,7 @@ export default async function CreatePostPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Create Instagram Post</h1>
+      <h1 className="text-3xl font-bold text-zinc-100 mb-6">Create Instagram Post</h1>
       <CreatePostForm
         brandSpaces={brandSpaces}
         userCredits={userProfile?.credits_remaining || 0}

@@ -3,11 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0a0a;
+  --background: #09090b;
   --foreground: #fafafa;
-  --surface: rgba(23, 23, 23, 0.8);
-  --surface-elevated: rgba(38, 38, 38, 0.9);
-  --border: rgba(255, 255, 255, 0.08);
+  --surface: rgba(24, 24, 27, 0.5);
+  --surface-elevated: rgba(39, 39, 42, 0.8);
+  --card-bg: #18181b;
+  --border: rgba(255, 255, 255, 0.1);
   --accent-violet: #8b5cf6;
   --accent-cyan: #06b6d4;
   --accent-magenta: #ec4899;
@@ -74,5 +75,12 @@ body {
   @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
+  }
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .animate-scroll {
+    animation: scroll 25s linear infinite;
   }
 }

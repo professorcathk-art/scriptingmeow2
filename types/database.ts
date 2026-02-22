@@ -115,8 +115,8 @@ export interface PlanLimits {
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   free: {
-    brand_spaces: 1,
-    monthly_credits: 10,
+    brand_spaces: 999,
+    monthly_credits: 9999,
     priority_support: false,
     batch_generation: false,
   },

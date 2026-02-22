@@ -55,7 +55,11 @@ export async function POST(request: Request) {
     }
 
     const creditsNeeded = variations;
-    if (userProfile.credits_remaining < creditsNeeded) {
+    const unlimitedCredits = process.env.UNLIMITED_CREDITS_FOR_TESTING === "true";
+    if (
+      !unlimitedCredits &&
+      userProfile.credits_remaining < creditsNeeded
+    ) {
       return NextResponse.json(
         {
           error: `Not enough credits. You have ${userProfile.credits_remaining} credits, but need ${creditsNeeded}.`,
@@ -101,24 +105,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
     }
 
-    // Deduct credits
-    const { error: creditError } = await supabase
-      .from("users")
-      .update({
-        credits_remaining: userProfile.credits_remaining - creditsNeeded,
-      })
-      .eq("id", user.id);
+    // Deduct credits (skip when unlimited for testing)
+    if (!unlimitedCredits) {
+      const { error: creditError } = await supabase
+        .from("users")
+        .update({
+          credits_remaining: userProfile.credits_remaining - creditsNeeded,
+        })
+        .eq("id", user.id);
 
-    if (creditError) {
-      console.error("Error updating credits:", creditError);
+      if (creditError) {
+        console.error("Error updating credits:", creditError);
+      }
+
+      await supabase.from("credit_transactions").insert({
+        user_id: user.id,
+        amount: -creditsNeeded,
+        description: `Generated ${variations} post variation(s)`,
+      });
     }
-
-    // Record transaction
-    await supabase.from("credit_transactions").insert({
-      user_id: user.id,
-      amount: -creditsNeeded,
-      description: `Generated ${variations} post variation(s)`,
-    });
 
     return NextResponse.json(post);
   } catch (error) {

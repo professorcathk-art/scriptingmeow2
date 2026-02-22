@@ -29,16 +29,16 @@ export function LibraryFilters({
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg border">
+    <div className="bg-zinc-900/50 p-4 rounded-2xl border border-white/10">
       <div className="flex flex-wrap gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-zinc-400 mb-1">
             Filter by Brand
           </label>
           <select
             value={currentBrand || ""}
             onChange={(e) => handleFilterChange("brand", e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
           >
             <option value="">All Brands</option>
             {brandSpaces.map((space) => (
@@ -50,13 +50,13 @@ export function LibraryFilters({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-zinc-400 mb-1">
             Filter by Tag
           </label>
           <select
             value={currentTag || ""}
             onChange={(e) => handleFilterChange("tag", e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
           >
             <option value="">All Tags</option>
             {tags.map((tag) => (

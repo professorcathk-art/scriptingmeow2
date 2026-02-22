@@ -24,7 +24,7 @@ export default async function MainLayout({
     .single();
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex">
+    <div className="min-h-screen bg-zinc-950 flex">
       <DashboardSidebar />
       <main className="flex-1 flex flex-col min-w-0">
         <header className="glass border-b border-white/5 sticky top-0 z-10">
