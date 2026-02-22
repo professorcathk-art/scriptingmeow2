@@ -17,6 +17,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
+    console.log("🔵 Form submitted", { email, password: "***" });
+
     if (!email || !password) {
       setError("Please enter email and password");
       setLoading(false);
@@ -24,29 +26,40 @@ export default function LoginPage() {
     }
 
     try {
+      console.log("🔵 Creating Supabase client...");
       const supabase = createClient();
       
+      console.log("🔵 Calling signInWithPassword...");
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       });
 
+      console.log("🔵 Response:", { 
+        hasData: !!data, 
+        hasSession: !!data?.session,
+        error: signInError?.message 
+      });
+
       if (signInError) {
+        console.error("🔴 Sign in error:", signInError);
         setError(signInError.message);
         setLoading(false);
         return;
       }
 
       if (data?.session) {
-        // Wait a moment for cookies to be set, then redirect
-        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log("🟢 Login successful! Session:", data.session);
+        console.log("🟢 Redirecting to dashboard...");
+        // Use window.location for full page reload to ensure cookies are set
         window.location.href = "/dashboard";
       } else {
+        console.error("🔴 No session in response");
         setError("Login failed - no session created");
         setLoading(false);
       }
     } catch (err: any) {
-      console.error("Login error:", err);
+      console.error("🔴 Exception:", err);
       setError(err.message || "An error occurred");
       setLoading(false);
     }

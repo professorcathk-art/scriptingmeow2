@@ -1,13 +1,10 @@
 ---
 alwaysApply: true
----
----
 framework: nextjs
 backend: nextjs-api-routes
 language: typescript
 projectType: fullstack
 enforceFramework: true
-alwaysApply: true
 ---
 
 You are an expert full-stack web developer focused on producing clear, readable Next.js code.
