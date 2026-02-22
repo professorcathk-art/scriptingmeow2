@@ -17,8 +17,25 @@ const DEFAULT_SAFETY = [
 
 function safeGetText(response: { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }): string | null {
   if (!response.candidates?.length) return null;
-  const part = response.candidates[0].content?.parts?.[0];
-  return part?.text?.trim() || null;
+  const parts = response.candidates[0].content?.parts ?? [];
+  const textPart = parts.find((p) => p.text);
+  return textPart?.text?.trim() || null;
+}
+
+/** Fetch image from URL and return as Gemini inlineData part. Skips blob: or invalid URLs. */
+async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const base64 = buf.toString("base64");
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
+    return { inlineData: { mimeType, data: base64 } };
+  } catch {
+    return null;
+  }
 }
 
 // Image generation using Gemini's image generation capabilities
@@ -79,6 +96,8 @@ export async function generateBrandbook(
     layoutTendencies: string;
     layoutStyle?: string;
     vibe?: string[];
+    typographySpec?: string;
+    layoutStyleDetail?: string;
   };
   captionStructure: {
     hookPatterns: string[];
@@ -118,7 +137,7 @@ Brand Information:
 
 ${
   brandData.referenceImages && brandData.referenceImages.length > 0
-    ? `Reference: The brand has uploaded ${brandData.referenceImages.length} reference images. Analyze their visual style (colors, typography, layout, mood) and reflect it in the brandbook.`
+    ? `IMPORTANT: You are being shown ${brandData.referenceImages.length} reference image(s) of the brand's past IG posts. Analyze each image carefully for: colors (extract Hex codes), typography (font styles, sizes), layout (card/minimal/info-dense, borders, spacing), image style (photography/illustration), and mood. Reflect these findings in the brandbook.`
     : "No reference images. Create a cohesive visual system based on the brand information."
 }
 
@@ -128,16 +147,18 @@ Output a comprehensive brandbook in JSON. Use English for all content.
   "brandPersonality": "2-3 sentences describing the brand's personality and character",
   "toneOfVoice": "2-3 sentences on how the brand communicates (e.g., friendly but professional, direct and punchy)",
   "visualStyle": {
-    "colors": ["array of 3-5 Hex codes, e.g. #5E66C2, #FF6B35, #2EC4B6. First = primary, rest = secondary/accents"],
-    "primaryColor": "Main brand Hex code, e.g. #5E66C2",
+    "colors": ["array of 3-5 Hex codes. First = primary, rest = secondary/accents"],
+    "primaryColor": "Main brand Hex code",
     "secondaryColor1": "First accent Hex code",
     "secondaryColor2": "Second accent Hex code",
-    "backgroundColor": "white / light / dark - for post backgrounds",
-    "mood": "Overall mood of visuals (e.g., warm and inviting, bold and energetic, calm and premium)",
-    "imageStyle": "photography / illustration / mixed. Describe style: minimalist, vibrant, editorial, lifestyle, product-focused, etc.",
-    "layoutTendencies": "card-style / minimal / info-dense / story-driven. Describe: borders, rounded corners, spacing, text placement",
+    "backgroundColor": "white / light / dark",
+    "mood": "Overall mood of visuals",
+    "imageStyle": "photography / illustration / mixed. Describe style",
+    "layoutTendencies": "Common layout patterns",
     "layoutStyle": "card / minimal / info-dense / story",
-    "vibe": ["3-5 adjectives for overall feel, e.g. professional yet approachable, modern, clean, trustworthy"]
+    "vibe": ["3-5 adjectives for overall feel"],
+    "typographySpec": "字型規範: Headings - font, size, color. Body - font, size, color. Emphasis - italic/bold/color. Be specific.",
+    "layoutStyleDetail": "排版風格: card / minimal / info-dense / story. Borders - yes/no, color, radius. Spacing - margins, padding. Text placement."
   },
   "captionStructure": {
     "hookPatterns": ["3-5 hook styles that work for this brand"],
@@ -153,6 +174,16 @@ Output a comprehensive brandbook in JSON. Use English for all content.
 
 Return ONLY valid JSON, no markdown.`;
 
+  const imageParts: Array<{ inlineData: { mimeType: string; data: string } }> = [];
+  const validUrls = (brandData.referenceImages ?? []).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")));
+  for (let i = 0; i < Math.min(validUrls.length, 5); i++) {
+    const part = await fetchImagePart(validUrls[i]);
+    if (part) imageParts.push(part);
+  }
+
+  const contentParts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: prompt }];
+  contentParts.push(...imageParts);
+
   let lastError: unknown = null;
   for (const modelName of GEMINI_MODELS) {
     try {
@@ -161,7 +192,7 @@ Return ONLY valid JSON, no markdown.`;
         generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
         safetySettings: [...DEFAULT_SAFETY],
       });
-      const result = await model.generateContent(prompt);
+      const result = await model.generateContent(contentParts);
       const response = result.response;
       const text = safeGetText(response);
 
@@ -188,6 +219,8 @@ Return ONLY valid JSON, no markdown.`;
             layoutTendencies: vs.layoutTendencies || "",
             layoutStyle: vs.layoutStyle || "",
             vibe: Array.isArray(vs.vibe) ? vs.vibe : [],
+            typographySpec: vs.typographySpec || "",
+            layoutStyleDetail: vs.layoutStyleDetail || "",
           },
           captionStructure: {
             hookPatterns: Array.isArray(brandbook.captionStructure?.hookPatterns)
@@ -228,7 +261,9 @@ export async function generatePost(
   contentIdea: string,
   language: string,
   postType: string,
-  format: string
+  format: string,
+  postStyle?: string,
+  preferPro?: boolean
 ): Promise<{
   caption: {
     hook: string;
@@ -268,6 +303,7 @@ Post Brief:
 - Language: ${language}
 - Post Type: ${postType}
 - Format: ${format}
+- Post Style (視覺風格): ${postStyle || "pure-image"} — pure-image=純圖片, image-with-title=圖片+標題, infographic=圖表/資訊圖, quote-overlay=引文疊加, split-layout=圖文分欄, before-after=前後對比, minimal-text=極簡文字
 
 Output JSON with two parts:
 
@@ -291,8 +327,11 @@ Output JSON with two parts:
 
 Return ONLY valid JSON, no markdown.`;
 
+  const modelOrder = preferPro
+    ? (["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
+    : GEMINI_MODELS;
   let lastError: unknown = null;
-  for (const modelName of GEMINI_MODELS) {
+  for (const modelName of modelOrder) {
     try {
       const model = genAI.getGenerativeModel({
         model: modelName,

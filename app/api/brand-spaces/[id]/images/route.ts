@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+
+const BUCKET = "brand-reference-images";
 
 export async function POST(
   request: Request,
@@ -15,7 +18,6 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify brand space ownership
     const { data: brandSpace } = await supabase
       .from("brand_spaces")
       .select("id")
@@ -35,32 +37,34 @@ export async function POST(
     }
 
     const uploadedImages = [];
+    const adminClient = process.env.SUPABASE_SERVICE_ROLE_KEY ? createAdminClient() : null;
 
-    for (const file of files) {
-      // Convert file to base64 or upload to Supabase Storage
-      // For now, we'll use a placeholder approach
-      // In production, upload to Supabase Storage:
-      /*
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${user.id}/${params.id}/${fileName}`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('brand-reference-images')
-        .upload(filePath, file);
-      
-      if (uploadError) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileExt = file.name.split(".").pop() || "jpg";
+      const fileName = `${user.id}/${params.id}/${Date.now()}-${i}.${fileExt}`;
+
+      let imageUrl: string;
+
+      if (adminClient) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const { data: uploadData, error: uploadError } = await adminClient.storage
+          .from(BUCKET)
+          .upload(fileName, buffer, {
+            contentType: file.type || "image/jpeg",
+            upsert: true,
+          });
+
+        if (uploadError) {
+          console.warn("Storage upload failed:", uploadError.message);
+          continue;
+        }
+        const { data: urlData } = adminClient.storage.from(BUCKET).getPublicUrl(uploadData.path);
+        imageUrl = urlData.publicUrl;
+      } else {
         continue;
       }
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('brand-reference-images')
-        .getPublicUrl(filePath);
-      */
 
-      // Placeholder: store file info
-      const imageUrl = URL.createObjectURL(file); // Temporary URL for now
-      
       const { data: imageRecord, error: imageError } = await supabase
         .from("brand_reference_images")
         .insert({

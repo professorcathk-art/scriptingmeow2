@@ -13,8 +13,9 @@ interface CreatePostFormProps {
 
 const STEPS = [
   { id: 1, label: "Select Brand" },
-  { id: 2, label: "Select Format" },
-  { id: 3, label: "Generate Content" },
+  { id: 2, label: "Content & Style" },
+  { id: 3, label: "Review Draft" },
+  { id: 4, label: "Generate Image" },
 ];
 
 function ImageIcon({ className }: { className?: string }) {
@@ -39,8 +40,12 @@ export function CreatePostForm({
   planTier,
 }: CreatePostFormProps) {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [loading, setLoading] = useState(false);
+  const [draft, setDraft] = useState<{
+    caption: { hook: string; body: string; cta: string; hashtags: string[] };
+    visualAdvice: string;
+  } | null>(null);
   const [formData, setFormData] = useState({
     brandSpaceId: "",
     postType: "single-image" as PostType,
@@ -48,6 +53,7 @@ export function CreatePostForm({
     language: "English",
     customLanguage: "",
     contentIdea: "",
+    postStyle: "pure-image" as string,
     variations: 1,
   });
 
@@ -75,9 +81,47 @@ export function CreatePostForm({
   const creditsNeeded = formData.variations;
   const canGenerate = userCredits >= creditsNeeded;
 
-  const handleGenerate = async () => {
-    if (!canGenerate) {
-      alert("Not enough credits. Please upgrade your plan.");
+  const handleGenerateDraft = async () => {
+    setLoading(true);
+    setDraft(null);
+    try {
+      const response = await fetch("/api/posts/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brandSpaceId: formData.brandSpaceId,
+          postType: formData.postType,
+          format: formData.format,
+          language: effectiveLanguage,
+          contentIdea: formData.contentIdea,
+          postStyle: formData.postStyle,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || err.details || "Failed to generate draft");
+      }
+
+      const data = await response.json();
+      setDraft({
+        caption: data.caption || { hook: "", body: "", cta: "", hashtags: [] },
+        visualAdvice: data.visualAdvice || "",
+      });
+      setStep(4);
+    } catch (error: unknown) {
+      console.error("Error generating draft:", error);
+      alert(
+        error instanceof Error ? error.message : "Failed to generate draft. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmAndGenerate = async () => {
+    if (!draft || !canGenerate) {
+      alert("Not enough credits or no draft. Please upgrade your plan or regenerate.");
       return;
     }
 
@@ -87,14 +131,21 @@ export function CreatePostForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          brandSpaceId: formData.brandSpaceId,
+          postType: formData.postType,
+          format: formData.format,
           language: effectiveLanguage,
+          contentIdea: formData.contentIdea,
+          variations: formData.variations,
+          postStyle: formData.postStyle,
+          confirmedCaption: draft.caption,
+          confirmedVisualAdvice: draft.visualAdvice,
         }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to generate posts");
+        const err = await response.json();
+        throw new Error(err.error || err.details || "Failed to generate post");
       }
 
       const data = await response.json();
@@ -339,24 +390,34 @@ export function CreatePostForm({
 
         <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
           <p className="text-sm font-medium text-zinc-400 mb-2">
-            Quick Templates:
+            Post Style (視覺風格)
+          </p>
+          <p className="text-xs text-zinc-500 mb-3">
+            Choose the visual style. Your content idea above stays unchanged.
           </p>
           <div className="flex flex-wrap gap-2">
             {[
-              "Educational carousel",
-              "Announcement",
-              "Soft promotion",
-              "Before & after",
-            ].map((template) => (
+              { value: "pure-image", label: "純圖片 (No text overlay)" },
+              { value: "image-with-title", label: "圖片+標題 (Image with title)" },
+              { value: "infographic", label: "圖表/資訊圖 (Illustrative graphs)" },
+              { value: "quote-overlay", label: "引文疊加 (Quote overlay)" },
+              { value: "split-layout", label: "圖文分欄 (Photo + text card)" },
+              { value: "before-after", label: "前後對比 (Before & after)" },
+              { value: "minimal-text", label: "極簡文字 (Minimal subtle text)" },
+            ].map(({ value, label }) => (
               <button
-                key={template}
+                key={value}
                 type="button"
                 onClick={() =>
-                  setFormData({ ...formData, contentIdea: template })
+                  setFormData({ ...formData, postStyle: value })
                 }
-                className="px-3 py-1.5 text-sm rounded-lg border border-white/10 text-zinc-400 hover:text-zinc-100 hover:border-white/20 hover:bg-white/5 transition-colors"
+                className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                  formData.postStyle === value
+                    ? "border-violet-500 bg-violet-500/20 text-violet-200"
+                    : "border-white/10 text-zinc-400 hover:text-zinc-100 hover:border-white/20 hover:bg-white/5"
+                }`}
               >
-                {template}
+                {label}
               </button>
             ))}
           </div>
@@ -379,89 +440,229 @@ export function CreatePostForm({
             }
             className="flex-1 px-4 py-2.5 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
-            Next: Variations
+            Next: Generate Draft
           </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className={cardClass}>
-      <Stepper />
-      <h2 className="text-xl font-semibold text-zinc-100">
-        Step 3: Variations & Credits
-      </h2>
-
-      <div>
-        <label className="block text-sm font-medium text-zinc-400 mb-2">
-          Number of Variations
-        </label>
-        <select
-          value={formData.variations}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              variations: parseInt(e.target.value),
-            })
-          }
-          className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-        >
-          <option value={1}>1 variation</option>
-          <option value={3}>3 variations</option>
-          <option value={5}>5 variations</option>
-        </select>
-        <p className="text-sm text-zinc-500 mt-1">
-          1 credit = 1 generated variation for one size
+  if (step === 3) {
+    return (
+      <div className={cardClass}>
+        <Stepper />
+        <h2 className="text-xl font-semibold text-zinc-100">
+          Step 3: Generate Draft (Caption + 視覺建議)
+        </h2>
+        <p className="text-sm text-zinc-400">
+          AI will generate the post caption and visual advice. Review and confirm before generating the image.
         </p>
-      </div>
 
-      <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-zinc-400">
-            Credits Needed:
-          </span>
-          <span className="text-lg font-bold text-zinc-100">
-            {creditsNeeded} credits
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-zinc-400">Your Credits:</span>
-          <span
-            className={`text-sm font-medium ${
-              canGenerate ? "text-emerald-400" : "text-red-400"
-            }`}
+        <div>
+          <label className="block text-sm font-medium text-zinc-400 mb-2">
+            Number of Variations
+          </label>
+          <select
+            value={formData.variations}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                variations: parseInt(e.target.value),
+              })
+            }
+            className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
           >
-            {userCredits} / {PLAN_LIMITS[planTier].monthly_credits}
-          </span>
-        </div>
-        {!canGenerate && (
-          <p className="text-sm text-red-400 mt-2">
-            Not enough credits.{" "}
-            <a href="/billing" className="underline text-violet-400">
-              Upgrade your plan
-            </a>
+            <option value={1}>1 variation</option>
+            <option value={3}>3 variations</option>
+            <option value={5}>5 variations</option>
+          </select>
+          <p className="text-sm text-zinc-500 mt-1">
+            1 credit = 1 generated variation for one size
           </p>
-        )}
-      </div>
+        </div>
 
-      <div className="flex gap-4 pt-4">
+        <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-zinc-400">
+              Credits Needed:
+            </span>
+            <span className="text-lg font-bold text-zinc-100">
+              {creditsNeeded} credits
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-zinc-400">Your Credits:</span>
+            <span
+              className={`text-sm font-medium ${
+                canGenerate ? "text-emerald-400" : "text-red-400"
+              }`}
+            >
+              {userCredits} / {PLAN_LIMITS[planTier].monthly_credits}
+            </span>
+          </div>
+          {!canGenerate && (
+            <p className="text-sm text-red-400 mt-2">
+              Not enough credits.{" "}
+              <a href="/billing" className="underline text-violet-400">
+                Upgrade your plan
+              </a>
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-4 pt-4">
+          <button
+            type="button"
+            onClick={() => setStep(2)}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={handleGenerateDraft}
+            disabled={loading}
+            className="flex-1 px-4 py-2.5 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          >
+            {loading ? "Generating draft..." : "Generate Draft"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 4 && !draft) {
+    return (
+      <div className={cardClass}>
+        <Stepper />
+        <p className="text-zinc-400">No draft yet. Please go back and generate a draft.</p>
         <button
           type="button"
-          onClick={() => setStep(2)}
-          className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
+          onClick={() => setStep(3)}
+          className="mt-4 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5"
         >
-          Back
-        </button>
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={loading || !canGenerate}
-          className="flex-1 px-4 py-2.5 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-        >
-          {loading ? "Generating..." : "Create Posts"}
+          Back to Step 3
         </button>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (step === 4 && draft) {
+    return (
+      <div className={cardClass}>
+        <Stepper />
+        <h2 className="text-xl font-semibold text-zinc-100">
+          Step 4: Confirm & Generate Image
+        </h2>
+        <p className="text-sm text-zinc-400 mb-4">
+          Review the caption and visual advice. Edit if needed, then confirm to generate the image.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Caption (可編輯)
+            </label>
+            <div className="space-y-2">
+              <div>
+                <span className="text-xs text-zinc-500">Hook:</span>
+                <textarea
+                  value={draft.caption.hook}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      caption: { ...draft.caption, hook: e.target.value },
+                    })
+                  }
+                  className="w-full mt-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <span className="text-xs text-zinc-500">Body:</span>
+                <textarea
+                  value={draft.caption.body}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      caption: { ...draft.caption, body: e.target.value },
+                    })
+                  }
+                  className="w-full mt-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+                  rows={4}
+                />
+              </div>
+              <div>
+                <span className="text-xs text-zinc-500">CTA:</span>
+                <input
+                  type="text"
+                  value={draft.caption.cta}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      caption: { ...draft.caption, cta: e.target.value },
+                    })
+                  }
+                  className="w-full mt-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+                />
+              </div>
+              <div>
+                <span className="text-xs text-zinc-500">Hashtags (comma-separated):</span>
+                <input
+                  type="text"
+                  value={Array.isArray(draft.caption.hashtags) ? draft.caption.hashtags.join(", ") : ""}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      caption: {
+                        ...draft.caption,
+                        hashtags: e.target.value.split(",").map((h) => h.trim()).filter(Boolean),
+                      },
+                    })
+                  }
+                  className="w-full mt-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+                  placeholder="#hashtag1 #hashtag2"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              視覺建議 (Visual Advice for Image Generation)
+            </label>
+            <textarea
+              value={draft.visualAdvice}
+              onChange={(e) =>
+                setDraft({ ...draft, visualAdvice: e.target.value })
+              }
+              className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+              rows={6}
+              placeholder="AI-generated visual description for the image..."
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-4 pt-4">
+          <button
+            type="button"
+            onClick={() => setStep(3)}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmAndGenerate}
+            disabled={loading || !canGenerate}
+            className="flex-1 px-4 py-2.5 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          >
+            {loading ? "Generating image..." : "Confirm & Generate Image"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }

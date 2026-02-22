@@ -197,6 +197,42 @@ export function BrandbookForm({
                   className={inputClass}
                 />
               </div>
+              <div>
+                <label className={labelClass}>字型規範 (Typography)</label>
+                <textarea
+                  value={(brandbook.visual_style as { typographySpec?: string })?.typographySpec || ""}
+                  onChange={(e) =>
+                    setBrandbook({
+                      ...brandbook,
+                      visual_style: {
+                        ...brandbook.visual_style,
+                        typographySpec: e.target.value,
+                      },
+                    })
+                  }
+                  className={inputClass}
+                  rows={3}
+                  placeholder="Headings - font, size, color. Body - font, size. Emphasis style."
+                />
+              </div>
+              <div>
+                <label className={labelClass}>排版風格 (Layout Style)</label>
+                <textarea
+                  value={(brandbook.visual_style as { layoutStyleDetail?: string })?.layoutStyleDetail || ""}
+                  onChange={(e) =>
+                    setBrandbook({
+                      ...brandbook,
+                      visual_style: {
+                        ...brandbook.visual_style,
+                        layoutStyleDetail: e.target.value,
+                      },
+                    })
+                  }
+                  className={inputClass}
+                  rows={3}
+                  placeholder="Card/minimal/info-dense. Borders, spacing, text placement."
+                />
+              </div>
             </div>
           </div>
 

@@ -5,19 +5,58 @@ import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
 
 export async function POST(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: Record<string, unknown>;
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    body = await request.json();
+  } catch (e) {
+    console.error("[posts/generate] Invalid JSON body:", e);
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
+  }
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const {
+    brandSpaceId,
+    postType,
+    format,
+    language,
+    contentIdea,
+    variations,
+    postStyle,
+    confirmedCaption,
+    confirmedVisualAdvice,
+  } = body as {
+    brandSpaceId?: string;
+    postType?: string;
+    format?: string;
+    language?: string;
+    contentIdea?: string;
+    variations?: number;
+    postStyle?: string;
+    confirmedCaption?: { hook: string; body: string; cta: string; hashtags: string[] };
+    confirmedVisualAdvice?: string;
+  };
 
-    const { brandSpaceId, postType, format, language, contentIdea, variations } =
-      await request.json();
+  if (!brandSpaceId) {
+    return NextResponse.json(
+      { error: "brandSpaceId is required" },
+      { status: 400 }
+    );
+  }
 
+  const creditsNeeded = typeof variations === "number" ? variations : 1;
+
+  try {
     // Verify brand space ownership
     const { data: brandSpace } = await supabase
       .from("brand_spaces")
@@ -30,7 +69,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
     }
 
-    // Get brandbook
+    // Get brandbook (needed for image prompt fallback when not using confirmed data)
     const { data: brandbook } = await supabase
       .from("brandbooks")
       .select("*")
@@ -44,6 +83,51 @@ export async function POST(request: Request) {
       );
     }
 
+    // Use confirmed draft or generate new
+    let caption: { hook: string; body: string; cta: string; hashtags: string[] };
+    let imagePrompt: string;
+
+    if (confirmedCaption && confirmedVisualAdvice) {
+      caption = confirmedCaption;
+      imagePrompt = confirmedVisualAdvice.trim();
+    } else {
+      const generatedPost = await generatePost(
+        {
+          brandPersonality: brandbook.brand_personality,
+          toneOfVoice: brandbook.tone_of_voice,
+          visualStyle: brandbook.visual_style,
+          captionStructure: brandbook.caption_structure,
+          dosAndDonts: brandbook.dos_and_donts,
+        },
+        contentIdea || "",
+        language || "English",
+        postType || "single-image",
+        format || "square",
+        postStyle
+      );
+      caption = generatedPost.caption;
+      imagePrompt =
+        generatedPost.nanoBananaPrompt?.trim() ||
+        generatedPost.visualDescription ||
+        "";
+    }
+
+    if (!imagePrompt) {
+      const vs = brandbook.visual_style as {
+        primaryColor?: string;
+        secondaryColor1?: string;
+        colors?: string[];
+        mood?: string;
+        imageStyle?: string;
+      } | null;
+      const colors = vs?.primaryColor
+        ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
+        : vs?.colors?.join(", ") || "";
+      const style = vs?.imageStyle || "professional";
+      const mood = vs?.mood || "engaging";
+      imagePrompt = `Professional Instagram post. Style: ${style}. Mood: ${mood}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
+    }
+
     // Check credits
     const { data: userProfile } = await supabase
       .from("users")
@@ -55,7 +139,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const creditsNeeded = variations;
     const unlimitedCredits = process.env.UNLIMITED_CREDITS_FOR_TESTING === "true";
     if (
       !unlimitedCredits &&
@@ -69,21 +152,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate post using AI
-    const generatedPost = await generatePost(
-      {
-        brandPersonality: brandbook.brand_personality,
-        toneOfVoice: brandbook.tone_of_voice,
-        visualStyle: brandbook.visual_style,
-        captionStructure: brandbook.caption_structure,
-        dosAndDonts: brandbook.dos_and_donts,
-      },
-      contentIdea,
-      language,
-      postType,
-      format
-    );
-
     // Create post record (visual_url set after upload)
     const { data: post, error: postError } = await supabase
       .from("generated_posts")
@@ -92,9 +160,9 @@ export async function POST(request: Request) {
         post_type: postType,
         format,
         language,
-        content_idea: contentIdea,
+        content_idea: contentIdea || "",
         visual_url: null,
-        caption: generatedPost.caption,
+        caption,
         status: "generated",
         credits_used: creditsNeeded,
       })
@@ -102,28 +170,9 @@ export async function POST(request: Request) {
       .single();
 
     if (postError) {
-      console.error("Error creating post:", postError);
+      console.error("[posts/generate] Error creating post:", postError);
       return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
     }
-
-    // Use Nano Banana-ready prompt from AI, or build from visualDescription + brandbook
-    const imagePrompt =
-      generatedPost.nanoBananaPrompt?.trim() ||
-      (() => {
-        const vs = brandbook.visual_style as {
-          primaryColor?: string;
-          secondaryColor1?: string;
-          colors?: string[];
-          mood?: string;
-          imageStyle?: string;
-        } | null;
-        const colors = vs?.primaryColor
-          ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
-          : vs?.colors?.join(", ") || "";
-        const style = vs?.imageStyle || "professional";
-        const mood = vs?.mood || "engaging";
-        return `${generatedPost.visualDescription}. Style: ${style}. Mood: ${mood}.${colors ? ` Use these exact colors: ${colors}.` : ""} High-quality, Instagram-ready, scroll-stopping visual.`;
-      })();
 
     // Generate image with Nano Banana; fall back to SVG placeholder if it fails
     let visualUrl: string;
@@ -135,7 +184,7 @@ export async function POST(request: Request) {
       visualUrl = await uploadPostImage(imageBuffer, post.id, user.id);
     } else {
       visualUrl = await uploadPostPlaceholder(
-        generatedPost.visualDescription,
+        imagePrompt,
         post.id,
         user.id
       );
@@ -161,15 +210,19 @@ export async function POST(request: Request) {
       await supabase.from("credit_transactions").insert({
         user_id: user.id,
         amount: -creditsNeeded,
-        description: `Generated ${variations} post variation(s)`,
+        description: `Generated ${creditsNeeded} post variation(s)`,
       });
     }
 
     return NextResponse.json({ ...post, visual_url: visualUrl });
   } catch (error) {
-    console.error("Error generating post:", error);
+    console.error("[posts/generate] Error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to generate post" },
+      {
+        error: "Failed to generate post",
+        details: process.env.NODE_ENV === "development" ? message : undefined,
+      },
       { status: 500 }
     );
   }
