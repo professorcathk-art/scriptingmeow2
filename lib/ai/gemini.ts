@@ -6,7 +6,7 @@ import {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-const GEMINI_MODELS = ["gemini-3-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"] as const;
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"] as const;
 
 const DEFAULT_SAFETY = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
@@ -360,7 +360,7 @@ Output JSON with two parts:
 Return ONLY valid JSON, no markdown.`;
 
   const modelOrder = preferPro
-    ? (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-preview"] as const)
+    ? (["gemini-2.5-pro", "gemini-2.5-flash"] as const)
     : GEMINI_MODELS;
   let lastError: unknown = null;
   for (const modelName of modelOrder) {
