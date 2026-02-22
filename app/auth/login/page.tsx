@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -12,8 +12,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    console.log("LoginPage component mounted");
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("FORM SUBMITTED", { email, password });
     setError("");
     setLoading(true);
 
@@ -24,26 +29,34 @@ export default function LoginPage() {
     }
 
     try {
+      console.log("Creating Supabase client...");
       const supabase = createClient();
+      console.log("Calling signInWithPassword...");
+      
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       });
 
+      console.log("Auth response:", { data, error: signInError });
+
       if (signInError) {
+        console.error("Sign in error:", signInError);
         setError(signInError.message);
         setLoading(false);
         return;
       }
 
-      if (data.session) {
-        router.push("/dashboard");
-        router.refresh();
+      if (data?.session) {
+        console.log("Login successful, redirecting...");
+        window.location.href = "/dashboard";
       } else {
+        console.error("No session in response");
         setError("Login failed - no session created");
         setLoading(false);
       }
     } catch (err: any) {
+      console.error("Exception:", err);
       setError(err.message || "An error occurred");
       setLoading(false);
     }
@@ -61,7 +74,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} method="post">
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -74,7 +87,10 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  console.log("Email changed:", e.target.value);
+                  setEmail(e.target.value);
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -90,7 +106,10 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  console.log("Password changed");
+                  setPassword(e.target.value);
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -98,6 +117,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
+              onClick={() => console.log("Button clicked")}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Signing in..." : "Sign In"}
