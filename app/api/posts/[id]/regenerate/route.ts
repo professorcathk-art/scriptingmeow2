@@ -58,16 +58,27 @@ export async function POST(
       post.format
     );
 
-    // Regenerate image with Nano Banana
-    const visualStyle = brandbook.visual_style as { colors?: string[]; mood?: string; imageStyle?: string } | null;
-    const styleContext = visualStyle
-      ? `Style: ${visualStyle.imageStyle ?? "professional"}. Mood: ${visualStyle.mood ?? "engaging"}.${visualStyle.colors?.length ? ` Color palette: ${visualStyle.colors.join(", ")}.` : ""}`
-      : "";
-    const imagePrompt = styleContext
-      ? `${generatedPost.visualDescription}. ${styleContext} High-quality, Instagram-ready, 1080x1080 square format.`
-      : `${generatedPost.visualDescription}. High-quality, Instagram-ready, 1080x1080 square format.`;
+    // Use Nano Banana-ready prompt from AI, or build from visualDescription + brandbook
+    const imagePrompt =
+      generatedPost.nanoBananaPrompt?.trim() ||
+      (() => {
+        const vs = brandbook.visual_style as {
+          primaryColor?: string;
+          secondaryColor1?: string;
+          colors?: string[];
+          mood?: string;
+          imageStyle?: string;
+        } | null;
+        const colors = vs?.primaryColor
+          ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
+          : vs?.colors?.join(", ") || "";
+        const style = vs?.imageStyle || "professional";
+        const mood = vs?.mood || "engaging";
+        return `${generatedPost.visualDescription}. Style: ${style}. Mood: ${mood}.${colors ? ` Use these exact colors: ${colors}.` : ""} High-quality, Instagram-ready, scroll-stopping visual.`;
+      })();
 
-    const aspectRatio = post.format === "portrait" ? "4:5" : post.format === "landscape" ? "16:9" : "1:1";
+    const aspectRatio =
+      post.format === "portrait" ? "4:5" : post.format === "story" || post.format === "reel-cover" ? "9:16" : "1:1";
     const imageBuffer = await generateImageWithNanoBanana(imagePrompt, { aspectRatio });
 
     let visualUrl: string;

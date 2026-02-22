@@ -48,6 +48,13 @@ export function CreateBrandSpaceForm() {
         body: JSON.stringify({
           text,
           fieldLabel: POLISH_FIELD_LABELS[field],
+          context: {
+            accountPositioning: formData.valueProposition ? `${formData.name} - ${formData.valueProposition}` : formData.name,
+            targetAudiences: formData.targetAudiences || undefined,
+            painPoints: formData.painPoints || undefined,
+            contentPillars: formData.desiredOutcomes || undefined,
+            valueProposition: formData.valueProposition || undefined,
+          },
         }),
       });
       if (!res.ok) {

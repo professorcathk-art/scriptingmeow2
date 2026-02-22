@@ -70,9 +70,15 @@ export async function generateBrandbook(
   toneOfVoice: string;
   visualStyle: {
     colors: string[];
+    primaryColor?: string;
+    secondaryColor1?: string;
+    secondaryColor2?: string;
+    backgroundColor?: string;
     mood: string;
     imageStyle: string;
     layoutTendencies: string;
+    layoutStyle?: string;
+    vibe?: string[];
   };
   captionStructure: {
     hookPatterns: string[];
@@ -100,7 +106,7 @@ export async function generateBrandbook(
     : "General goals";
   const valueProp = brandData.valueProposition || "Unique value to customers";
 
-  const prompt = `You are a brand strategist creating a comprehensive brandbook for an Instagram-focused brand.
+  const prompt = `You are an expert brand visual design consultant creating a detailed Brand Book for Instagram content.
 
 Brand Information:
 - Name: ${brandData.name}
@@ -112,33 +118,40 @@ Brand Information:
 
 ${
   brandData.referenceImages && brandData.referenceImages.length > 0
-    ? `Reference Images: The brand has uploaded ${brandData.referenceImages.length} reference images that should inform the visual style.`
-    : ""
+    ? `Reference: The brand has uploaded ${brandData.referenceImages.length} reference images. Analyze their visual style (colors, typography, layout, mood) and reflect it in the brandbook.`
+    : "No reference images. Create a cohesive visual system based on the brand information."
 }
 
-Create a comprehensive brandbook in JSON format with the following structure:
+Output a comprehensive brandbook in JSON. Use English for all content.
+
 {
-  "brandPersonality": "A 2-3 sentence description of the brand's personality",
-  "toneOfVoice": "A 2-3 sentence description of how the brand communicates",
+  "brandPersonality": "2-3 sentences describing the brand's personality and character",
+  "toneOfVoice": "2-3 sentences on how the brand communicates (e.g., friendly but professional, direct and punchy)",
   "visualStyle": {
-    "colors": ["array of 3-5 primary brand colors"],
-    "mood": "The overall mood/feeling of visuals",
-    "imageStyle": "Description of image style (e.g., minimalist, vibrant, professional, casual)",
-    "layoutTendencies": "Common layout patterns and composition preferences"
+    "colors": ["array of 3-5 Hex codes, e.g. #5E66C2, #FF6B35, #2EC4B6. First = primary, rest = secondary/accents"],
+    "primaryColor": "Main brand Hex code, e.g. #5E66C2",
+    "secondaryColor1": "First accent Hex code",
+    "secondaryColor2": "Second accent Hex code",
+    "backgroundColor": "white / light / dark - for post backgrounds",
+    "mood": "Overall mood of visuals (e.g., warm and inviting, bold and energetic, calm and premium)",
+    "imageStyle": "photography / illustration / mixed. Describe style: minimalist, vibrant, editorial, lifestyle, product-focused, etc.",
+    "layoutTendencies": "card-style / minimal / info-dense / story-driven. Describe: borders, rounded corners, spacing, text placement",
+    "layoutStyle": "card / minimal / info-dense / story",
+    "vibe": ["3-5 adjectives for overall feel, e.g. professional yet approachable, modern, clean, trustworthy"]
   },
   "captionStructure": {
-    "hookPatterns": ["array of 3-5 hook patterns/styles"],
-    "bodyPatterns": ["array of 3-5 body content patterns"],
-    "ctaPatterns": ["array of 3-5 call-to-action patterns"],
-    "hashtagStyle": "Description of hashtag strategy and style"
+    "hookPatterns": ["3-5 hook styles that work for this brand"],
+    "bodyPatterns": ["3-5 body content patterns"],
+    "ctaPatterns": ["3-5 call-to-action patterns"],
+    "hashtagStyle": "Hashtag strategy and style"
   },
   "dosAndDonts": {
-    "dos": ["array of 5-7 things the brand should do"],
-    "donts": ["array of 5-7 things the brand should avoid"]
+    "dos": ["5-7 things the brand should do in visuals and captions"],
+    "donts": ["5-7 things to avoid: colors, fonts, layouts, tones that would hurt the brand"]
   }
 }
 
-Return ONLY valid JSON, no markdown formatting or additional text.`;
+Return ONLY valid JSON, no markdown.`;
 
   let lastError: unknown = null;
   for (const modelName of GEMINI_MODELS) {
@@ -160,14 +173,21 @@ Return ONLY valid JSON, no markdown formatting or additional text.`;
         const match = cleanedText.match(/\{[\s\S]*\}/);
         const jsonStr = match ? match[0] : cleanedText;
         const brandbook = JSON.parse(jsonStr);
+        const vs = brandbook.visualStyle || {};
         return {
           brandPersonality: brandbook.brandPersonality || "",
           toneOfVoice: brandbook.toneOfVoice || "",
           visualStyle: {
-            colors: Array.isArray(brandbook.visualStyle?.colors) ? brandbook.visualStyle.colors : [],
-            mood: brandbook.visualStyle?.mood || "",
-            imageStyle: brandbook.visualStyle?.imageStyle || "",
-            layoutTendencies: brandbook.visualStyle?.layoutTendencies || "",
+            colors: Array.isArray(vs.colors) ? vs.colors : [],
+            primaryColor: vs.primaryColor || (Array.isArray(vs.colors) ? vs.colors[0] : ""),
+            secondaryColor1: vs.secondaryColor1 || (Array.isArray(vs.colors) ? vs.colors[1] : ""),
+            secondaryColor2: vs.secondaryColor2 || (Array.isArray(vs.colors) ? vs.colors[2] : ""),
+            backgroundColor: vs.backgroundColor || "light",
+            mood: vs.mood || "",
+            imageStyle: (vs as { imageStyle?: string; image_style?: string }).imageStyle || (vs as { image_style?: string }).image_style || "",
+            layoutTendencies: vs.layoutTendencies || "",
+            layoutStyle: vs.layoutStyle || "",
+            vibe: Array.isArray(vs.vibe) ? vs.vibe : [],
           },
           captionStructure: {
             hookPatterns: Array.isArray(brandbook.captionStructure?.hookPatterns)
@@ -217,9 +237,24 @@ export async function generatePost(
     hashtags: string[];
   };
   visualDescription: string;
-  imageUrl?: string;
+  nanoBananaPrompt?: string;
 }> {
-  const prompt = `You are creating an Instagram post for a brand following their brandbook.
+  const vs = brandbook.visualStyle as {
+    primaryColor?: string;
+    secondaryColor1?: string;
+    secondaryColor2?: string;
+    colors?: string[];
+    mood?: string;
+    imageStyle?: string;
+    layoutStyle?: string;
+    vibe?: string[];
+  } | null;
+  const colors = vs?.primaryColor
+    ? [vs.primaryColor, vs.secondaryColor1, vs.secondaryColor2].filter(Boolean).join(", ")
+    : Array.isArray(vs?.colors) ? vs.colors.join(", ") : "";
+  const vibeStr = Array.isArray(vs?.vibe) ? vs.vibe.join(", ") : vs?.mood || "";
+
+  const prompt = `You are an expert IG content strategist and copywriter. Create an Instagram post that follows the brandbook strictly.
 
 Brandbook:
 - Personality: ${brandbook.brandPersonality}
@@ -228,24 +263,33 @@ Brandbook:
 - Caption Structure: ${JSON.stringify(brandbook.captionStructure)}
 - Do's and Don'ts: ${JSON.stringify(brandbook.dosAndDonts)}
 
-Post Requirements:
+Post Brief:
 - Content Idea: ${contentIdea}
 - Language: ${language}
 - Post Type: ${postType}
 - Format: ${format}
 
-Generate a complete Instagram post in JSON format:
-{
-  "caption": {
-    "hook": "An engaging hook (first 1-2 lines)",
-    "body": "The main body content (3-5 sentences)",
-    "cta": "A clear call-to-action",
-    "hashtags": ["array of 5-10 relevant hashtags"]
-  },
-  "visualDescription": "A detailed description of what the visual should look like, including colors, composition, text overlay if any, and style"
+Output JSON with two parts:
+
+1. "caption": {
+  "hook": "Strong, scroll-stopping hook (1-2 lines). Direct, curiosity-driven or emotionally resonant.",
+  "body": "Main content (3-5 sentences). Use second person 'you'. Clear value, no fluff.",
+  "cta": "Clear call-to-action. Invite to save, comment, or follow.",
+  "hashtags": ["5-10 relevant hashtags"]
 }
 
-Return ONLY valid JSON, no markdown formatting or additional text.`;
+2. "nanoBananaPrompt": A complete, detailed prompt for AI image generation (Nano Banana / Gemini). This will be used to generate the post visual. Requirements:
+- Describe the SCENE and COMPOSITION in detail (what is shown, layout, framing)
+- Include EXACT brand colors: ${colors || "use a cohesive, professional palette"}
+- Specify the MOOD and VIBE: ${vibeStr || "professional, engaging"}
+- Match the IMAGE STYLE from brandbook: ${vs?.imageStyle || "professional"}
+- For single-image: one cohesive visual. For carousel: describe the cover/first slide
+- Output dimensions: ${format === "portrait" ? "1080x1350px (4:5)" : format === "story" || format === "reel-cover" ? "1080x1920px (9:16)" : "1080x1080px (1:1 square)"}
+- If text overlay: describe placement, size, and style
+- Be specific: "A [style] [type of image] featuring [subject]. [Composition details]. Colors: [Hex codes]. [Mood]. Instagram-ready, high quality."
+- Do NOT use generic phrases. Be concrete and visual.
+
+Return ONLY valid JSON, no markdown.`;
 
   let lastError: unknown = null;
   for (const modelName of GEMINI_MODELS) {
@@ -264,7 +308,11 @@ Return ONLY valid JSON, no markdown formatting or additional text.`;
         const match = cleanedText.match(/\{[\s\S]*\}/);
         const jsonStr = match ? match[0] : cleanedText;
         const post = JSON.parse(jsonStr);
-        return post;
+        return {
+          caption: post.caption || { hook: "", body: "", cta: "", hashtags: [] },
+          visualDescription: post.visualDescription || post.nanoBananaPrompt || "",
+          nanoBananaPrompt: post.nanoBananaPrompt || post.visualDescription,
+        };
       }
       lastError = new Error("Empty or blocked response");
     } catch (err) {

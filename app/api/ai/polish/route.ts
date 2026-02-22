@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { text, fieldLabel } = await request.json();
+    const { text, fieldLabel, context } = await request.json();
 
     if (!text || typeof text !== "string") {
       return NextResponse.json(
@@ -38,11 +38,32 @@ export async function POST(request: Request) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    const prompt = `You are a professional copywriter. Polish and improve the following text for a brand. Keep the same meaning and intent, but make it clearer, more professional, and more compelling. Do not add new information—only refine what's there.
+    const contextBlock =
+      context && typeof context === "object"
+        ? `
+Brand context (use to inform the polish):
+${context.accountPositioning ? `- Account positioning: ${context.accountPositioning}` : ""}
+${context.targetAudiences ? `- Target audiences: ${context.targetAudiences}` : ""}
+${context.painPoints ? `- Audience pain points: ${context.painPoints}` : ""}
+${context.contentPillars ? `- Content pillars: ${context.contentPillars}` : ""}
+${context.valueProposition ? `- Value proposition: ${context.valueProposition}` : ""}
+`
+        : "";
+
+    const prompt = `You are an expert IG content strategist and brand copywriter. Polish and improve the following text for an Instagram-focused brand.
 
 Field: ${fieldLabel || "Brand description"}
 Original text:
 ${text}
+${contextBlock}
+
+Guidelines:
+- Keep the same meaning and intent. Do not add new information—only refine.
+- Make it clearer, more compelling, and Instagram-appropriate.
+- For target audiences: be specific (age, situation, goals). Avoid vague terms.
+- For pain points: focus on emotional and practical struggles the audience faces.
+- For value proposition: lead with benefit, be concise and memorable.
+- Use language that resonates with the target audience.
 
 Return ONLY the polished text, nothing else. No quotes, no preamble.`;
 

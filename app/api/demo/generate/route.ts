@@ -53,8 +53,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       caption: generatedPost.caption,
-      visualUrl: generatedPost.imageUrl,
       visualDescription: generatedPost.visualDescription,
+      nanoBananaPrompt: generatedPost.nanoBananaPrompt,
       brandDescription: trimmed,
     });
   } catch (error) {

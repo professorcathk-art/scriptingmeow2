@@ -184,7 +184,7 @@ export function BrandbookForm({
                 <label className={labelClass}>Image Style</label>
                 <input
                   type="text"
-                  value={brandbook.visual_style?.image_style || ""}
+                  value={brandbook.visual_style?.image_style || (brandbook.visual_style as { imageStyle?: string })?.imageStyle || ""}
                   onChange={(e) =>
                     setBrandbook({
                       ...brandbook,
