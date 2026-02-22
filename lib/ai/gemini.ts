@@ -292,7 +292,8 @@ export async function generatePost(
   postType: string,
   format: string,
   postStyle?: string,
-  preferPro?: boolean
+  preferPro?: boolean,
+  contentFramework?: string
 ): Promise<{
   caption: {
     hook: string;
@@ -333,7 +334,8 @@ Post Brief:
 - Language: ${language}
 - Post Type: ${postType}
 - Format: ${format}
-- Post Style (視覺風格): ${postStyle || "pure-image"} — pure-image=純圖片, image-with-title=圖片+標題, infographic=圖表/資訊圖, quote-overlay=引文疊加, split-layout=圖文分欄, before-after=前後對比, minimal-text=極簡文字
+- Content Framework (內容架構): ${contentFramework || "educational-value"} — educational-value=教育/乾貨, engagement-relatable=互動/共鳴, promotional-proof=宣傳/轉換, storytelling=品牌故事
+- Visual Layout (視覺排版): ${postStyle || "immersive-photo"} — editorial=雜誌排版 (split image/text), text-heavy=醒目大字 (bold typography), immersive-photo=純圖/極簡文字, tweet-card=推文/語錄 (quote/message), split-screen=圖文分割 (vertical split)
 
 Output JSON with two parts:
 
@@ -358,34 +360,40 @@ Output JSON with two parts:
 Return ONLY valid JSON, no markdown.`;
 
   const modelOrder = preferPro
-    ? (["gemini-3-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"] as const)
+    ? (["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-pro-preview"] as const)
     : GEMINI_MODELS;
   let lastError: unknown = null;
   for (const modelName of modelOrder) {
-    try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-        safetySettings: [...DEFAULT_SAFETY],
-      });
-      const result = await model.generateContent(prompt);
-      const response = result.response;
-      const text = safeGetText(response);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            temperature: attempt === 0 ? 0.7 : 0.5,
+            maxOutputTokens: 2048,
+          },
+          safetySettings: [...DEFAULT_SAFETY],
+        });
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const text = safeGetText(response);
 
-      if (text) {
-        const parsed = parsePostJson(text);
-        if (parsed) {
-          return {
-            caption: parsed.caption,
-            visualDescription: parsed.nanoBananaPrompt,
-            nanoBananaPrompt: parsed.nanoBananaPrompt,
-          };
+        if (text) {
+          const parsed = parsePostJson(text);
+          if (parsed) {
+            return {
+              caption: parsed.caption,
+              visualDescription: parsed.nanoBananaPrompt,
+              nanoBananaPrompt: parsed.nanoBananaPrompt,
+            };
+          }
         }
+        lastError = new Error("Empty or blocked response");
+      } catch (err) {
+        console.warn(`[generatePost] Model ${modelName} attempt ${attempt + 1} failed:`, err);
+        lastError = err;
       }
-      lastError = new Error("Empty or blocked response");
-    } catch (err) {
-      console.warn(`[generatePost] Model ${modelName} failed:`, err);
-      lastError = err;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1000));
     }
   }
   const msg = lastError instanceof Error ? lastError.message : "Unknown error";

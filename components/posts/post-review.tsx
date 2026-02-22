@@ -5,7 +5,29 @@ import { useRouter } from "next/navigation";
 import type { GeneratedPost } from "@/types/database";
 
 interface PostReviewProps {
-  post: GeneratedPost & { brand_spaces?: { name: string } };
+  post: GeneratedPost & { brand_spaces?: { name: string }; format?: string };
+}
+
+/** Build full caption as one block for copy-paste (hook, body, cta, hashtags). */
+function captionToParagraph(c: { hook: string; body: string; cta: string; hashtags: string[] }): string {
+  const parts = [c.hook, c.body, c.cta].filter(Boolean);
+  const hashtags = Array.isArray(c.hashtags) ? c.hashtags.filter(Boolean) : [];
+  const hashtagStr = hashtags.length ? hashtags.join(" ") : "";
+  return [...parts, hashtagStr].filter(Boolean).join("\n\n");
+}
+
+/** Parse one-block caption back to structured parts. */
+function paragraphToCaption(text: string): { hook: string; body: string; cta: string; hashtags: string[] } {
+  const hashtagMatch = text.match(/\n(#[\w\u4e00-\u9fff]+(?:\s+#[\w\u4e00-\u9fff]+)*)\s*$/);
+  const hashtags = hashtagMatch
+    ? hashtagMatch[1].split(/\s+/).filter(Boolean)
+    : [];
+  const main = hashtagMatch ? text.slice(0, hashtagMatch.index).trim() : text.trim();
+  const blocks = main.split(/\n\n+/).filter(Boolean);
+  const hook = blocks[0] || "";
+  const cta = blocks.length >= 3 ? blocks[blocks.length - 1] || "" : "";
+  const body = blocks.length >= 2 ? blocks.slice(1, blocks.length - (blocks.length >= 3 ? 1 : 0)).join("\n\n") : "";
+  return { hook, body, cta, hashtags };
 }
 
 export function PostReview({ post: initialPost }: PostReviewProps) {
@@ -14,6 +36,7 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
   const [post, setPost] = useState(initialPost);
   const [caption, setCaption] = useState(initialPost.caption);
   const [imageError, setImageError] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setPost(initialPost);
@@ -42,6 +65,38 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
       alert("Failed to save post. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCopyCaption = async () => {
+    const text = captionToParagraph(caption);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      alert("Failed to copy");
+    }
+  };
+
+  const handleSaveImage = async () => {
+    if (!post.visual_url || imageError) return;
+    try {
+      const res = await fetch(post.visual_url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `post-${post.id}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      const link = document.createElement("a");
+      link.href = post.visual_url;
+      link.download = `post-${post.id}.png`;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.click();
     }
   };
 
@@ -79,8 +134,28 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="glass-elevated p-6 rounded-2xl">
-          <h2 className="text-xl font-semibold text-white mb-4">Visual Preview</h2>
-          <div className="aspect-square bg-white/5 rounded-xl flex items-center justify-center overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-white">Visual Preview</h2>
+            {post.visual_url && !imageError && (
+              <button
+                onClick={handleSaveImage}
+                className="text-sm text-violet-400 hover:text-violet-300 px-3 py-1.5 rounded-lg border border-violet-500/30 hover:bg-violet-500/10"
+              >
+                Save Image
+              </button>
+            )}
+          </div>
+          <div
+            className="bg-white/5 rounded-xl flex items-center justify-center overflow-hidden"
+            style={{
+              aspectRatio:
+                post.format === "portrait"
+                  ? "4/5"
+                  : post.format === "story" || post.format === "reel-cover"
+                    ? "9/16"
+                    : "1/1",
+            }}
+          >
             {post.visual_url && !imageError ? (
               <img
                 src={post.visual_url}
@@ -99,76 +174,37 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
         <div className="glass-elevated p-6 rounded-2xl">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-white">Caption</h2>
-            <button
-              onClick={handleRegenerate}
-              disabled={loading}
-              className="text-sm text-violet-400 hover:text-violet-300 disabled:opacity-50"
-            >
-              Regenerate
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">
-                Hook
-              </label>
-              <textarea
-                value={caption.hook}
-                onChange={(e) =>
-                  setCaption({ ...caption, hook: e.target.value })
-                }
-                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                rows={2}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">
-                Body
-              </label>
-              <textarea
-                value={caption.body}
-                onChange={(e) =>
-                  setCaption({ ...caption, body: e.target.value })
-                }
-                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                rows={4}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">
-                Call to Action
-              </label>
-              <textarea
-                value={caption.cta}
-                onChange={(e) =>
-                  setCaption({ ...caption, cta: e.target.value })
-                }
-                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                rows={2}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">
-                Hashtags
-              </label>
-              <input
-                type="text"
-                value={Array.isArray(caption.hashtags) ? caption.hashtags.join(" ") : ""}
-                onChange={(e) =>
-                  setCaption({
-                    ...caption,
-                    hashtags: e.target.value.split(" ").filter((h) => h.trim()),
-                  })
-                }
-                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                placeholder="#hashtag1 #hashtag2"
-              />
+            <div className="flex gap-2">
+              <button
+                onClick={handleCopyCaption}
+                className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+                  copied
+                    ? "border-emerald-500/50 text-emerald-400 bg-emerald-500/10"
+                    : "border-violet-500/30 text-violet-400 hover:text-violet-300 hover:bg-violet-500/10"
+                }`}
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+              <button
+                onClick={handleRegenerate}
+                disabled={loading}
+                className="text-sm text-violet-400 hover:text-violet-300 disabled:opacity-50 px-3 py-1.5 rounded-lg border border-violet-500/30 hover:bg-violet-500/10"
+              >
+                Regenerate
+              </button>
             </div>
           </div>
+
+          <p className="text-sm text-zinc-400 mb-2">
+            Full caption (edit and copy-paste directly to Instagram):
+          </p>
+          <textarea
+            value={captionToParagraph(caption)}
+            onChange={(e) => setCaption(paragraphToCaption(e.target.value))}
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 min-h-[200px]"
+            rows={10}
+            placeholder="Hook&#10;&#10;Body&#10;&#10;CTA&#10;&#10;#hashtag1 #hashtag2"
+          />
         </div>
       </div>
 

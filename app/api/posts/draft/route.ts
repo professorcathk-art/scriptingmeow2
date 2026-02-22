@@ -27,7 +27,8 @@ export async function POST(request: Request) {
   const format = (body.format as string) || "square";
   const language = (body.language as string) || "English";
   const contentIdea = (body.contentIdea as string) || "";
-  const postStyle = (body.postStyle as string) || "pure-image";
+  const postStyle = (body.postStyle as string) || "immersive-photo";
+  const contentFramework = (body.contentFramework as string) || "educational-value";
 
   if (!brandSpaceId || typeof brandSpaceId !== "string") {
     return NextResponse.json(
@@ -90,7 +91,8 @@ export async function POST(request: Request) {
       postType,
       format,
       postStyle,
-      true // prefer Gemini Pro for text output
+      true, // prefer Gemini Pro for text output
+      contentFramework
     );
 
     return NextResponse.json({

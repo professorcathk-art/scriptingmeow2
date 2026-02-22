@@ -33,6 +33,7 @@ export async function POST(request: Request) {
     contentIdea,
     variations,
     postStyle,
+    contentFramework,
     confirmedCaption,
     confirmedVisualAdvice,
   } = body as {
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
     contentIdea?: string;
     variations?: number;
     postStyle?: string;
+    contentFramework?: string;
     confirmedCaption?: { hook: string; body: string; cta: string; hashtags: string[] };
     confirmedVisualAdvice?: string;
   };
@@ -103,7 +105,9 @@ export async function POST(request: Request) {
         language || "English",
         postType || "single-image",
         format || "square",
-        postStyle
+        postStyle,
+        false,
+        contentFramework
       );
       caption = generatedPost.caption;
       imagePrompt =

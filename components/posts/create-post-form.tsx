@@ -34,6 +34,52 @@ function SquaresIcon({ className }: { className?: string }) {
   );
 }
 
+function EditorialIcon() {
+  return (
+    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="2" y="4" width="20" height="16" rx="1" strokeWidth={2} />
+      <line x1="2" y1="10" x2="22" y2="10" strokeWidth={2} />
+      <line x1="8" y1="14" x2="14" y2="14" strokeWidth={1.5} />
+      <line x1="8" y1="17" x2="12" y2="17" strokeWidth={1.5} />
+    </svg>
+  );
+}
+
+function TextHeavyIcon() {
+  return (
+    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h12M4 18h10" />
+    </svg>
+  );
+}
+
+function ImmersivePhotoIcon() {
+  return (
+    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="14" rx="1" strokeWidth={2} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14l3-3 2 2 4-5 2 3" />
+    </svg>
+  );
+}
+
+function TweetCardIcon() {
+  return (
+    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+    </svg>
+  );
+}
+
+function SplitScreenIcon() {
+  return (
+    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="2" y="4" width="9" height="16" rx="1" strokeWidth={2} />
+      <rect x="13" y="4" width="9" height="16" rx="1" strokeWidth={2} />
+      <line x1="12" y1="4" x2="12" y2="20" strokeWidth={1.5} strokeDasharray="2 2" />
+    </svg>
+  );
+}
+
 export function CreatePostForm({
   brandSpaces,
   userCredits,
@@ -53,7 +99,8 @@ export function CreatePostForm({
     language: "English",
     customLanguage: "",
     contentIdea: "",
-    postStyle: "pure-image" as string,
+    contentFramework: "educational-value" as string,
+    postStyle: "immersive-photo" as string,
     variations: 1,
   });
 
@@ -94,6 +141,7 @@ export function CreatePostForm({
           format: formData.format,
           language: effectiveLanguage,
           contentIdea: formData.contentIdea,
+          contentFramework: formData.contentFramework,
           postStyle: formData.postStyle,
         }),
       });
@@ -138,6 +186,7 @@ export function CreatePostForm({
           language: effectiveLanguage,
           contentIdea: formData.contentIdea,
           variations: formData.variations,
+          contentFramework: formData.contentFramework,
           postStyle: formData.postStyle,
           confirmedCaption: draft.caption,
           confirmedVisualAdvice: draft.visualAdvice,
@@ -334,6 +383,46 @@ export function CreatePostForm({
   }
 
   if (step === 2) {
+    const CONTENT_FRAMEWORK_OPTIONS = [
+      { value: "educational-value", label: "Educational / Value", zh: "教育/乾貨" },
+      { value: "engagement-relatable", label: "Engagement / Relatable", zh: "互動/共鳴" },
+      { value: "promotional-proof", label: "Promotional / Proof", zh: "宣傳/轉換" },
+      { value: "storytelling", label: "Storytelling", zh: "品牌故事" },
+    ];
+
+    const VISUAL_LAYOUT_OPTIONS = [
+      {
+        value: "editorial",
+        label: "Editorial",
+        zh: "雜誌排版",
+        icon: EditorialIcon,
+      },
+      {
+        value: "text-heavy",
+        label: "Text-Heavy",
+        zh: "醒目大字",
+        icon: TextHeavyIcon,
+      },
+      {
+        value: "immersive-photo",
+        label: "Immersive Photo",
+        zh: "純圖/極簡文字",
+        icon: ImmersivePhotoIcon,
+      },
+      {
+        value: "tweet-card",
+        label: "Tweet Card",
+        zh: "推文/語錄",
+        icon: TweetCardIcon,
+      },
+      {
+        value: "split-screen",
+        label: "Split Screen",
+        zh: "圖文分割",
+        icon: SplitScreenIcon,
+      },
+    ];
+
     return (
       <div className={cardClass}>
         <Stepper />
@@ -351,7 +440,7 @@ export function CreatePostForm({
             onChange={(e) =>
               setFormData({ ...formData, language: e.target.value })
             }
-            className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+            className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
           >
             {LANGUAGE_OPTIONS.map((lang) => (
               <option key={lang} value={lang}>
@@ -368,7 +457,7 @@ export function CreatePostForm({
                 setFormData({ ...formData, customLanguage: e.target.value })
               }
               placeholder="Enter your language"
-              className="mt-2 w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              className="mt-2 w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             />
           )}
         </div>
@@ -383,42 +472,67 @@ export function CreatePostForm({
             onChange={(e) =>
               setFormData({ ...formData, contentIdea: e.target.value })
             }
-            className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+            className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             rows={6}
             placeholder="e.g., Announce our new product launch, share a customer testimonial, or create an educational carousel about..."
           />
         </div>
 
         <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
-          <p className="text-sm font-medium text-zinc-400 mb-2">
-            Post Style (視覺風格)
+          <p className="text-sm font-medium text-zinc-400 mb-3">
+            Content Framework (內容架構)
           </p>
           <p className="text-xs text-zinc-500 mb-3">
-            Choose the visual style. Your content idea above stays unchanged.
+            Select the strategic goal of your post.
           </p>
           <div className="flex flex-wrap gap-2">
-            {[
-              { value: "pure-image", label: "純圖片 (No text overlay)" },
-              { value: "image-with-title", label: "圖片+標題 (Image with title)" },
-              { value: "infographic", label: "圖表/資訊圖 (Illustrative graphs)" },
-              { value: "quote-overlay", label: "引文疊加 (Quote overlay)" },
-              { value: "split-layout", label: "圖文分欄 (Photo + text card)" },
-              { value: "before-after", label: "前後對比 (Before & after)" },
-              { value: "minimal-text", label: "極簡文字 (Minimal subtle text)" },
-            ].map(({ value, label }) => (
+            {CONTENT_FRAMEWORK_OPTIONS.map(({ value, label, zh }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, contentFramework: value })
+                }
+                className={`px-4 py-2 text-sm rounded-xl border transition-all ${
+                  formData.contentFramework === value
+                    ? "border-indigo-500 bg-indigo-500/20 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
+                    : "border-white/10 text-zinc-400 hover:text-zinc-100 hover:border-indigo-500/30 hover:bg-zinc-800/50"
+                }`}
+              >
+                {label} <span className={formData.contentFramework === value ? "text-indigo-300/80" : "text-zinc-500"}>({zh})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
+          <p className="text-sm font-medium text-zinc-400 mb-3">
+            Visual Layout (視覺排版)
+          </p>
+          <p className="text-xs text-zinc-500 mb-4">
+            Choose the layout style for your post image.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {VISUAL_LAYOUT_OPTIONS.map(({ value, label, zh, icon: Icon }) => (
               <button
                 key={value}
                 type="button"
                 onClick={() =>
                   setFormData({ ...formData, postStyle: value })
                 }
-                className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col items-start gap-3 hover:border-indigo-500/50 hover:bg-zinc-800/50 ${
                   formData.postStyle === value
-                    ? "border-violet-500 bg-violet-500/20 text-violet-200"
-                    : "border-white/10 text-zinc-400 hover:text-zinc-100 hover:border-white/20 hover:bg-white/5"
+                    ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+                    : "border-white/10 bg-zinc-800/20"
                 }`}
               >
-                {label}
+                <div className="w-10 h-10 flex items-center justify-center text-indigo-400/80">
+                  <Icon />
+                </div>
+                <div>
+                  <div className="font-medium text-zinc-100 text-sm">{label}</div>
+                  <div className="text-xs text-zinc-500">{zh}</div>
+                </div>
               </button>
             ))}
           </div>
@@ -439,7 +553,7 @@ export function CreatePostForm({
               !formData.contentIdea ||
               (formData.language === "Other" && !formData.customLanguage.trim())
             }
-            className="flex-1 px-4 py-2.5 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
             Next: Generate Draft
           </button>
