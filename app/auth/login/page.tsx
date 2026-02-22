@@ -12,15 +12,32 @@ export default function LoginPage() {
 
   useEffect(() => {
     const form = document.querySelector('form') as HTMLFormElement;
+    const button = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+    
     if (form) {
       console.log("Form found, attaching test listener");
       const testHandler = () => {
         console.log("NATIVE FORM SUBMIT EVENT FIRED");
       };
       form.addEventListener('submit', testHandler);
-      return () => form.removeEventListener('submit', testHandler);
+      
+      if (button) {
+        console.log("Button found, attaching click listener");
+        button.addEventListener('click', () => {
+          console.log("NATIVE BUTTON CLICK EVENT FIRED");
+        });
+      }
+      
+      return () => {
+        form.removeEventListener('submit', testHandler);
+      };
     }
   }, []);
+
+  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log("REACT BUTTON CLICK HANDLER CALLED");
+    // Don't prevent default - let form submit naturally
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -33,6 +50,7 @@ export default function LoginPage() {
     setLoading(true);
 
     if (!email || !password) {
+      console.log("Validation failed - missing email or password");
       setError("Please enter email and password");
       setLoading(false);
       return;
@@ -42,7 +60,7 @@ export default function LoginPage() {
       console.log("Creating Supabase client...");
       const supabase = createClient();
       console.log("Supabase client created");
-      console.log("Calling signInWithPassword...");
+      console.log("Calling signInWithPassword with email:", email.trim());
       
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -51,7 +69,8 @@ export default function LoginPage() {
 
       console.log("Auth response:", { 
         hasData: !!data, 
-        hasSession: !!data?.session, 
+        hasSession: !!data?.session,
+        sessionUser: data?.session?.user?.email,
         error: signInError?.message 
       });
 
@@ -63,7 +82,7 @@ export default function LoginPage() {
       }
 
       if (data?.session) {
-        console.log("SUCCESS - Session created, redirecting...");
+        console.log("SUCCESS - Session created, redirecting to dashboard");
         window.location.href = "/dashboard";
       } else {
         console.error("No session in response");
@@ -89,7 +108,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -102,7 +121,10 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  console.log("Email onChange:", e.target.value);
+                  setEmail(e.target.value);
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -118,7 +140,10 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  console.log("Password onChange:", e.target.value.length, "chars");
+                  setPassword(e.target.value);
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -126,6 +151,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
+              onClick={handleButtonClick}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Signing in..." : "Sign In"}
