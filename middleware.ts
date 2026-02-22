@@ -27,6 +27,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Root: redirect to login if unauthenticated, dashboard if authenticated
+  if (request.nextUrl.pathname === "/") {
+    return user
+      ? NextResponse.redirect(new URL("/dashboard", request.url))
+      : NextResponse.redirect(new URL("/auth/login", request.url));
+  }
+
   // Protect dashboard routes
   if (
     request.nextUrl.pathname.startsWith('/dashboard') ||
