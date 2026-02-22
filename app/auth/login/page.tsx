@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +11,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     console.log("🟢 LoginPage mounted - React is working");
@@ -21,7 +24,31 @@ export default function LoginPage() {
     if (form) {
       console.log("🟢 Form has onSubmit:", typeof (form as any).onsubmit);
     }
+
+    // Test if inputs exist
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+    console.log("🟢 Email input found:", !!emailInput);
+    console.log("🟢 Password input found:", !!passwordInput);
+    
+    if (emailInput) {
+      emailInput.addEventListener('input', (e) => {
+        console.log("🔵 Native input event fired on email:", (e.target as HTMLInputElement).value);
+      });
+    }
   }, []);
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    console.log("🔵 Email onChange handler called:", val);
+    setEmail(val);
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    console.log("🔵 Password onChange handler called:", val.length, "chars");
+    setPassword(val);
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -96,24 +123,21 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form ref={formRef} onSubmit={handleSubmit} noValidate>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
               <input
+                ref={emailRef}
                 type="email"
                 id="email"
                 name="email"
                 required
                 autoComplete="email"
                 value={email}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  console.log("🔵 Email changed:", val);
-                  setEmail(val);
-                }}
+                onChange={handleEmailChange}
                 onBlur={() => console.log("🔵 Email blurred, current value:", email)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
@@ -124,17 +148,14 @@ export default function LoginPage() {
                 Password
               </label>
               <input
+                ref={passwordRef}
                 type="password"
                 id="password"
                 name="password"
                 required
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  console.log("🔵 Password changed:", val.length, "chars");
-                  setPassword(val);
-                }}
+                onChange={handlePasswordChange}
                 onBlur={() => console.log("🔵 Password blurred, current length:", password.length)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
