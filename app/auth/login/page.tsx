@@ -1,20 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    console.log("FORM SUBMIT CALLED");
+    console.log("FORM SUBMIT CALLED", { email, password: "***" });
     setError("");
     setLoading(true);
 
@@ -25,29 +23,38 @@ export default function LoginPage() {
     }
 
     try {
+      console.log("Creating Supabase client...");
       const supabase = createClient();
+      console.log("Calling signInWithPassword...");
+      
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       });
 
+      console.log("Response:", { hasData: !!data, hasSession: !!data?.session, error: signInError?.message });
+
       if (signInError) {
+        console.error("Error:", signInError);
         setError(signInError.message);
         setLoading(false);
         return;
       }
 
       if (data?.session) {
+        console.log("SUCCESS - Redirecting to dashboard");
         window.location.href = "/dashboard";
       } else {
+        console.error("No session");
         setError("Login failed - no session created");
         setLoading(false);
       }
     } catch (err: any) {
+      console.error("Exception:", err);
       setError(err.message || "An error occurred");
       setLoading(false);
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
