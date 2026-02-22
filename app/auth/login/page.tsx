@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -10,9 +10,21 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const form = document.querySelector('form');
+    if (form) {
+      console.log("Form found, attaching test listener");
+      const testHandler = (e: Event) => {
+        console.log("NATIVE FORM SUBMIT EVENT FIRED");
+      };
+      form.addEventListener('submit', testHandler);
+      return () => form.removeEventListener('submit', testHandler);
+    }
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    console.log("FORM SUBMIT CALLED", { email, password: "***" });
+    console.log("REACT FORM SUBMIT HANDLER CALLED");
     setError("");
     setLoading(true);
 
