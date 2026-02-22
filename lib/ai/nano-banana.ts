@@ -1,6 +1,6 @@
 /**
  * Gemini Nano Banana image generation.
- * Uses Nano Banana Pro (gemini-2.5-flash-preview-05-20) for better Chinese text.
+ * Uses Nano Banana Pro (Gemini 3 Pro Image) for best quality and Chinese text.
  * Falls back to gemini-2.5-flash-image if Pro fails.
  * @see https://ai.google.dev/gemini-api/docs/image-generation
  */
