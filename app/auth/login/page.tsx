@@ -11,20 +11,25 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const form = document.querySelector('form');
+    const form = document.querySelector('form') as HTMLFormElement;
     if (form) {
       console.log("Form found, attaching test listener");
-      const testHandler = (e: Event) => {
+      const testHandler = (e: SubmitEvent) => {
         console.log("NATIVE FORM SUBMIT EVENT FIRED");
+        e.preventDefault(); // Prevent default to let React handle it
       };
       form.addEventListener('submit', testHandler);
       return () => form.removeEventListener('submit', testHandler);
     }
   }, []);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     console.log("REACT FORM SUBMIT HANDLER CALLED");
+    console.log("Email:", email);
+    console.log("Password length:", password.length);
+    
     setError("");
     setLoading(true);
 
@@ -37,6 +42,7 @@ export default function LoginPage() {
     try {
       console.log("Creating Supabase client...");
       const supabase = createClient();
+      console.log("Supabase client created");
       console.log("Calling signInWithPassword...");
       
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -44,20 +50,24 @@ export default function LoginPage() {
         password: password.trim(),
       });
 
-      console.log("Response:", { hasData: !!data, hasSession: !!data?.session, error: signInError?.message });
+      console.log("Auth response:", { 
+        hasData: !!data, 
+        hasSession: !!data?.session, 
+        error: signInError?.message 
+      });
 
       if (signInError) {
-        console.error("Error:", signInError);
+        console.error("Sign in error:", signInError);
         setError(signInError.message);
         setLoading(false);
         return;
       }
 
       if (data?.session) {
-        console.log("SUCCESS - Redirecting to dashboard");
+        console.log("SUCCESS - Session created, redirecting...");
         window.location.href = "/dashboard";
       } else {
-        console.error("No session");
+        console.error("No session in response");
         setError("Login failed - no session created");
         setLoading(false);
       }
@@ -66,7 +76,7 @@ export default function LoginPage() {
       setError(err.message || "An error occurred");
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -80,7 +90,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
