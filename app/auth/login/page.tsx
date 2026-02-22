@@ -28,9 +28,11 @@ export default function LoginPage() {
     }
 
     if (data.session) {
-      // Wait a moment for cookies to be set
-      await new Promise(resolve => setTimeout(resolve, 500));
-      window.location.href = "/dashboard";
+      // Refresh the session to ensure cookies are synced
+      await supabase.auth.getSession();
+      // Use router.push with refresh for proper Next.js navigation
+      router.push("/dashboard");
+      router.refresh();
     } else {
       alert("Login failed - no session created");
       setLoading(false);
