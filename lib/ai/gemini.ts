@@ -365,11 +365,7 @@ Return ONLY valid JSON, no markdown.`;
     try {
       const model = genAI.getGenerativeModel({
         model: modelName,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
-          responseMimeType: "application/json",
-        } as Record<string, unknown>,
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
         safetySettings: [...DEFAULT_SAFETY],
       });
       const result = await model.generateContent(prompt);
