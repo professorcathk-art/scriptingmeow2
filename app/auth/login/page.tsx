@@ -24,7 +24,12 @@ export default function LoginPage() {
     if (error) {
       alert(error.message);
       setLoading(false);
-    } else if (data.session) {
+      return;
+    }
+
+    if (data.session) {
+      // Wait a moment for cookies to be set
+      await new Promise(resolve => setTimeout(resolve, 500));
       window.location.href = "/dashboard";
     } else {
       alert("Login failed - no session created");
