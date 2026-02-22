@@ -5,8 +5,21 @@ import {
   HarmCategory,
   HarmBlockThreshold,
 } from "@google/generative-ai";
+import { generateContentV1Beta, isV1BetaModel, safetyToV1Beta } from "@/lib/ai/gemini";
 
-const GEMINI_MODELS = ["gemini-3-pro-preview", "gemini-2.5-flash", "gemini-2.5-pro"] as const;
+const GEMINI_MODELS = ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"] as const;
+
+const DEFAULT_SAFETY = [
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+] as const;
+
+type GenerateContentResponse = {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
+  promptFeedback?: { blockReason?: string };
+};
 
 export async function POST(request: Request) {
   try {
@@ -70,22 +83,23 @@ Return ONLY the polished text, nothing else. No quotes, no preamble.`;
     let lastError: unknown = null;
     for (const modelName of GEMINI_MODELS) {
       try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            temperature: 0.7,
+        let response: GenerateContentResponse;
+        if (isV1BetaModel(modelName)) {
+          response = await generateContentV1Beta(modelName, [{ text: prompt }], {
+            temperature: 1.0,
             maxOutputTokens: 1024,
-          },
-          safetySettings: [
-            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-          ],
-        });
-
-        const result = await model.generateContent(prompt);
-        const response = result.response;
+            thinkingLevel: "low",
+            safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
+          });
+        } else {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+            safetySettings: [...DEFAULT_SAFETY],
+          });
+          const result = await model.generateContent(prompt);
+          response = result.response;
+        }
 
         if (!response.candidates || response.candidates.length === 0) {
           const blockReason = response.promptFeedback?.blockReason || "No candidates returned";

@@ -6,7 +6,72 @@ import {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-const GEMINI_MODELS = ["gemini-3-pro-preview", "gemini-2.5-flash", "gemini-2.5-pro"] as const;
+/** Models that require v1beta (Gemini 3). Legacy @google/generative-ai SDK uses v1 only. */
+const V1BETA_MODELS = ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview"] as const;
+
+const GEMINI_MODELS = ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"] as const;
+
+const API_BASE_V1BETA = "https://generativelanguage.googleapis.com/v1beta";
+
+type ContentPart = { text: string } | { inlineData: { mimeType: string; data: string } };
+
+/**
+ * Call generateContent via v1beta REST API. Required for Gemini 3 (not in v1).
+ * @see https://ai.google.dev/gemini-api/docs/gemini-3
+ */
+export async function generateContentV1Beta(
+  model: string,
+  parts: ContentPart[],
+  options: { temperature?: number; maxOutputTokens?: number; safetySettings?: Array<{ category: string; threshold: string }>; thinkingLevel?: "low" | "medium" | "high" | "minimal" }
+): Promise<{ candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+
+  const url = `${API_BASE_V1BETA}/models/${model}:generateContent`;
+  const generationConfig: Record<string, unknown> = {
+    temperature: options.temperature ?? 1.0,
+    maxOutputTokens: options.maxOutputTokens ?? 1024,
+  };
+  if (options.thinkingLevel) {
+    generationConfig.thinkingConfig = { thinkingLevel: options.thinkingLevel };
+  }
+  const body = {
+    contents: [{ parts }],
+    generationConfig,
+    safetySettings: options.safetySettings ?? [
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
+    ],
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`[${res.status}] ${errText}`);
+  }
+
+  return (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+}
+
+export function isV1BetaModel(model: string): boolean {
+  return (V1BETA_MODELS as readonly string[]).includes(model);
+}
+
+export function safetyToV1Beta(
+  settings: ReadonlyArray<{ category: (typeof HarmCategory)[keyof typeof HarmCategory]; threshold: (typeof HarmBlockThreshold)[keyof typeof HarmBlockThreshold] }>
+): Array<{ category: string; threshold: string }> {
+  return settings.map((s) => ({ category: s.category, threshold: s.threshold }));
+}
 
 const DEFAULT_SAFETY = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
@@ -221,16 +286,29 @@ Return ONLY valid JSON, no markdown.`;
   contentParts.push(...imageParts);
 
   let lastError: unknown = null;
+  const v1BetaParts: ContentPart[] = contentParts.map((p) =>
+    "text" in p ? { text: p.text } : { inlineData: p.inlineData }
+  );
   for (const modelName of GEMINI_MODELS) {
     try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
-        safetySettings: [...DEFAULT_SAFETY],
-      });
-      const result = await model.generateContent(contentParts);
-      const response = result.response;
-      const text = safeGetText(response);
+      let text: string | null;
+      if (isV1BetaModel(modelName)) {
+        const response = await generateContentV1Beta(modelName, v1BetaParts, {
+          temperature: 1.0,
+          maxOutputTokens: 4096,
+          thinkingLevel: "low",
+          safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
+        });
+        text = safeGetText(response);
+      } else {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+          safetySettings: [...DEFAULT_SAFETY],
+        });
+        const result = await model.generateContent(contentParts);
+        text = safeGetText(result.response);
+      }
 
       if (text) {
         const cleanedText = text
@@ -343,21 +421,32 @@ Output JSON only:
 - nanoBananaPrompt: image gen prompt. Scene, composition, colors ${colors || ""}, mood, ${format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1"}. Specific, visual, Instagram-ready.`;
 
   const modelOrder = preferPro
-    ? (["gemini-2.5-flash", "gemini-3-pro-preview", "gemini-2.5-pro"] as const)
+    ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
     : GEMINI_MODELS;
   const safetyOrder = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
+  const parts: ContentPart[] = [{ text: prompt }];
   let lastError: unknown = null;
   for (const modelName of modelOrder) {
     for (const safetySettings of safetyOrder) {
       try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: { temperature: 0.6, maxOutputTokens: 1024 },
-          safetySettings: [...safetySettings],
-        });
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = safeGetText(response);
+        let text: string | null;
+        if (isV1BetaModel(modelName)) {
+          const response = await generateContentV1Beta(modelName, parts, {
+            temperature: 1.0,
+            maxOutputTokens: 1024,
+            thinkingLevel: "low",
+            safetySettings: safetyToV1Beta(safetySettings),
+          });
+          text = safeGetText(response);
+        } else {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: { temperature: 0.6, maxOutputTokens: 1024 },
+            safetySettings: [...safetySettings],
+          });
+          const result = await model.generateContent(prompt);
+          text = safeGetText(result.response);
+        }
 
         if (text) {
           const parsed = parsePostJson(text);
