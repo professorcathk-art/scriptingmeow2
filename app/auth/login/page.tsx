@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -11,18 +11,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    console.log("✅ LoginPage component mounted");
-    console.log("✅ React is working");
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    e.stopPropagation();
-    console.log("✅ FORM SUBMITTED", { email, password });
     setError("");
     setLoading(true);
 
@@ -33,46 +24,31 @@ export default function LoginPage() {
     }
 
     try {
-      console.log("✅ Creating Supabase client...");
       const supabase = createClient();
-      console.log("✅ Calling signInWithPassword...");
       
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       });
 
-      console.log("✅ Auth response:", { hasData: !!data, hasError: !!signInError });
-
       if (signInError) {
-        console.error("❌ Sign in error:", signInError);
         setError(signInError.message);
         setLoading(false);
         return;
       }
 
       if (data?.session) {
-        console.log("✅ Login successful, redirecting...");
-        window.location.href = "/dashboard";
+        router.push("/dashboard");
+        router.refresh();
       } else {
-        console.error("❌ No session in response");
         setError("Login failed - no session created");
         setLoading(false);
       }
     } catch (err: any) {
-      console.error("❌ Exception:", err);
       setError(err.message || "An error occurred");
       setLoading(false);
     }
   };
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -99,11 +75,7 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 value={email}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  console.log("✅ Email changed:", val);
-                  setEmail(val);
-                }}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -119,10 +91,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => {
-                  console.log("✅ Password changed");
-                  setPassword(e.target.value);
-                }}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
