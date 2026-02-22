@@ -18,11 +18,13 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     console.log("🔵 Form submitted", { email, password: "***" });
     setError("");
     setLoading(true);
 
     if (!email || !password) {
+      console.log("🔴 Validation failed: missing email or password");
       setError("Please enter email and password");
       setLoading(false);
       return;
@@ -31,16 +33,18 @@ export default function LoginPage() {
     try {
       console.log("🔵 Creating Supabase client...");
       const supabase = createClient();
+      console.log("🔵 Supabase client created");
       
-      console.log("🔵 Calling signInWithPassword...");
+      console.log("🔵 Calling signInWithPassword with:", { email: email.trim() });
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       });
 
-      console.log("🔵 Response:", { 
+      console.log("🔵 Auth response received:", { 
         hasData: !!data, 
         hasSession: !!data?.session,
+        sessionUser: data?.session?.user?.email,
         error: signInError?.message 
       });
 
@@ -52,9 +56,15 @@ export default function LoginPage() {
       }
 
       if (data?.session) {
-        console.log("🟢 Login successful! Session:", data.session);
-        console.log("🟢 Redirecting to dashboard...");
-        window.location.href = "/dashboard";
+        console.log("🟢 Login successful! Session user:", data.session.user.email);
+        console.log("🟢 Session token exists:", !!data.session.access_token);
+        console.log("🟢 Redirecting to dashboard in 500ms...");
+        
+        // Wait a bit for cookies to be set
+        setTimeout(() => {
+          console.log("🟢 Executing redirect now...");
+          window.location.href = "/dashboard";
+        }, 500);
       } else {
         console.error("🔴 No session in response");
         setError("Login failed - no session created");
@@ -79,7 +89,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -93,9 +103,11 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => {
-                  setEmail(e.target.value);
-                  console.log("🔵 Email changed");
+                  const val = e.target.value;
+                  console.log("🔵 Email changed:", val);
+                  setEmail(val);
                 }}
+                onBlur={() => console.log("🔵 Email blurred, current value:", email)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -112,9 +124,11 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => {
-                  setPassword(e.target.value);
-                  console.log("🔵 Password changed");
+                  const val = e.target.value;
+                  console.log("🔵 Password changed:", val.length, "chars");
+                  setPassword(val);
                 }}
+                onBlur={() => console.log("🔵 Password blurred, current length:", password.length)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 disabled={loading}
               />
@@ -122,7 +136,9 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              onClick={() => console.log("🔵 Button clicked")}
+              onClick={(e) => {
+                console.log("🔵 Button clicked, form will submit");
+              }}
               className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Signing in..." : "Sign In"}
