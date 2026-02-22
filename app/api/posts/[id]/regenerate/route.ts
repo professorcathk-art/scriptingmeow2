@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generatePost } from "@/lib/ai/gemini";
+import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
+import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
 
 export async function POST(
   request: Request,
@@ -56,11 +58,35 @@ export async function POST(
       post.format
     );
 
+    // Regenerate image with Nano Banana
+    const visualStyle = brandbook.visual_style as { colors?: string[]; mood?: string; imageStyle?: string } | null;
+    const styleContext = visualStyle
+      ? `Style: ${visualStyle.imageStyle ?? "professional"}. Mood: ${visualStyle.mood ?? "engaging"}.${visualStyle.colors?.length ? ` Color palette: ${visualStyle.colors.join(", ")}.` : ""}`
+      : "";
+    const imagePrompt = styleContext
+      ? `${generatedPost.visualDescription}. ${styleContext} High-quality, Instagram-ready, 1080x1080 square format.`
+      : `${generatedPost.visualDescription}. High-quality, Instagram-ready, 1080x1080 square format.`;
+
+    const aspectRatio = post.format === "portrait" ? "4:5" : post.format === "landscape" ? "16:9" : "1:1";
+    const imageBuffer = await generateImageWithNanoBanana(imagePrompt, { aspectRatio });
+
+    let visualUrl: string;
+    if (imageBuffer) {
+      visualUrl = await uploadPostImage(imageBuffer, params.id, user.id);
+    } else {
+      visualUrl = await uploadPostPlaceholder(
+        generatedPost.visualDescription,
+        params.id,
+        user.id
+      );
+    }
+
     // Update post
     const { data: updatedPost, error } = await supabase
       .from("generated_posts")
       .update({
         caption: generatedPost.caption,
+        visual_url: visualUrl,
         updated_at: new Date().toISOString(),
       })
       .eq("id", params.id)

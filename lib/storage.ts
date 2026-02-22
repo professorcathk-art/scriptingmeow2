@@ -60,3 +60,41 @@ export async function uploadPostPlaceholder(
     return dataUrl;
   }
 }
+
+/**
+ * Uploads a generated PNG image to Supabase Storage and returns the public URL.
+ * Falls back to data URL if upload fails.
+ */
+export async function uploadPostImage(
+  imageBuffer: Buffer,
+  postId: string,
+  userId: string
+): Promise<string> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn("SUPABASE_SERVICE_ROLE_KEY not set");
+    return `data:image/png;base64,${imageBuffer.toString("base64")}`;
+  }
+
+  try {
+    const supabase = createAdminClient();
+    const path = `${userId}/${postId}.png`;
+
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, imageBuffer, {
+        contentType: "image/png",
+        upsert: true,
+      });
+
+    if (error) {
+      console.warn("Storage upload failed:", error.message);
+      return `data:image/png;base64,${imageBuffer.toString("base64")}`;
+    }
+
+    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
+    return urlData.publicUrl;
+  } catch (err) {
+    console.warn("Storage upload error:", err);
+    return `data:image/png;base64,${imageBuffer.toString("base64")}`;
+  }
+}

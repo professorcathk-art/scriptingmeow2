@@ -264,8 +264,6 @@ Return ONLY valid JSON, no markdown formatting or additional text.`;
         const match = cleanedText.match(/\{[\s\S]*\}/);
         const jsonStr = match ? match[0] : cleanedText;
         const post = JSON.parse(jsonStr);
-        const { generateImageWithImagen } = await import("./imagen");
-        post.imageUrl = await generateImageWithImagen(post.visualDescription);
         return post;
       }
       lastError = new Error("Empty or blocked response");

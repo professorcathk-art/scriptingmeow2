@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { GeneratedPost } from "@/types/database";
 
@@ -8,11 +8,17 @@ interface PostReviewProps {
   post: GeneratedPost & { brand_spaces?: { name: string } };
 }
 
-export function PostReview({ post }: PostReviewProps) {
+export function PostReview({ post: initialPost }: PostReviewProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [caption, setCaption] = useState(post.caption);
+  const [post, setPost] = useState(initialPost);
+  const [caption, setCaption] = useState(initialPost.caption);
   const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setPost(initialPost);
+    setCaption(initialPost.caption);
+  }, [initialPost]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -51,7 +57,9 @@ export function PostReview({ post }: PostReviewProps) {
       }
 
       const data = await response.json();
+      setPost(data);
       setCaption(data.caption);
+      setImageError(false);
     } catch (error) {
       console.error("Error regenerating post:", error);
       alert("Failed to regenerate post. Please try again.");

@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generatePost } from "@/lib/ai/gemini";
-import { PLAN_LIMITS } from "@/types/database";
-import { uploadPostPlaceholder } from "@/lib/storage";
+import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
+import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
 
 export async function POST(request: Request) {
   try {
@@ -106,12 +106,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
     }
 
-    // Upload placeholder to Supabase Storage (or use data URL fallback)
-    const visualUrl = await uploadPostPlaceholder(
-      generatedPost.visualDescription,
-      post.id,
-      user.id
-    );
+    // Build image prompt with brandbook context for consistent style
+    const visualStyle = brandbook.visual_style as { colors?: string[]; mood?: string; imageStyle?: string } | null;
+    const styleContext = visualStyle
+      ? `Style: ${visualStyle.imageStyle ?? "professional"}. Mood: ${visualStyle.mood ?? "engaging"}.${visualStyle.colors?.length ? ` Color palette: ${visualStyle.colors.join(", ")}.` : ""}`
+      : "";
+    const imagePrompt = styleContext
+      ? `${generatedPost.visualDescription}. ${styleContext} High-quality, Instagram-ready, 1080x1080 square format.`
+      : `${generatedPost.visualDescription}. High-quality, Instagram-ready, 1080x1080 square format.`;
+
+    // Generate image with Nano Banana; fall back to SVG placeholder if it fails
+    let visualUrl: string;
+    const aspectRatio = format === "portrait" ? "4:5" : format === "landscape" ? "16:9" : "1:1";
+    const imageBuffer = await generateImageWithNanoBanana(imagePrompt, { aspectRatio });
+
+    if (imageBuffer) {
+      visualUrl = await uploadPostImage(imageBuffer, post.id, user.id);
+    } else {
+      visualUrl = await uploadPostPlaceholder(
+        generatedPost.visualDescription,
+        post.id,
+        user.id
+      );
+    }
     await supabase
       .from("generated_posts")
       .update({ visual_url: visualUrl })
