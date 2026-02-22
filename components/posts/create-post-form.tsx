@@ -99,8 +99,9 @@ export function CreatePostForm({
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || err.details || "Failed to generate draft");
+        const err = await response.json().catch(() => ({}));
+        const msg = err.details || err.error || "Failed to generate draft";
+        throw new Error(msg);
       }
 
       const data = await response.json();

@@ -281,6 +281,7 @@ export async function generatePost(
     colors?: string[];
     mood?: string;
     imageStyle?: string;
+    image_style?: string; // DB snake_case
     layoutStyle?: string;
     vibe?: string[];
   } | null;
@@ -318,7 +319,7 @@ Output JSON with two parts:
 - Describe the SCENE and COMPOSITION in detail (what is shown, layout, framing)
 - Include EXACT brand colors: ${colors || "use a cohesive, professional palette"}
 - Specify the MOOD and VIBE: ${vibeStr || "professional, engaging"}
-- Match the IMAGE STYLE from brandbook: ${vs?.imageStyle || "professional"}
+- Match the IMAGE STYLE from brandbook: ${vs?.imageStyle || vs?.image_style || "professional"}
 - For single-image: one cohesive visual. For carousel: describe the cover/first slide
 - Output dimensions: ${format === "portrait" ? "1080x1350px (4:5)" : format === "story" || format === "reel-cover" ? "1080x1920px (9:16)" : "1080x1080px (1:1 square)"}
 - If text overlay: describe placement, size, and style
@@ -328,7 +329,7 @@ Output JSON with two parts:
 Return ONLY valid JSON, no markdown.`;
 
   const modelOrder = preferPro
-    ? (["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
+    ? (["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"] as const)
     : GEMINI_MODELS;
   let lastError: unknown = null;
   for (const modelName of modelOrder) {
