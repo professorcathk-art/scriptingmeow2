@@ -6,7 +6,7 @@ import {
   HarmBlockThreshold,
 } from "@google/generative-ai";
 
-const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"] as const;
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"] as const;
 
 export async function POST(request: Request) {
   try {
@@ -96,9 +96,14 @@ Return ONLY the polished text, nothing else. No quotes, no preamble.`;
   } catch (error) {
     console.error("Error polishing text:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: message.includes("AI service") ? message : "Failed to polish text. Please try again." },
-      { status: 500 }
-    );
+    let userMessage = "Failed to polish text. Please try again.";
+    if (message.includes("leaked") || message.includes("403")) {
+      userMessage = "API key invalid or revoked. Please create a new key at aistudio.google.com/apikey and update GEMINI_API_KEY in Vercel.";
+    } else if (message.includes("404") || message.includes("not found")) {
+      userMessage = "AI model unavailable. Please check your API key and try again.";
+    } else if (message.includes("AI service")) {
+      userMessage = message;
+    }
+    return NextResponse.json({ error: userMessage }, { status: 500 });
   }
 }
