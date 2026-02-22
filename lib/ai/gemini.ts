@@ -22,6 +22,35 @@ function safeGetText(response: { candidates?: Array<{ content?: { parts?: Array<
   return textPart?.text?.trim() || null;
 }
 
+/** Parse JSON from model output, fixing common issues. */
+function parsePostJson(text: string): { caption: { hook: string; body: string; cta: string; hashtags: string[] }; nanoBananaPrompt: string } | null {
+  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  let jsonStr = match ? match[0] : cleaned;
+  // Fix trailing commas (invalid in strict JSON)
+  jsonStr = jsonStr.replace(/,(\s*[}\]])/g, "$1");
+  // Fix unescaped newlines inside strings (replace with space)
+  jsonStr = jsonStr.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, (_, inner) =>
+    `"${inner.replace(/\r?\n/g, " ")}"`
+  );
+  try {
+    const post = JSON.parse(jsonStr);
+    const caption = post.caption || { hook: "", body: "", cta: "", hashtags: [] };
+    const nanoBananaPrompt = post.nanoBananaPrompt || post.visualDescription || "";
+    return {
+      caption: {
+        hook: String(caption.hook ?? ""),
+        body: String(caption.body ?? ""),
+        cta: String(caption.cta ?? ""),
+        hashtags: Array.isArray(caption.hashtags) ? caption.hashtags.map(String) : [],
+      },
+      nanoBananaPrompt: String(nanoBananaPrompt),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Fetch image from URL and return as Gemini inlineData part. Skips blob: or invalid URLs. */
 async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
   if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
@@ -336,7 +365,11 @@ Return ONLY valid JSON, no markdown.`;
     try {
       const model = genAI.getGenerativeModel({
         model: modelName,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+          responseMimeType: "application/json",
+        } as Record<string, unknown>,
         safetySettings: [...DEFAULT_SAFETY],
       });
       const result = await model.generateContent(prompt);
@@ -344,15 +377,14 @@ Return ONLY valid JSON, no markdown.`;
       const text = safeGetText(response);
 
       if (text) {
-        const cleanedText = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-        const match = cleanedText.match(/\{[\s\S]*\}/);
-        const jsonStr = match ? match[0] : cleanedText;
-        const post = JSON.parse(jsonStr);
-        return {
-          caption: post.caption || { hook: "", body: "", cta: "", hashtags: [] },
-          visualDescription: post.visualDescription || post.nanoBananaPrompt || "",
-          nanoBananaPrompt: post.nanoBananaPrompt || post.visualDescription,
-        };
+        const parsed = parsePostJson(text);
+        if (parsed) {
+          return {
+            caption: parsed.caption,
+            visualDescription: parsed.nanoBananaPrompt,
+            nanoBananaPrompt: parsed.nanoBananaPrompt,
+          };
+        }
       }
       lastError = new Error("Empty or blocked response");
     } catch (err) {
