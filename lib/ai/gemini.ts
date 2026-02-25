@@ -237,9 +237,9 @@ export async function generateBrandbook(
     : "General goals";
   const valueProp = brandData.valueProposition || "Unique value to customers";
 
-  const prompt = `You are an expert brand visual design consultant creating a detailed Brand Book for Instagram content.
+  const prompt = `You are an expert brand visual design consultant. Create a SPECIFIC, ACTIONABLE Brand Book for Instagram. Avoid generic phrases. Every field must be concrete and usable for content creation.
 
-Brand Information:
+## Brand Information
 - Name: ${brandData.name}
 - Type: ${brandData.type}
 - Target Audiences: ${audiences}
@@ -249,42 +249,45 @@ Brand Information:
 
 ${
   brandData.referenceImages && brandData.referenceImages.length > 0
-    ? `IMPORTANT: You are being shown ${brandData.referenceImages.length} reference image(s) of the brand's past IG posts. Analyze each image carefully for: colors (extract Hex codes), typography (font styles, sizes), layout (card/minimal/info-dense, borders, spacing), image style (photography/illustration), and mood. Reflect these findings in the brandbook.`
-    : "No reference images. Create a cohesive visual system based on the brand information."
+    ? `## Reference Images (${brandData.referenceImages.length} provided)
+
+**IMPORTANT:** These may be full screenshots (phone UI, margins, browser chrome, status bars). Extract and analyze ONLY the actual post content within the frame. Ignore status bars, navigation, surrounding UI, and other noise. Focus on the post itself: colors, typography, layout, imagery style.
+
+Extract exact Hex codes, font families, layout structure. Reflect these findings specifically in the brandbook.`
+    : "## No Reference Images\nCreate a cohesive, specific visual system—no generic 'modern' or 'professional' without concrete details."
 }
 
-Output a comprehensive brandbook in JSON. Use English for all content.
+## Output
+Valid JSON only. No markdown. Use brand's primary language when appropriate. Be specific, not generic.
 
 {
-  "brandPersonality": "2-3 sentences describing the brand's personality and character",
-  "toneOfVoice": "2-3 sentences on how the brand communicates (e.g., friendly but professional, direct and punchy)",
+  "brandPersonality": "string",
+  "toneOfVoice": "string",
   "visualStyle": {
-    "colors": ["array of 3-5 Hex codes. First = primary, rest = secondary/accents"],
-    "primaryColor": "Main brand Hex code",
-    "secondaryColor1": "First accent Hex code",
-    "secondaryColor2": "Second accent Hex code",
-    "backgroundColor": "white / light / dark",
-    "mood": "Overall mood of visuals",
-    "imageStyle": "photography / illustration / mixed. Describe style",
-    "layoutTendencies": "Common layout patterns",
-    "layoutStyle": "card / minimal / info-dense / story",
-    "vibe": ["3-5 adjectives for overall feel"],
-    "typographySpec": "字型規範: Headings - font, size, color. Body - font, size, color. Emphasis - italic/bold/color. Be specific.",
-    "layoutStyleDetail": "排版風格: card / minimal / info-dense / story. Borders - yes/no, color, radius. Spacing - margins, padding. Text placement."
+    "colors": ["hex", "hex", ...],
+    "primaryColor": "hex",
+    "secondaryColor1": "hex",
+    "secondaryColor2": "hex",
+    "backgroundColor": "string",
+    "mood": "string - vivid visual description",
+    "imageStyle": "string - technique, subject, ratio",
+    "layoutTendencies": "string - concrete patterns",
+    "layoutStyle": "string",
+    "vibe": ["string"],
+    "typographySpec": "string - headings, body, hierarchy",
+    "layoutStyleDetail": "string - structure, sections, spacing"
   },
   "captionStructure": {
-    "hookPatterns": ["3-5 hook styles that work for this brand"],
-    "bodyPatterns": ["3-5 body content patterns"],
-    "ctaPatterns": ["3-5 call-to-action patterns"],
-    "hashtagStyle": "Hashtag strategy and style"
+    "hookPatterns": ["string"],
+    "bodyPatterns": ["string"],
+    "ctaPatterns": ["string"],
+    "hashtagStyle": "string"
   },
   "dosAndDonts": {
-    "dos": ["5-7 things the brand should do in visuals and captions"],
-    "donts": ["5-7 things to avoid: colors, fonts, layouts, tones that would hurt the brand"]
+    "dos": ["string"],
+    "donts": ["string"]
   }
-}
-
-Return ONLY valid JSON, no markdown.`;
+}`;
 
   const imageParts: Array<{ inlineData: { mimeType: string; data: string } }> = [];
   const validUrls = (brandData.referenceImages ?? []).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")));
