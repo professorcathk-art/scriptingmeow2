@@ -716,12 +716,14 @@ export function CreatePostForm({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Text on Image (可編輯) — Markdown for header/subheader/body
+              Text on Image (可編輯) — Plain text only, no markdown
             </label>
             <p className="text-xs text-zinc-500 mb-1">
               {formData.postStyle === "immersive-photo"
                 ? "Minimal or no text. Leave blank for pure image."
-                : "Text that will be rendered on the image. Use ## for header, ### for subheader."}
+                : formData.postStyle === "editorial"
+                  ? "Line 1 = headline, Line 2 = subheadline, Line 3+ = body. Plain text only (no #, ##, ###)."
+                  : "Text to render on the image. Plain text only, no markdown."}
             </p>
             <textarea
               value={draft.imageTextOnImage}
@@ -729,8 +731,8 @@ export function CreatePostForm({
                 setDraft({ ...draft, imageTextOnImage: e.target.value })
               }
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-              rows={3}
-              placeholder={formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "## Headline\n### Subheader\nBody text..."}
+              rows={4}
+              placeholder={formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "Headline\nSubheadline\nBody text..."}
             />
           </div>
 

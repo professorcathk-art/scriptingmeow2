@@ -100,6 +100,18 @@ export type DraftOutput = {
   igCaption: string;
 };
 
+/** Strip markdown formatting so it never appears on the image. */
+function stripMarkdownFromText(s: string): string {
+  return String(s || "")
+    .replace(/^#+\s*/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
+}
+
 /** Parse JSON from model output, fixing common issues. */
 function parsePostJson(text: string): DraftOutput | null {
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -111,8 +123,9 @@ function parsePostJson(text: string): DraftOutput | null {
   );
   try {
     const post = JSON.parse(jsonStr);
+    const raw = String(post.imageTextOnImage ?? post.imageText ?? "").trim();
     return {
-      imageTextOnImage: String(post.imageTextOnImage ?? post.imageText ?? "").trim(),
+      imageTextOnImage: stripMarkdownFromText(raw),
       visualAdvice: String(post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
       igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, 400),
     };
@@ -368,11 +381,11 @@ function truncate(s: string, max: number): string {
 }
 
 const LAYOUT_TEXT_GUIDE: Record<string, string> = {
-  "immersive-photo": "No text or minimal text (one short tagline max). Leave imageTextOnImage blank or very short.",
-  editorial: "Magazine layout: header (bold headline), subheader (supporting line), mainBody (2-4 sentences). Use markdown: ## Header, ### Subheader, body text.",
-  "text-heavy": "One big bold headline. imageTextOnImage: single impactful line.",
-  "tweet-card": "Quote card style. imageTextOnImage: the key quote or statement to display.",
-  "split-screen": "Split layout. imageTextOnImage: key text for the text half (headline + 1-2 lines).",
+  "immersive-photo": "No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line.",
+  editorial: "Magazine layout. Output PLAIN TEXT only—NO markdown (#, ##, ###, **). Use line breaks. Line 1 = headline (主標題). Line 2 = subheadline (副標題). Line 3+ = body (正文). Each line is the actual text only, no labels.",
+  "text-heavy": "One big bold headline. imageTextOnImage: single impactful line, plain text only, no markdown.",
+  "tweet-card": "Quote card. imageTextOnImage: the key quote, plain text only, no markdown.",
+  "split-screen": "Split layout. imageTextOnImage: Line 1 = headline, Line 2+ = body. Plain text only, no markdown.",
 };
 
 export async function generatePost(
@@ -418,11 +431,11 @@ Lang: ${language}. Format: ${format}. Layout: ${layout}. Goal: ${contentFramewor
 Output JSON only:
 {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 
-1. imageTextOnImage: Text to RENDER ON THE IMAGE. ${textGuide} This will be drawn on the image by the AI. Use markdown for structure (## for header, ### for subheader). If no text on image, use "".
+1. imageTextOnImage: Text to RENDER ON THE IMAGE. ${textGuide} NEVER use markdown (#, ##, ###, **). Output only the actual display text. If no text on image, use "".
 
-2. visualAdvice: 視覺建議. Scene, composition, colors ${colors || ""}, mood, aspect ${aspectNote}. Describe the VISUAL (photo/illustration style). If imageTextOnImage has content, mention "with text overlay" and describe placement (e.g. "text in top third, editorial layout").
+2. visualAdvice: 視覺建議. Detailed scene, composition, colors ${colors || ""}, mood, aspect ${aspectNote}. Describe the VISUAL (photo/illustration style, lighting, framing). For editorial: describe how text integrates with image (e.g. "text overlay in top third, magazine-style typography, image below"). Be specific about brand alignment.
 
-3. igCaption: Full IG caption for the post. Max 400 chars. Include max 3 hashtags at the end. Engaging, on-brand.`;
+3. igCaption: Full IG caption. Max 400 chars. Max 3 hashtags at end. Engaging, on-brand.`;
 
   const modelOrder = preferPro
     ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
