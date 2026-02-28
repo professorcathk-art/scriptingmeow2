@@ -310,6 +310,7 @@ export function CreatePostForm({
         throw new Error("Invalid response from server. Please try again.");
       }
       clearPostDraft();
+      router.refresh();
       router.push(`/posts/${data.id}/review`);
     } catch (error: unknown) {
       console.error("Error generating post:", error);

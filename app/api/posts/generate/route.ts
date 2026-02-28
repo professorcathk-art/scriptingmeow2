@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { generatePost } from "@/lib/ai/gemini";
 import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
@@ -299,13 +300,12 @@ export async function POST(request: Request) {
         .eq("id", post.id);
     }
 
-    // Deduct credits (skip when unlimited for testing)
+    let newCreditsRemaining = userProfile.credits_remaining;
     if (!unlimitedCredits) {
+      newCreditsRemaining = userProfile.credits_remaining - creditsNeeded;
       const { error: creditError } = await supabase
         .from("users")
-        .update({
-          credits_remaining: userProfile.credits_remaining - creditsNeeded,
-        })
+        .update({ credits_remaining: newCreditsRemaining })
         .eq("id", user.id);
 
       if (creditError) {
@@ -319,10 +319,13 @@ export async function POST(request: Request) {
       });
     }
 
+    revalidatePath("/", "layout");
+
     return NextResponse.json({
       ...post,
       visual_url: visualUrl,
       carousel_urls: isCarousel ? carouselUrls : undefined,
+      credits_remaining: newCreditsRemaining,
     });
   } catch (error) {
     console.error("[posts/generate] Error:", error);
