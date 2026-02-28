@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Brandbook, BrandReferenceImage } from "@/types/database";
 
@@ -13,12 +13,55 @@ interface BrandbookFormProps {
 export function BrandbookForm({
   brandSpaceId,
   initialBrandbook,
-  referenceImages,
+  referenceImages: initialRefImages,
 }: BrandbookFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [brandbook, setBrandbook] = useState(initialBrandbook);
+  const [referenceImages, setReferenceImages] = useState(initialRefImages);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    setReferenceImages(initialRefImages);
+  }, [initialRefImages]);
+
+  const fetchReferenceImages = async () => {
+    try {
+      const res = await fetch(`/api/brand-spaces/${brandSpaceId}/images`);
+      if (res.ok) {
+        const { images } = await res.json();
+        setReferenceImages(images ?? []);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleUploadImages = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files).slice(0, 10)) {
+        const fd = new FormData();
+        fd.append("files", file);
+        const res = await fetch(`/api/brand-spaces/${brandSpaceId}/images`, {
+          method: "POST",
+          body: fd,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Upload failed");
+        }
+      }
+      await fetchReferenceImages();
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Upload failed. Ensure Storage bucket 'brand-reference-images' exists and SUPABASE_SERVICE_ROLE_KEY is set.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleGenerateBrandbook = async () => {
     setGenerating(true);
@@ -83,24 +126,79 @@ export function BrandbookForm({
 
   if (!brandbook) {
     return (
-      <div className="bg-zinc-900/50 p-8 rounded-2xl border border-white/10 text-center">
-        <p className="text-zinc-400 mb-6">
-          Generate your brandbook to get started. AI will analyze your brand
-          information and create a comprehensive guide.
-        </p>
-        <button
-          onClick={handleGenerateBrandbook}
-          disabled={generating}
-          className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-        >
-          {generating ? "Generating..." : "Generate Brandbook with AI"}
-        </button>
+      <div className="bg-zinc-900/50 p-8 rounded-2xl border border-white/10 space-y-6">
+        <div>
+          <h3 className="font-semibold text-zinc-100 mb-2">Sample Posts (Reference Images)</h3>
+          <p className="text-sm text-zinc-400 mb-3">
+            Upload 3–10 of your past IG posts or style references. AI will analyze them for colors, typography, and art style (e.g. watercolor).
+          </p>
+          <div
+            className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-violet-500/30 transition-colors cursor-pointer"
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleUploadImages(e.dataTransfer?.files ?? null);
+            }}
+          >
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              id="brandbook-upload"
+              onChange={(e) => handleUploadImages(e.target.files)}
+            />
+            <label htmlFor="brandbook-upload" className="cursor-pointer block">
+              <p className="text-zinc-400 mb-2">
+                {uploading ? "Uploading..." : "Drag & drop or click to upload"}
+              </p>
+              {referenceImages.length > 0 && (
+                <p className="text-sm text-violet-400">{referenceImages.length} image(s) ready for analysis</p>
+              )}
+            </label>
+          </div>
+        </div>
+        <div className="text-center">
+          <p className="text-zinc-400 mb-4">
+            Generate your brandbook. AI will analyze your brand info{referenceImages.length > 0 ? " and sample images" : ""}.
+          </p>
+          <button
+            onClick={handleGenerateBrandbook}
+            disabled={generating}
+            className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+          >
+            {generating ? "Generating..." : "Generate Brandbook with AI"}
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <div className="bg-zinc-900/50 p-4 rounded-xl border border-white/10">
+        <h3 className="font-semibold text-zinc-100 mb-2">Sample Posts (for regeneration)</h3>
+        <p className="text-sm text-zinc-400 mb-2">
+          Add more reference images to improve style analysis when regenerating.
+        </p>
+        <div
+          className="border-2 border-dashed border-white/10 rounded-lg p-4 text-center hover:border-violet-500/30 transition-colors cursor-pointer"
+          onDragOver={(e) => { e.preventDefault(); }}
+          onDrop={(e) => { e.preventDefault(); handleUploadImages(e.dataTransfer?.files ?? null); }}
+        >
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            className="hidden"
+            id="brandbook-upload-edit"
+            onChange={(e) => handleUploadImages(e.target.files)}
+          />
+          <label htmlFor="brandbook-upload-edit" className="cursor-pointer text-sm text-zinc-400">
+            {uploading ? "Uploading..." : "Upload images"} · {referenceImages.length} total
+          </label>
+        </div>
+      </div>
       <div className="bg-zinc-900/50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-zinc-100">Brandbook</h2>

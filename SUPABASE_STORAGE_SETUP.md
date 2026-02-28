@@ -1,4 +1,15 @@
-# Supabase Storage Setup for Post Images
+# Supabase Storage Setup
+
+## Brand Reference Images (for Brandbook)
+
+1. Create bucket **`brand-reference-images`** (public)
+2. Used when uploading sample IG posts on the brandbook page
+3. Required for AI to analyze your style (watercolor, colors, etc.)
+4. If upload fails, check: bucket exists, `SUPABASE_SERVICE_ROLE_KEY` is set
+
+---
+
+## Post Images
 
 This guide explains how to configure Supabase Storage for post images used in the "Review your post" page.
 

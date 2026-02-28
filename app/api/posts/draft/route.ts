@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { generatePost, type CarouselDraftOutput } from "@/lib/ai/gemini";
+import { generatePostLight, type CarouselDraftOutput } from "@/lib/ai/gemini";
 
 export const maxDuration = 60;
 
@@ -59,10 +59,9 @@ export async function POST(request: Request) {
   }
 
   try {
-
     const { data: brandSpace } = await supabase
       .from("brand_spaces")
-      .select("id, brand_type, brand_details")
+      .select("id")
       .eq("id", brandSpaceId)
       .eq("user_id", user.id)
       .single();
@@ -71,37 +70,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
     }
 
-    const { data: brandbook } = await supabase
-      .from("brandbooks")
-      .select("*")
-      .eq("brand_space_id", brandSpaceId)
-      .single();
-
-    if (!brandbook) {
-      return NextResponse.json(
-        { error: "Brandbook not found. Please create a brandbook first." },
-        { status: 400 }
-      );
-    }
-
-    const brandType = brandSpace?.brand_type as string | undefined;
-    const otherBrandType = (brandSpace as { brand_details?: { otherBrandType?: string } })?.brand_details?.otherBrandType;
-
-    const result = await generatePost(
-      {
-        brandPersonality: brandbook.brand_personality || "",
-        toneOfVoice: brandbook.tone_of_voice || "",
-        visualStyle: brandbook.visual_style || {},
-        dosAndDonts: brandbook.dos_and_donts || {},
-        brandType,
-        otherBrandType,
-      },
+    const result = await generatePostLight(
       contentIdea,
       language,
       postType,
       format,
       postStyle,
-      true, // prefer Gemini Pro for text output
       contentFramework,
       carouselPageCount
     );

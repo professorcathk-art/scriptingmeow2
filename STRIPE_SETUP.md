@@ -1,5 +1,21 @@
 # Stripe Setup Guide (Test Mode)
 
+## Reset account to Free (for testing upgrade flow)
+
+If your account is on Pro/Basic and you want to test the upgrade flow, run in Supabase SQL Editor:
+
+```sql
+-- Replace YOUR_USER_ID with your auth.users id (from Supabase Auth or users table)
+UPDATE public.users
+SET plan_tier = 'free', credits_remaining = 5, credits_reset_date = NOW() + INTERVAL '1 month',
+    stripe_subscription_id = NULL, stripe_price_id = NULL
+WHERE id = 'YOUR_USER_ID';
+```
+
+To find your user id: Supabase Dashboard → Authentication → Users → copy the UUID.
+
+---
+
 ## 1. Keys stored
 
 Your Stripe keys are in `.env.local`:

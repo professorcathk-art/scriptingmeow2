@@ -193,3 +193,68 @@ Return valid JSON only:
   ],
   "igCaption": "Full caption (max 400 chars, max 3 hashtags)."
 }`;
+
+/** Lightweight draft prompts - no brandbook needed. Used for fast draft generation. */
+const DRAFT_SINGLE_LIGHT = `Create 2 DISTINCT Instagram post draft variations. Keep it concise.
+
+## Brief
+Content idea: {{idea}}
+Language: {{language}}. Format: {{format}}. Layout: {{layout}}.
+Content goal: {{contentFrameworkDesc}}
+
+## Output
+Return valid JSON only:
+{
+  "variation1": {"imageTextOnImage":"","visualAdvice":"","igCaption":""},
+  "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
+}
+
+Rules: imageTextOnImage = text to render on image (plain text, no markdown). visualAdvice = scene description for image gen, aspect {{aspectNote}}. igCaption = max 400 chars, max 3 hashtags.`;
+
+const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Keep it concise.
+
+## Brief
+{{idea}}
+Language: {{language}}. Format: {{format}}. Aspect: {{aspectNote}}.
+Content goal: {{contentFrameworkDesc}}
+
+## Output
+Return valid JSON only:
+{
+  "pages": [
+    { "pageIndex": 1, "header": "Headline", "imageTextOnImage": "Text (use \\n)", "visualAdvice": "Scene" },
+    ...
+  ],
+  "igCaption": "Caption (max 400 chars, max 3 hashtags)."
+}
+
+header = main headline on slide (not "Step 1"). visualAdvice = scene for image gen.`;
+
+export function getSingleImageDraftPromptLight(vars: {
+  idea: string;
+  language: string;
+  format: string;
+  layout: string;
+  contentFrameworkDesc: string;
+  aspectNote: string;
+}): string {
+  return replaceAll(DRAFT_SINGLE_LIGHT, vars);
+}
+
+export function getCarouselDraftPromptLight(vars: {
+  pageCount: number;
+  idea: string;
+  language: string;
+  format: string;
+  aspectNote: string;
+  contentFrameworkDesc: string;
+}): string {
+  let t = DRAFT_CAROUSEL_LIGHT.replace(/\{\{pageCount\}\}/g, String(vars.pageCount));
+  return replaceAll(t, {
+    idea: vars.idea,
+    language: vars.language,
+    format: vars.format,
+    aspectNote: vars.aspectNote,
+    contentFrameworkDesc: vars.contentFrameworkDesc,
+  });
+}

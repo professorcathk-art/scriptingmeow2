@@ -134,9 +134,10 @@ export default async function BillingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((plan) => {
             const isCurrentPlan = plan.tier === userProfile.plan_tier;
+            const tierOrder = { free: 0, basic: 1, pro: 2 };
             const isUpgrade =
-              (userProfile.plan_tier === "free" && plan.tier === "basic") ||
-              (userProfile.plan_tier === "basic" && plan.tier === "pro");
+              !isCurrentPlan &&
+              tierOrder[plan.tier as keyof typeof tierOrder] > tierOrder[userProfile.plan_tier as keyof typeof tierOrder];
 
             return (
               <div

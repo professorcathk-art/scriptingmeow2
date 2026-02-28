@@ -3,7 +3,13 @@ import {
   HarmCategory,
   HarmBlockThreshold,
 } from "@google/generative-ai";
-import { getBrandbookPrompt, getSingleImageDraftPrompt, getCarouselDraftPrompt } from "./load-prompts";
+import {
+  getBrandbookPrompt,
+  getSingleImageDraftPrompt,
+  getCarouselDraftPrompt,
+  getSingleImageDraftPromptLight,
+  getCarouselDraftPromptLight,
+} from "./load-prompts";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -453,6 +459,128 @@ const CONTENT_FRAMEWORK_GUIDE: Record<string, string> = {
   "promotional-proof": "Promotional / Proof: Highlight products/services, testimonials, or sales. Proof-driven, conversion-focused.",
   "storytelling": "Storytelling / Behind the Scenes: Build connection. Share journey, team, or processes. Authentic, narrative-driven.",
 };
+
+/**
+ * Lightweight draft generation - no brandbook needed.
+ * Brandbook is only used at image generation stage.
+ */
+export async function generatePostLight(
+  contentIdea: string,
+  language: string,
+  postType: string,
+  format: string,
+  postStyle: string,
+  contentFramework?: string,
+  carouselPageCount?: number
+): Promise<DraftOutput[] | CarouselDraftOutput> {
+  const idea = truncate(contentIdea, 400);
+  const contentFrameworkDesc =
+    CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] ||
+    CONTENT_FRAMEWORK_GUIDE["educational-value"];
+  const aspectNote =
+    format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
+  const layoutGuide = LAYOUT_TEXT_GUIDE[postStyle || "immersive-photo"] || LAYOUT_TEXT_GUIDE["immersive-photo"];
+
+  const isCarousel =
+    postType === "carousel" && typeof carouselPageCount === "number" && carouselPageCount >= 1 && carouselPageCount <= 9;
+
+  if (isCarousel) {
+    const pageCount = carouselPageCount!;
+    const prompt = getCarouselDraftPromptLight({
+      pageCount,
+      idea,
+      language,
+      format,
+      aspectNote,
+      contentFrameworkDesc,
+    });
+    const parts: ContentPart[] = [{ text: prompt }];
+    for (const modelName of GEMINI_MODELS) {
+      try {
+        let text: string | null;
+        if (isV1BetaModel(modelName)) {
+          const response = await generateContentV1Beta(modelName, parts, {
+            temperature: 0.8,
+            maxOutputTokens: 1024,
+            thinkingLevel: "low",
+            safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
+          });
+          text = safeGetText(response);
+        } else {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+            safetySettings: [...DEFAULT_SAFETY],
+          });
+          const result = await model.generateContent(prompt);
+          text = safeGetText(result.response);
+        }
+        if (text) {
+          const carousel = parseCarouselJson(text, pageCount);
+          if (carousel && carousel.pages.length >= 1) return carousel;
+        }
+      } catch (err) {
+        console.warn(`[generatePostLight] Carousel ${modelName} failed:`, err);
+      }
+    }
+    const fallbackPages: CarouselPageDraft[] = [];
+    for (let i = 0; i < pageCount; i++) {
+      fallbackPages.push({
+        pageIndex: i + 1,
+        header: `Slide ${i + 1}`,
+        imageTextOnImage: i === 0 ? idea.slice(0, 100) : "",
+        visualAdvice: `Professional Instagram carousel page ${i + 1}. ${idea}.`,
+      });
+    }
+    return { pages: fallbackPages, igCaption: `${idea.slice(0, 200)}...\n\n#instagram` };
+  }
+
+  const prompt = getSingleImageDraftPromptLight({
+    idea,
+    language,
+    format,
+    layout: layoutGuide,
+    contentFrameworkDesc,
+    aspectNote,
+  });
+  const parts: ContentPart[] = [{ text: prompt }];
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      let text: string | null;
+      if (isV1BetaModel(modelName)) {
+        const response = await generateContentV1Beta(modelName, parts, {
+          temperature: 0.9,
+          maxOutputTokens: 1024,
+          thinkingLevel: "low",
+          safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
+        });
+        text = safeGetText(response);
+      } else {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: { temperature: 0.8, maxOutputTokens: 1024 },
+          safetySettings: [...DEFAULT_SAFETY],
+        });
+        const result = await model.generateContent(prompt);
+        text = safeGetText(result.response);
+      }
+      if (text) {
+        const variations = parsePostJsonVariations(text);
+        if (variations && variations.length >= 2) return variations;
+        const single = parsePostJson(text);
+        if (single) return [single, { ...single }];
+      }
+    } catch (err) {
+      console.warn(`[generatePostLight] ${modelName} failed:`, err);
+    }
+  }
+  const fallback: DraftOutput = {
+    imageTextOnImage: "",
+    visualAdvice: `Professional Instagram post. ${idea}. Clean, modern. Aspect ${aspectNote}.`,
+    igCaption: `${idea.slice(0, 200)}...\n\n#instagram`,
+  };
+  return [fallback, { ...fallback }];
+}
 
 /** Parse carousel JSON from model output. */
 function parseCarouselJson(text: string, pageCount: number): CarouselDraftOutput | null {
