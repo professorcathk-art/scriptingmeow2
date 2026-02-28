@@ -300,7 +300,23 @@ export async function generateBrandbook(
     ? `Other (user specified: "${brandData.otherBrandType.trim()}")`
     : brandTypeLabel;
 
-  const prompt = `You are a pro IG post expert and brand visual design consultant. Create a DETAILED, INSTITUTIONAL-GRADE Brand Book for Instagram. Each field must be rich, specific, and actionable—not generic. Use the brand's primary language when appropriate. Fields may use markdown (**, *, bullet points) for structure and emphasis.
+  const hasRefImages = brandData.referenceImages && brandData.referenceImages.length > 0;
+  const refImagesSection = hasRefImages
+    ? `## CRITICAL: Reference Images (${brandData.referenceImages!.length} sample posts attached below)
+
+**YOU MUST analyze the attached images.** They are the user's actual IG posts or style references. Your brandbook output MUST be derived from what you see—not generic templates.
+
+1. **Colors**: Extract exact hex codes from the images. Use them in the colors array and colorDescriptionDetailed. If you see warm browns, specify #hex. If cream backgrounds, specify #hex.
+2. **Typography**: Describe the actual fonts, weights, and hierarchy you see (e.g. bold sans headlines, serif body).
+3. **Layout**: Describe the structure—text placement, image-to-text ratio, spacing.
+4. **Style**: Line quality (hand-drawn vs vector), texture (matte, glossy, paper), mood.
+5. **Do NOT** output generic content. Every field must reflect the visual language of the provided images.
+6. **Ignore** status bars, navigation, UI chrome—focus only on post content.`
+    : "## No Reference Images\nCreate a cohesive, highly specific visual system. No generic phrases—every detail must be concrete and usable for image generation.";
+
+  const prompt = `You are a pro IG post expert and brand visual design consultant. Create a DETAILED, INSTITUTIONAL-GRADE Brand Book for Instagram. **Output all content in English.**
+
+Each field must be rich, specific, and actionable—not generic. Fields may use markdown (**, *, bullet points) for structure and emphasis.
 
 ## Brand Information
 - Name: ${brandData.name}
@@ -310,13 +326,7 @@ export async function generateBrandbook(
 - Desired Outcomes: ${outcomes}
 - Value Proposition: ${valueProp}
 
-${
-  brandData.referenceImages && brandData.referenceImages.length > 0
-    ? `## Reference Images (${brandData.referenceImages.length} provided)
-
-**IMPORTANT:** Extract and analyze ONLY the actual post content. Ignore status bars, navigation, surrounding UI. Focus on: exact Hex codes, typography, layout, imagery style, line quality, texture. Reflect these findings in detail.`
-    : "## No Reference Images\nCreate a cohesive, highly specific visual system. No generic phrases—every detail must be concrete and usable for image generation."
-}
+${refImagesSection}
 
 ## Output Format (institutional-grade, tailor for ${brandTypeContext})
 
@@ -324,15 +334,15 @@ ${
 
 **imageStyle** – Technique + subject + image-to-text ratio. Describe texture (e.g. watercolor on paper, matte photo, glossy). DO NOT specify aspect ratio. Markdown allowed.
 
-**colorDescriptionDetailed** – RICH color spec. Structure like:
-- 整體色調 (Overall tone): e.g. "水彩畫在紙張上的質感，低飽和度、高明度"
-- 主色調 (Primary): e.g. "文字深棕色 #3E332A (非純黑，視覺較柔和)", "背景紙張色 #F9F7F2 (米白色/水彩紙色)"
-- 輔助色 (Secondary): e.g. "療癒綠 #8FB995 (莫蘭迪綠，代表正確)", "警示紅 #E68A81 (珊瑚粉紅)"
+**colorDescriptionDetailed** – RICH color spec in English. Structure like:
+- Overall tone: e.g. "Watercolor-on-paper texture, low saturation, high brightness"
+- Primary: e.g. "Text dark brown #3E332A (not pure black, softer)", "Background paper #F9F7F2 (cream/watercolor paper)"
+- Secondary: e.g. "Healing green #8FB995 (muted green)", "Alert coral #E68A81 (soft pink-red)"
 Include hex + purpose for each. Markdown allowed. 200–400 chars.
 
-**visualAura** – 視覺氣質. Layout mood, breathing room, spacing philosophy. e.g. "留白適中，呼吸感強。不強迫塞滿資訊，讓讀者有消化的空間." Markdown allowed.
+**visualAura** – Layout mood, breathing room, spacing philosophy. e.g. "Moderate whitespace, strong breathing room. Never cram information—let readers digest." Markdown allowed.
 
-**lineStyle** – 線條風格. Edge quality, stroke feel. e.g. "手繪鉛筆/墨水線條。邊緣不銳利，帶有筆觸的粗細變化（Bleed effect），非向量幾何線條." Markdown allowed.
+**lineStyle** – Edge quality, stroke feel. e.g. "Hand-drawn pencil/ink lines. Soft edges, subtle stroke variation (bleed effect), not vector geometric." Markdown allowed.
 
 **typographySpec** – Headings, body, hierarchy. Concrete font suggestions. Markdown allowed.
 
@@ -388,7 +398,7 @@ Valid JSON only. Escape newlines in strings as \\n. No raw newlines inside strin
       if (isV1BetaModel(modelName)) {
         const response = await generateContentV1Beta(modelName, v1BetaParts, {
           temperature: 1.0,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
           thinkingLevel: "low",
           safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
         });
@@ -396,7 +406,7 @@ Valid JSON only. Escape newlines in strings as \\n. No raw newlines inside strin
       } else {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
           safetySettings: [...DEFAULT_SAFETY],
         });
         const result = await model.generateContent(contentParts);
@@ -460,10 +470,10 @@ function truncate(s: string, max: number): string {
 
 const LAYOUT_TEXT_GUIDE: Record<string, string> = {
   "immersive-photo": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
-  editorial: "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown (#, ##, ###, **). Line 1 = headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography.",
-  "text-heavy": "Text-Heavy / Carousel: Bold typography center stage. imageTextOnImage: single impactful line or step headline, plain text only. Perfect for step-by-step guides.",
+  editorial: "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown (#, ##, ###, **). Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography.",
+  "text-heavy": "Text-Heavy / Carousel: Bold typography center stage. imageTextOnImage: 2–4 lines (main headline 主標題 + subheadline + body). Each line adds value. Max ~125 chars per slide for mobile. Plain text only, no markdown.",
   "tweet-card": "Tweet / Quote Card: Stylized quote or social post. imageTextOnImage: the key quote, plain text only, no markdown. Attractive background.",
-  "split-screen": "Split Screen / Collage: Dynamic mix. imageTextOnImage: Line 1 = headline, Line 2+ = body. Side-by-side or collage layout with text areas.",
+  "split-screen": "Split Screen / Collage: Dynamic mix. imageTextOnImage: Line 1 = main headline, Line 2+ = body. Side-by-side or collage layout with text areas.",
 };
 
 /** Single post (單頁圖表): impress target audience. Carousel (複頁教學貼文): save value. */
@@ -564,30 +574,46 @@ export async function generatePost(
     const tone = truncate(brandbook.toneOfVoice, 150);
     const aspectNote = format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
 
-    const carouselPrompt = `You are an IG carousel expert. Create a ${pageCount}-page carousel post. Each page should have clear value and flow logically.
+    const isTextHeavy = postStyle === "text-heavy";
+    const layoutGuide = LAYOUT_TEXT_GUIDE[postStyle || "text-heavy"] || LAYOUT_TEXT_GUIDE["text-heavy"];
+
+    const carouselPrompt = `You are an expert Instagram carousel designer and marketer. Create a ${pageCount}-page carousel. Output language: ${language}.
+
+## TERMINOLOGY (research-backed)
+- **header** = 主標題 = The MAIN HEADLINE/TITLE that appears INSIDE the image. It is the content headline that stops the scroll—concrete, specific, value-driven. Examples: "5 Mistakes That Kill Your Growth", "The Real Reason You're Stuck", "The One Thing That Changed Everything", "3 Action Steps to Get Started".
+- **header is NOT**: "Step 1", "Step 2", "Tip 1" (those are slide labels). NOT abstract aims like "引發共鳴" or "trigger resonance". NOT vague themes like "趣味解析" or "fun analysis". The header IS the actual content headline the viewer reads on the slide.
+- **imageTextOnImage** = The full text to RENDER ON the image. For text-heavy: 2–4 lines (header as line 1 + subheadline + body). Use \\n for line breaks. Max ~125 chars per slide for mobile readability. Plain text only, no markdown.
 
 ## Brand & Context
-- Brand: ${personality}. Tone: ${tone}. Style: ${style}. Colors: ${colors || "professional palette"}.
-- Content goal: ${CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"]}
+- Brand: ${personality}. Tone: ${tone}. Visual style: ${style}. Colors: ${colors || "professional palette"}.
+- Content framework: ${CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"]}
+- Visual layout: ${layoutGuide}
 
-## Brief
+## User Brief
 ${idea}
-Lang: ${language}. Format: ${format}. Aspect: ${aspectNote}.
+
+Format: ${format}. Aspect ratio: ${aspectNote}.
+
+## Carousel Structure (IG best practices)
+- Slide 1: Hook that stops the scroll—bold headline, intriguing or specific outcome.
+- Slides 2–${Math.max(2, pageCount - 1)}: Deliver value. Each slide has a clear content headline (header) + supporting text.
+- Final slide: CTA or key takeaway.
 
 ## Output Format
-Return JSON only:
+Return valid JSON only:
 {
   "pages": [
-    { "pageIndex": 1, "header": "Page title", "imageTextOnImage": "Text on image (plain, no markdown)", "visualAdvice": "Visual description for this page" },
+    { "pageIndex": 1, "header": "Concrete content headline for this slide", "imageTextOnImage": "Full text to render (use \\n for line breaks)", "visualAdvice": "Detailed visual description for image generation" },
     ... repeat for each of ${pageCount} pages
   ],
-  "igCaption": "Full IG caption (max 400 chars, max 3 hashtags at end)"
+  "igCaption": "Full IG caption (max 400 chars, max 3 hashtags at end). Engaging, on-brand, encourages save/share."
 }
 
 ### Rules
-- Each page: header = short title (e.g. "Step 1", "Tip 1"). imageTextOnImage = text to render on image (plain text only, no # or **). visualAdvice = detailed scene, composition, colors for image generation.
-- Pages flow logically: intro → content → CTA or conclusion.
-- igCaption: engaging, on-brand, encourages save/share.`;
+- header = Main headline 主標題 INSIDE the image. Concrete, specific, value-driven. NEVER "Step 1" or abstract aims.
+- imageTextOnImage: ${isTextHeavy ? "2–4 lines. Line 1 = header. Lines 2+ = subheadline/body. Use \\n. Max ~125 chars per slide." : "Text to render on image. Plain text only."}
+- visualAdvice: Scene, composition, colors, typography placement for image generation.
+- igCaption: One caption for the whole carousel.`;
 
     const modelOrder = preferPro
       ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
@@ -599,20 +625,20 @@ Return JSON only:
         try {
           let text: string | null;
           if (isV1BetaModel(modelName)) {
-            const response = await generateContentV1Beta(modelName, parts, {
-              temperature: 0.8,
-              maxOutputTokens: 4096,
-              thinkingLevel: "low",
+          const response = await generateContentV1Beta(modelName, parts, {
+            temperature: 0.8,
+            maxOutputTokens: 8192,
+            thinkingLevel: "low",
               safetySettings: safetyToV1Beta(safetySettings),
             });
             text = safeGetText(response);
           } else {
-            const model = genAI.getGenerativeModel({
-              model: modelName,
-              generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
-              safetySettings: [...safetySettings],
-            });
-            const result = await model.generateContent(carouselPrompt);
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+            safetySettings: [...safetySettings],
+          });
+          const result = await model.generateContent(carouselPrompt);
             text = safeGetText(result.response);
           }
           if (text) {
@@ -625,10 +651,11 @@ Return JSON only:
       }
     }
     const fallbackPages: CarouselPageDraft[] = [];
+    const fallbackHeaders = ["Key Insight", "The Problem", "The Solution", "Action Steps", "Key Takeaway", "Summary", "Next Steps", "CTA", "Conclusion"];
     for (let i = 0; i < pageCount; i++) {
       fallbackPages.push({
         pageIndex: i + 1,
-        header: `Page ${i + 1}`,
+        header: fallbackHeaders[i] || `Slide ${i + 1}`,
         imageTextOnImage: i === 0 ? idea.slice(0, 100) : "",
         visualAdvice: `Professional Instagram carousel page ${i + 1}. ${idea}. Clean, modern style.`,
       });
@@ -717,7 +744,7 @@ Return JSON only with 2 variations. Make them meaningfully different (e.g. diffe
         if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 1.0,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
             thinkingLevel: "low",
             safetySettings: safetyToV1Beta(safetySettings),
           });
@@ -725,7 +752,7 @@ Return JSON only with 2 variations. Make them meaningfully different (e.g. diffe
         } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.6, maxOutputTokens: 2048 },
+            generationConfig: { temperature: 0.6, maxOutputTokens: 4096 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(prompt);

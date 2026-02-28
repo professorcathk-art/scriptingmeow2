@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { BrandSpace, PostType, PostFormat, PlanTier } from "@/types/database";
 import { PLAN_LIMITS } from "@/types/database";
+
+const CREATE_POST_DRAFT_KEY = "createPost_draft";
 
 interface CreatePostFormProps {
   brandSpaces: BrandSpace[];
@@ -63,6 +65,68 @@ export function CreatePostForm({
   const [carouselPages, setCarouselPages] = useState<
     { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]
   >([]);
+
+  const saveDraft = useCallback(() => {
+    try {
+      sessionStorage.setItem(
+        CREATE_POST_DRAFT_KEY,
+        JSON.stringify({
+          formData,
+          step,
+          draftVariations,
+          selectedDraftIndex,
+          carouselPages,
+          selectedSampleUrls,
+        })
+      );
+    } catch {
+      // ignore
+    }
+  }, [formData, step, draftVariations, selectedDraftIndex, carouselPages, selectedSampleUrls]);
+
+  const saveDraftAndSetStep = useCallback(
+    (nextStep: 1 | 2 | 3 | 4) => {
+      saveDraft();
+      setStep(nextStep);
+    },
+    [saveDraft]
+  );
+
+  const clearPostDraft = useCallback(() => {
+    try {
+      sessionStorage.removeItem(CREATE_POST_DRAFT_KEY);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    } else {
+      saveDraft();
+    }
+  }, [saveDraft]);
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(CREATE_POST_DRAFT_KEY);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data?.formData && typeof data?.step === "number" && data.step >= 1 && data.step <= 4) {
+          setFormData((prev) => ({ ...prev, ...data.formData }));
+          setStep(data.step);
+          if (data.draftVariations?.length) setDraftVariations(data.draftVariations);
+          if (typeof data.selectedDraftIndex === "number") setSelectedDraftIndex(data.selectedDraftIndex as 0 | 1);
+          if (Array.isArray(data.carouselPages)) setCarouselPages(data.carouselPages);
+          if (Array.isArray(data.selectedSampleUrls)) setSelectedSampleUrls(data.selectedSampleUrls);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (step === 4 && formData.brandSpaceId) {
@@ -226,11 +290,26 @@ export function CreatePostForm({
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || err.details || "Failed to generate post");
+        let errMsg = "Failed to generate post";
+        try {
+          const err = await response.json();
+          errMsg = err.error || err.details || errMsg;
+        } catch {
+          errMsg =
+            response.status === 504 || response.status === 502
+              ? "Request timed out. Carousel generation takes longer—try fewer pages or try again."
+              : `Request failed (${response.status})`;
+        }
+        throw new Error(errMsg);
       }
 
-      const data = await response.json();
+      let data: { id: string };
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("Invalid response from server. Please try again.");
+      }
+      clearPostDraft();
       router.push(`/posts/${data.id}/review`);
     } catch (error: unknown) {
       console.error("Error generating post:", error);
@@ -427,7 +506,7 @@ export function CreatePostForm({
           </button>
           <button
             type="button"
-            onClick={() => setStep(2)}
+            onClick={() => saveDraftAndSetStep(2)}
             disabled={!formData.brandSpaceId}
             className="flex-1 px-4 py-2.5 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
@@ -608,14 +687,14 @@ export function CreatePostForm({
         <div className="flex gap-4 pt-4">
           <button
             type="button"
-            onClick={() => setStep(1)}
+            onClick={() => saveDraftAndSetStep(1)}
             className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
           >
             Back
           </button>
           <button
             type="button"
-            onClick={() => setStep(3)}
+            onClick={() => saveDraftAndSetStep(3)}
             disabled={
               !formData.contentIdea ||
               (formData.language === "Other" && !formData.customLanguage.trim())
@@ -643,7 +722,7 @@ export function CreatePostForm({
         <div className="flex gap-4 pt-4">
           <button
             type="button"
-            onClick={() => setStep(2)}
+            onClick={() => saveDraftAndSetStep(2)}
             className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
           >
             Back
@@ -668,7 +747,7 @@ export function CreatePostForm({
         <p className="text-zinc-400">No draft yet. Please go back and generate a draft.</p>
         <button
           type="button"
-          onClick={() => setStep(3)}
+          onClick={() => saveDraftAndSetStep(3)}
           className="mt-4 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5"
         >
           Back to Step 3
@@ -753,7 +832,7 @@ export function CreatePostForm({
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">
-                      Header (optional)
+                      Main Headline 主標題 (content headline on image)
                     </label>
                     <input
                       type="text"
@@ -762,7 +841,7 @@ export function CreatePostForm({
                         setCarouselPageField(page.pageIndex, "header", e.target.value)
                       }
                       className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                      placeholder="Page title"
+                      placeholder="e.g. 5 Mistakes That Kill Your Growth"
                     />
                   </div>
                   <div>
@@ -974,7 +1053,7 @@ export function CreatePostForm({
         <div className="flex gap-4 pt-4">
           <button
             type="button"
-            onClick={() => setStep(3)}
+            onClick={() => saveDraftAndSetStep(3)}
             className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
           >
             Back

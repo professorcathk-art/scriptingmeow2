@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BrandType } from "@/types/database";
 import { compressImageForUpload } from "@/lib/image-utils";
 import { PolishModal } from "./polish-modal";
+
+const BRAND_SPACE_DRAFT_KEY = "createBrandSpace_draft";
 
 type PolishField = "targetAudiences" | "painPoints" | "desiredOutcomes" | "valueProposition";
 
@@ -33,6 +35,38 @@ export function CreateBrandSpaceForm() {
     desiredOutcomes: "",
     valueProposition: "",
   });
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(BRAND_SPACE_DRAFT_KEY);
+      if (saved) {
+        const { formData: fd, step: s } = JSON.parse(saved);
+        if (fd && typeof s === "number" && s >= 1 && s <= 3) {
+          setFormData((prev) => ({ ...prev, ...fd }));
+          setStep(s as 1 | 2 | 3);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const saveDraftAndSetStep = (nextStep: 1 | 2 | 3) => {
+    try {
+      sessionStorage.setItem(BRAND_SPACE_DRAFT_KEY, JSON.stringify({ formData, step: nextStep }));
+    } catch {
+      // ignore
+    }
+    setStep(nextStep);
+  };
+
+  const clearDraft = () => {
+    try {
+      sessionStorage.removeItem(BRAND_SPACE_DRAFT_KEY);
+    } catch {
+      // ignore
+    }
+  };
 
   const handlePolishClick = async (field: PolishField) => {
     const text = formData[field];
@@ -103,7 +137,7 @@ export function CreateBrandSpaceForm() {
       }
 
       const data = await response.json();
-      // Store brand details in sessionStorage to use in brandbook generation
+      clearDraft();
       if (data.brandDetails) {
         sessionStorage.setItem(`brandDetails_${data.id}`, JSON.stringify(data.brandDetails));
       }
@@ -118,7 +152,7 @@ export function CreateBrandSpaceForm() {
 
   if (step === 1) {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); setStep(2); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
+      <form onSubmit={(e) => { e.preventDefault(); saveDraftAndSetStep(2); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-zinc-400 mb-2">
             Brand Name *
@@ -192,7 +226,7 @@ export function CreateBrandSpaceForm() {
 
   if (step === 2) {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); setStep(3); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
+      <form onSubmit={(e) => { e.preventDefault(); saveDraftAndSetStep(3); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
         <div>
           <h2 className="text-xl font-semibold text-zinc-100 mb-4">Tell us about your brand</h2>
         </div>
@@ -303,7 +337,7 @@ export function CreateBrandSpaceForm() {
         <div className="flex gap-4">
           <button
             type="button"
-            onClick={() => setStep(1)}
+            onClick={() => saveDraftAndSetStep(1)}
             className="flex-1 px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
           >
             Back
@@ -363,7 +397,7 @@ export function CreateBrandSpaceForm() {
         setUploading(false);
       }
 
-      // Store brand details in sessionStorage
+      clearDraft();
       if (data.brandDetails) {
         sessionStorage.setItem(`brandDetails_${brandSpaceId}`, JSON.stringify(data.brandDetails));
       }
@@ -451,7 +485,7 @@ export function CreateBrandSpaceForm() {
       <div className="flex gap-4">
         <button
           type="button"
-          onClick={() => setStep(2)}
+          onClick={() => saveDraftAndSetStep(2)}
           className="flex-1 px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
         >
           Back

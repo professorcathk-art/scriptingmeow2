@@ -29,7 +29,7 @@ const LAYOUT_DESIGN_GUIDE: Record<string, string> = {
   editorial: `
 MINIMALIST EDITORIAL: Clean, magazine-like design with plenty of white space and elegant typography. Headline (line 1) = large, bold. Subheadline (line 2) = medium. Body (line 3+) = smaller, readable. Integrate with imagery—overlay, split, or framed.`,
   "text-heavy": `
-TEXT-HEAVY / CAROUSEL: Bold, easy-to-read typography taking center stage. One bold headline dominates. Perfect for step-by-step guides. High contrast.`,
+TEXT-HEAVY / CAROUSEL: Bold, easy-to-read typography. Main headline (主標題) = largest, dominant. Subheadline + body = supporting. 2–4 lines per slide. High contrast. Max ~125 chars per slide for mobile.`,
   "tweet-card": `
 TWEET / QUOTE CARD: Stylized social media post or quote on attractive background. Elegant typography. Card or frame treatment. Shareable, quote-worthy.`,
   "split-screen": `
