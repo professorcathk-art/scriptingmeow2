@@ -38,9 +38,9 @@ export default async function EditBrandSpacePage({
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-zinc-100 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 mb-2">
           Edit Brand Basic Info
         </h1>
         <p className="text-zinc-400">
@@ -53,6 +53,7 @@ export default async function EditBrandSpacePage({
         initialData={{
           name: brandSpace.name,
           brand_type: brandSpace.brand_type,
+          logo_url: (brandSpace as { logo_url?: string }).logo_url,
           brand_details: brandSpaceWithDetails.brand_details,
         }}
       />

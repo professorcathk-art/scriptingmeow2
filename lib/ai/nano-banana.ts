@@ -12,18 +12,49 @@ const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 export interface GenerateImageOptions {
   /** Aspect ratio: "1:1", "4:5", "9:16", etc. Default 1:1 for square. */
   aspectRatio?: string;
+  /** Up to 3 reference image URLs for style guidance. */
+  referenceImageUrls?: string[];
+}
+
+async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const base64 = buf.toString("base64");
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
+    return { inlineData: { mimeType, data: base64 } };
+  } catch {
+    return null;
+  }
 }
 
 async function generateWithModel(
   model: string,
   prompt: string,
   aspectRatio: string,
-  apiKey: string
+  apiKey: string,
+  referenceImageUrls: string[] = []
 ): Promise<Buffer | null> {
   const url = `${API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
+  const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+  for (let i = 0; i < Math.min(referenceImageUrls.length, 3); i++) {
+    const part = await fetchImagePart(referenceImageUrls[i]);
+    if (part) parts.push(part);
+  }
+
+  const styleInstruction =
+    parts.length > 0
+      ? "The following reference images show the desired style. Generate an image that matches this style and the prompt below.\n\n"
+      : "";
+  parts.push({ text: styleInstruction + prompt });
+
   const body: Record<string, unknown> = {
-    contents: [{ parts: [{ text: prompt }] }],
+    contents: [{ parts }],
     generationConfig: {
       responseModalities: ["TEXT", "IMAGE"],
       imageConfig: { aspectRatio },
@@ -50,8 +81,8 @@ async function generateWithModel(
     }>;
   };
 
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  for (const part of parts) {
+  const responseParts = data.candidates?.[0]?.content?.parts ?? [];
+  for (const part of responseParts) {
     if (part.inlineData?.data) {
       return Buffer.from(part.inlineData.data, "base64");
     }
@@ -74,11 +105,12 @@ export async function generateImageWithNanoBanana(
   }
 
   const aspectRatio = options.aspectRatio ?? "1:1";
+  const referenceImageUrls = options.referenceImageUrls ?? [];
 
-  const buffer = await generateWithModel(MODEL_PRO, prompt, aspectRatio, apiKey);
+  const buffer = await generateWithModel(MODEL_PRO, prompt, aspectRatio, apiKey, referenceImageUrls);
   if (buffer) return buffer;
 
-  const fallback = await generateWithModel(MODEL_FLASH, prompt, aspectRatio, apiKey);
+  const fallback = await generateWithModel(MODEL_FLASH, prompt, aspectRatio, apiKey, referenceImageUrls);
   if (fallback) return fallback;
 
   console.warn("[nano-banana] Both models failed");

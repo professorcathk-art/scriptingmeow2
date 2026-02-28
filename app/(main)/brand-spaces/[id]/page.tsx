@@ -35,9 +35,9 @@ export default async function BrandSpaceDetailPage({
     .single();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
           {brandSpace.name}
         </h1>
         <p className="text-zinc-400 capitalize">
@@ -45,7 +45,7 @@ export default async function BrandSpaceDetailPage({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         <Link
           href={`/brand-spaces/${params.id}/brandbook`}
           className="block p-6 glass rounded-2xl border border-white/5 hover:border-violet-500/30 transition-all group"
@@ -65,7 +65,7 @@ export default async function BrandSpaceDetailPage({
 
         <Link
           href="/create-post"
-          className="block p-6 glass rounded-2xl border border-white/5 hover:border-cyan-500/30 transition-all group"
+          className="block p-4 sm:p-6 glass rounded-xl sm:rounded-2xl border border-white/5 hover:border-cyan-500/30 transition-all group"
         >
           <h2 className="text-xl font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors">
             Create Post

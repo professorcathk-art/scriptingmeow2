@@ -61,6 +61,7 @@ export function buildImagePrompt(options: {
   imageTextOnImage?: string;
   postStyle?: string;
   contentIdea?: string;
+  logoUrl?: string | null;
 }): string {
   const vs = options.brandbook?.visual_style as BrandbookVisualStyle;
   const colors = vs?.primaryColor
@@ -79,6 +80,7 @@ export function buildImagePrompt(options: {
     colors ? `Colors (use these): ${colors}` : "",
     layoutTendencies ? `Layout tendencies: ${layoutTendencies}` : "",
     layoutStyle ? `Layout: ${layoutStyle}` : "",
+    options.logoUrl ? "Include the brand logo in the image (user has provided a logo—place it appropriately, e.g. corner or watermark)." : "",
   ]
     .filter(Boolean)
     .join(". ");

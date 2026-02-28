@@ -20,8 +20,8 @@ export function DashboardSidebar() {
   return (
     <aside
       className={cn(
-        "glass border-r border-white/5 flex flex-col transition-all duration-300",
-        collapsed ? "w-16" : "w-56"
+        "glass border-r border-white/5 flex flex-col transition-all duration-300 shrink-0",
+        collapsed ? "w-12 sm:w-16" : "w-48 sm:w-56"
       )}
     >
       <div className="p-4 flex items-center justify-between">

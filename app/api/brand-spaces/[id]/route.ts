@@ -69,11 +69,12 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, brandType, targetAudiences, painPoints, desiredOutcomes, valueProposition } = body;
+    const { name, brandType, targetAudiences, painPoints, desiredOutcomes, valueProposition, logoUrl } = body;
 
     const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (name !== undefined) updatePayload.name = name;
     if (brandType !== undefined) updatePayload.brand_type = brandType;
+    if (logoUrl !== undefined) updatePayload.logo_url = logoUrl;
 
     const brandDetails: Record<string, string> = {};
     if (targetAudiences !== undefined) brandDetails.targetAudiences = targetAudiences;

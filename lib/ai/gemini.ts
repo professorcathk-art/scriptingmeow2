@@ -237,7 +237,7 @@ export async function generateBrandbook(
     : "General goals";
   const valueProp = brandData.valueProposition || "Unique value to customers";
 
-  const prompt = `You are an expert brand visual design consultant. Create a SPECIFIC, ACTIONABLE Brand Book for Instagram. Avoid generic phrases. Every field must be concrete and usable for content creation.
+  const prompt = `You are an expert brand visual design consultant. Create a SPECIFIC, ACTIONABLE Brand Book for Instagram. Output each field in the format and depth shown in the examples below. Use the brand's primary language (e.g. Traditional Chinese if appropriate). Max ~300 chars per field unless the example shows more structure.
 
 ## Brand Information
 - Name: ${brandData.name}
@@ -251,14 +251,30 @@ ${
   brandData.referenceImages && brandData.referenceImages.length > 0
     ? `## Reference Images (${brandData.referenceImages.length} provided)
 
-**IMPORTANT:** These may be full screenshots (phone UI, margins, browser chrome, status bars). Extract and analyze ONLY the actual post content within the frame. Ignore status bars, navigation, surrounding UI, and other noise. Focus on the post itself: colors, typography, layout, imagery style.
-
-Extract exact Hex codes, font families, layout structure. Reflect these findings specifically in the brandbook.`
-    : "## No Reference Images\nCreate a cohesive, specific visual system—no generic 'modern' or 'professional' without concrete details."
+**IMPORTANT:** Extract and analyze ONLY the actual post content. Ignore status bars, navigation, surrounding UI. Focus on: colors (exact Hex), typography, layout, imagery style, mood. Reflect these findings in the brandbook.`
+    : "## No Reference Images\nCreate a cohesive, specific visual system—no generic phrases without concrete details."
 }
 
+## Output Format (follow these examples closely)
+
+**mood** – Vivid visual description, like: "一張日系療癒風格水彩插畫，圓潤棉花糖般的擬人小貓，一隻黑白奶牛貓戴眼鏡背著黑色背包，表情溫柔可愛。線條乾淨圓滑，顏色柔和，少量陰影，整體像童書封面，給人『今天也辛苦了』的療癒感。"
+
+**toneOfVoice** – Personified role + personality + voice rules, like: "如果要把這個品牌擬人化，他會是：一位溫柔的貓咪心理諮商師。性格：Empathetic、Scientific、Reassuring。口吻：不說教、第一人稱視角代替貓咪說話。"
+
+**typographySpec** (layoutStyleDetail) – Typography & Layout strategy with structure:
+字型使用
+* 主標題：風格、特徵、範例字體
+* 內文：風格、特徵、範例字體
+* 裝飾/署名：用途、風格
+
+**imageStyle** – Illustration technique + character design + image-to-text ratio. DO NOT specify aspect ratio (user chooses later). Example:
+插畫風格：技法（數位水彩等）、主角設定（形象、配件、表情）、圖文比例（封面、內容頁）
+
+**colors** – Hex codes with purpose and visual 氣質. Example:
+整體色調：低飽和度、高明度。主色調：#3E332A、#F9F7F2。輔助色：#8FB995、#E68A81、#AECBDA。視覺氣質：留白適中、線條風格。
+
 ## Output
-Valid JSON only. No markdown. Use brand's primary language when appropriate. Be specific, not generic.
+Valid JSON only. No markdown.
 
 {
   "brandPersonality": "string",
@@ -269,13 +285,13 @@ Valid JSON only. No markdown. Use brand's primary language when appropriate. Be 
     "secondaryColor1": "hex",
     "secondaryColor2": "hex",
     "backgroundColor": "string",
-    "mood": "string - vivid visual description",
-    "imageStyle": "string - technique, subject, ratio",
-    "layoutTendencies": "string - concrete patterns",
+    "mood": "string",
+    "imageStyle": "string",
+    "layoutTendencies": "string",
     "layoutStyle": "string",
     "vibe": ["string"],
-    "typographySpec": "string - headings, body, hierarchy",
-    "layoutStyleDetail": "string - structure, sections, spacing"
+    "typographySpec": "string",
+    "layoutStyleDetail": "string"
   },
   "captionStructure": {
     "hookPatterns": ["string"],

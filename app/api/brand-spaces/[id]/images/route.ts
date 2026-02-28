@@ -4,6 +4,47 @@ import { NextResponse } from "next/server";
 
 const BUCKET = "brand-reference-images";
 
+export async function GET(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: brandSpace } = await supabase
+      .from("brand_spaces")
+      .select("id")
+      .eq("id", params.id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (!brandSpace) {
+      return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
+    }
+
+    const { data: images } = await supabase
+      .from("brand_reference_images")
+      .select("id, image_url")
+      .eq("brand_space_id", params.id)
+      .order("uploaded_at", { ascending: false });
+
+    return NextResponse.json({ images: images ?? [] });
+  } catch (error) {
+    console.error("Error fetching images:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch images" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }

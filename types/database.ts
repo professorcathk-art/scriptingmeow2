@@ -24,6 +24,7 @@ export interface BrandSpace {
   name: string;
   brand_type: BrandType;
   avatar_url?: string;
+  logo_url?: string | null;
   style_summary?: string;
   created_at: string;
   updated_at: string;

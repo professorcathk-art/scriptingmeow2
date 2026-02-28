@@ -116,7 +116,7 @@ export function CreateBrandSpaceForm() {
 
   if (step === 1) {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); setStep(2); }} className="space-y-6 glass-elevated p-6 rounded-2xl">
+      <form onSubmit={(e) => { e.preventDefault(); setStep(2); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-zinc-400 mb-2">
             Brand Name *
@@ -172,7 +172,7 @@ export function CreateBrandSpaceForm() {
 
   if (step === 2) {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); setStep(3); }} className="space-y-6 glass-elevated p-6 rounded-2xl">
+      <form onSubmit={(e) => { e.preventDefault(); setStep(3); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
         <div>
           <h2 className="text-xl font-semibold text-zinc-100 mb-4">Tell us about your brand</h2>
         </div>
@@ -359,13 +359,31 @@ export function CreateBrandSpaceForm() {
   };
 
   return (
-    <form onSubmit={handleSubmitWithImages} className="space-y-6 glass-elevated p-6 rounded-2xl">
+    <form onSubmit={handleSubmitWithImages} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
       <div>
         <h2 className="text-xl font-semibold mb-4">Upload Reference Images (Optional)</h2>
         <p className="text-sm text-zinc-400 mb-4">
           Upload 3-10 of your past IG posts or target style references for better results.
         </p>
-        <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center">
+        <div
+          className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center transition-colors hover:border-violet-500/30"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+              handleImageUpload(files);
+            }
+          }}
+        >
           <p className="text-zinc-400 mb-2">Drag and drop images here, or click to browse</p>
           <input
             type="file"

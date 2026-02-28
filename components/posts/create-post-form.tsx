@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { BrandSpace, PostType, PostFormat, PlanTier } from "@/types/database";
 import { PLAN_LIMITS } from "@/types/database";
@@ -104,6 +104,18 @@ export function CreatePostForm({
     postStyle: "immersive-photo" as string,
     variations: 1,
   });
+  const [referenceImages, setReferenceImages] = useState<{ id: string; image_url: string }[]>([]);
+  const [selectedSampleUrls, setSelectedSampleUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (step === 4 && formData.brandSpaceId) {
+      fetch(`/api/brand-spaces/${formData.brandSpaceId}/images`)
+        .then((r) => r.json())
+        .then((data) => setReferenceImages(data.images ?? []))
+        .catch(() => setReferenceImages([]));
+      setSelectedSampleUrls([]);
+    }
+  }, [step, formData.brandSpaceId]);
 
   const LANGUAGE_OPTIONS = [
     "English",
@@ -223,6 +235,7 @@ export function CreatePostForm({
           confirmedImageTextOnImage: draft.imageTextOnImage,
           confirmedVisualAdvice: draft.visualAdvice,
           confirmedIgCaption: draft.igCaption,
+          selectedSampleImageUrls: selectedSampleUrls,
         }),
       });
 
@@ -244,15 +257,15 @@ export function CreatePostForm({
   };
 
   const cardClass =
-    "bg-zinc-900/50 rounded-2xl border border-white/10 p-6 space-y-6 backdrop-blur-sm";
+    "bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6 space-y-4 sm:space-y-6 backdrop-blur-sm";
 
   const Stepper = () => (
-    <div className="flex items-center justify-between mb-8">
+    <div className="flex items-center justify-between mb-4 sm:mb-8 overflow-x-auto">
       {STEPS.map((s, i) => (
         <div key={s.id} className="flex items-center flex-1">
           <div className="flex flex-col items-center">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
+              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold transition-all shrink-0 ${
                 step >= s.id
                   ? "bg-gradient-to-br from-violet-500 to-cyan-500 text-white ring-2 ring-violet-500/50"
                   : "bg-zinc-800 text-zinc-500 border border-white/10"
@@ -261,7 +274,7 @@ export function CreatePostForm({
               {s.id}
             </div>
             <span
-              className={`mt-2 text-xs font-medium ${
+              className={`mt-1 sm:mt-2 text-[10px] sm:text-xs font-medium whitespace-nowrap ${
                 step >= s.id ? "text-zinc-100" : "text-zinc-500"
               }`}
             >
@@ -750,6 +763,55 @@ export function CreatePostForm({
               placeholder="AI-generated visual description for the image..."
             />
           </div>
+
+          {referenceImages.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">
+                Sample Photos (optional, up to 3) — Use as style reference for image generation
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {referenceImages.map((img) => {
+                  const isSelected = selectedSampleUrls.includes(img.image_url);
+                  const canSelect = isSelected || selectedSampleUrls.length < 3;
+                  return (
+                    <button
+                      key={img.id}
+                      type="button"
+                      onClick={() => {
+                        if (!canSelect) return;
+                        setSelectedSampleUrls((prev) =>
+                          isSelected
+                            ? prev.filter((u) => u !== img.image_url)
+                            : [...prev, img.image_url].slice(0, 3)
+                        );
+                      }}
+                      className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                        isSelected
+                          ? "border-violet-500 ring-2 ring-violet-500/50"
+                          : canSelect
+                            ? "border-white/10 hover:border-violet-500/50"
+                            : "border-white/10 opacity-50 cursor-not-allowed"
+                      }`}
+                    >
+                      <img
+                        src={img.image_url}
+                        alt="Sample"
+                        className="w-full h-full object-cover"
+                      />
+                      {isSelected && (
+                        <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center text-white text-xs">
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">
+                {selectedSampleUrls.length}/3 selected
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">

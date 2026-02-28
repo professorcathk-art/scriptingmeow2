@@ -9,6 +9,7 @@ interface EditBrandSpaceFormProps {
   initialData: {
     name: string;
     brand_type: BrandType;
+    logo_url?: string | null;
     brand_details?: {
       targetAudiences?: string;
       painPoints?: string;
@@ -27,11 +28,13 @@ export function EditBrandSpaceForm({
   const [formData, setFormData] = useState({
     name: initialData.name,
     brandType: initialData.brand_type,
+    logoUrl: initialData.logo_url ?? "",
     targetAudiences: initialData.brand_details?.targetAudiences ?? "",
     painPoints: initialData.brand_details?.painPoints ?? "",
     desiredOutcomes: initialData.brand_details?.desiredOutcomes ?? "",
     valueProposition: initialData.brand_details?.valueProposition ?? "",
   });
+  const [logoUploading, setLogoUploading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +46,7 @@ export function EditBrandSpaceForm({
         body: JSON.stringify({
           name: formData.name,
           brandType: formData.brandType,
+          logoUrl: formData.logoUrl || null,
           targetAudiences: formData.targetAudiences,
           painPoints: formData.painPoints,
           desiredOutcomes: formData.desiredOutcomes,
@@ -68,7 +72,7 @@ export function EditBrandSpaceForm({
     "w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-zinc-900/50 p-6 rounded-2xl border border-white/10">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 bg-zinc-900/50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10">
       <h2 className="text-xl font-semibold text-zinc-100">Edit Brand Basic Info</h2>
 
       <div>
@@ -84,6 +88,93 @@ export function EditBrandSpaceForm({
           className={inputClass}
           placeholder="e.g., My Personal Brand"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-zinc-400 mb-2">
+          Brand Logo (used in generated posts)
+        </label>
+        {formData.logoUrl ? (
+          <div className="flex items-center gap-4">
+            <img
+              src={formData.logoUrl}
+              alt="Brand logo"
+              className="w-16 h-16 object-contain rounded-lg border border-white/10"
+            />
+            <div className="flex gap-2">
+              <label className="px-4 py-2 rounded-xl bg-white/10 cursor-pointer hover:bg-white/15 text-white text-sm transition-colors">
+                {logoUploading ? "Uploading..." : "Change Logo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={logoUploading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setLogoUploading(true);
+                    try {
+                      const fd = new FormData();
+                      fd.append("file", file);
+                      const res = await fetch(`/api/brand-spaces/${brandSpaceId}/logo`, {
+                        method: "POST",
+                        body: fd,
+                      });
+                      if (!res.ok) throw new Error("Upload failed");
+                      const { logoUrl: url } = await res.json();
+                      setFormData((prev) => ({ ...prev, logoUrl: url }));
+                    } catch (err) {
+                      alert("Failed to upload logo");
+                    } finally {
+                      setLogoUploading(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, logoUrl: "" }))}
+                className="px-4 py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-red-400 text-sm"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label className="block border-2 border-dashed border-white/10 rounded-xl p-6 text-center cursor-pointer hover:border-violet-500/30 transition-colors">
+            <span className="text-zinc-400 text-sm">
+              {logoUploading ? "Uploading..." : "Click to upload logo"}
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={logoUploading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setLogoUploading(true);
+                try {
+                  const fd = new FormData();
+                  fd.append("file", file);
+                  const res = await fetch(`/api/brand-spaces/${brandSpaceId}/logo`, {
+                    method: "POST",
+                    body: fd,
+                  });
+                  if (!res.ok) throw new Error("Upload failed");
+                  const { logoUrl: url } = await res.json();
+                  setFormData((prev) => ({ ...prev, logoUrl: url }));
+                } catch (err) {
+                  alert("Failed to upload logo");
+                } finally {
+                  setLogoUploading(false);
+                  e.target.value = "";
+                }
+              }}
+            />
+          </label>
+        )}
       </div>
 
       <div>

@@ -44,8 +44,8 @@ export default async function CreatePostPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-zinc-100 mb-6">Create Instagram Post</h1>
+    <div className="max-w-4xl mx-auto w-full">
+      <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 mb-4 sm:mb-6">Create Instagram Post</h1>
       <CreatePostForm
         brandSpaces={brandSpaces}
         userCredits={userProfile?.credits_remaining || 0}

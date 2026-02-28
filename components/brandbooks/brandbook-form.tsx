@@ -100,8 +100,8 @@ export function BrandbookForm({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-zinc-900/50 p-6 rounded-2xl border border-white/10">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="bg-zinc-900/50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-zinc-100">Brandbook</h2>
           <button
@@ -143,8 +143,7 @@ export function BrandbookForm({
             <div className="space-y-3">
               <div>
                 <label className={labelClass}>Colors</label>
-                <input
-                  type="text"
+                <textarea
                   value={
                     Array.isArray(brandbook.visual_style?.colors)
                       ? brandbook.visual_style.colors.join(", ")
@@ -160,13 +159,13 @@ export function BrandbookForm({
                     })
                   }
                   className={inputClass}
-                  placeholder="e.g., #FF5733, #33C3F0, #FFC300"
+                  rows={4}
+                  placeholder="e.g., #FF5733, #33C3F0, #FFC300 or full color spec with hex and purpose"
                 />
               </div>
               <div>
                 <label className={labelClass}>Mood</label>
-                <input
-                  type="text"
+                <textarea
                   value={brandbook.visual_style?.mood || ""}
                   onChange={(e) =>
                     setBrandbook({
@@ -178,12 +177,12 @@ export function BrandbookForm({
                     })
                   }
                   className={inputClass}
+                  rows={4}
                 />
               </div>
               <div>
                 <label className={labelClass}>Image Style</label>
-                <input
-                  type="text"
+                <textarea
                   value={brandbook.visual_style?.image_style || (brandbook.visual_style as { imageStyle?: string })?.imageStyle || ""}
                   onChange={(e) =>
                     setBrandbook({
@@ -195,6 +194,7 @@ export function BrandbookForm({
                     })
                   }
                   className={inputClass}
+                  rows={4}
                 />
               </div>
               <div>

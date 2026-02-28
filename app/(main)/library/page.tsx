@@ -66,15 +66,15 @@ export default async function LibraryPage({
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-zinc-100">Library</h1>
-          <p className="text-zinc-400 mt-1">Your saved Instagram posts</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100">Library</h1>
+          <p className="text-zinc-400 mt-1 text-sm sm:text-base">Your saved Instagram posts</p>
         </div>
         <Link
           href="/create-post"
-          className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity"
+          className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity text-center text-sm sm:text-base"
         >
           Create New Post
         </Link>
@@ -96,7 +96,7 @@ export default async function LibraryPage({
       </Suspense>
 
       {posts && posts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
           {posts.map((post: {
             id: string;
             visual_url?: string;
@@ -108,7 +108,7 @@ export default async function LibraryPage({
             <Link
               key={post.id}
               href={`/posts/${post.id}/review`}
-              className="block bg-zinc-900/50 rounded-2xl border border-white/10 overflow-hidden hover:border-violet-500/30 transition-all"
+              className="block bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden hover:border-violet-500/30 transition-all"
             >
               <div className="aspect-square bg-zinc-800/50 flex items-center justify-center overflow-hidden">
                 {post.visual_url ? (
@@ -118,17 +118,17 @@ export default async function LibraryPage({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-zinc-500">No visual</span>
+                  <span className="text-zinc-500 text-xs sm:text-sm">No visual</span>
                 )}
               </div>
-              <div className="p-4">
-                <p className="text-sm font-medium text-zinc-100 mb-1">
+              <div className="p-2 sm:p-4">
+                <p className="text-xs sm:text-sm font-medium text-zinc-100 mb-0.5 sm:mb-1 truncate">
                   {post.brand_spaces?.name || "Unknown Brand"}
                 </p>
-                <p className="text-xs text-zinc-500 mb-2 line-clamp-2">
+                <p className="text-xs text-zinc-500 mb-1 sm:mb-2 line-clamp-2">
                   {post.content_idea}
                 </p>
-                <div className="flex items-center justify-between text-xs text-zinc-500">
+                <div className="flex items-center justify-between text-[10px] sm:text-xs text-zinc-500">
                   <span>{formatDate(post.created_at)}</span>
                   {post.tags && post.tags.length > 0 && (
                     <span className="text-violet-400">

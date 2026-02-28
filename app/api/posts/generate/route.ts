@@ -41,6 +41,7 @@ export async function POST(request: Request) {
     confirmedVisualAdvice,
     confirmedIgCaption,
     confirmedCaption,
+    selectedSampleImageUrls,
   } = body as {
     brandSpaceId?: string;
     postType?: string;
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
     confirmedVisualAdvice?: string;
     confirmedIgCaption?: string;
     confirmedCaption?: { hook: string; body: string; cta: string; hashtags: string[] };
+    selectedSampleImageUrls?: string[];
   };
 
   if (!brandSpaceId) {
@@ -66,10 +68,10 @@ export async function POST(request: Request) {
   const creditsNeeded = typeof variations === "number" ? variations : 1;
 
   try {
-    // Verify brand space ownership
+    // Verify brand space ownership and get logo
     const { data: brandSpace } = await supabase
       .from("brand_spaces")
-      .select("id")
+      .select("id, logo_url")
       .eq("id", brandSpaceId)
       .eq("user_id", user.id)
       .single();
@@ -164,6 +166,7 @@ export async function POST(request: Request) {
       imageTextOnImage: imageTextOnImage || undefined,
       postStyle: postStyle || undefined,
       contentIdea: contentIdea || undefined,
+      logoUrl: brandSpace?.logo_url ?? null,
     });
 
     // Check credits
@@ -215,7 +218,13 @@ export async function POST(request: Request) {
     let visualUrl: string;
     const aspectRatio =
       format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
-    const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, { aspectRatio });
+    const sampleUrls = Array.isArray(selectedSampleImageUrls)
+      ? selectedSampleImageUrls.slice(0, 3).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
+      : [];
+    const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
+      aspectRatio,
+      referenceImageUrls: sampleUrls,
+    });
 
     if (imageBuffer) {
       visualUrl = await uploadPostImage(imageBuffer, post.id, user.id);
