@@ -17,8 +17,17 @@ npm install
 ### 2. Set Up Supabase
 
 1. Create a new Supabase project at https://supabase.com
-2. Go to SQL Editor and run the migration file: `supabase/migrations/001_initial_schema.sql`
-3. Go to Settings > API and copy:
+2. Run migrations in order via **SQL Editor** (Supabase Dashboard → SQL Editor → New query):
+   - `supabase/migrations/001_initial_schema.sql`
+   - `supabase/migrations/002_add_brand_details.sql`
+   - `supabase/migrations/003_add_logo_url.sql`
+   - `supabase/migrations/004_update_brand_types.sql`
+3. **Alternative (Supabase CLI):** If you use the Supabase CLI locally:
+   ```bash
+   supabase link  # link to your project
+   supabase db push  # applies all pending migrations
+   ```
+4. Go to Settings > API and copy:
    - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
    - Anon/Public Key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 

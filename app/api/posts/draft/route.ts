@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
     const { data: brandSpace } = await supabase
       .from("brand_spaces")
-      .select("id")
+      .select("id, brand_type, brand_details")
       .eq("id", brandSpaceId)
       .eq("user_id", user.id)
       .single();
@@ -80,13 +80,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const generatedPost = await generatePost(
+    const brandType = brandSpace?.brand_type as string | undefined;
+    const otherBrandType = (brandSpace as { brand_details?: { otherBrandType?: string } })?.brand_details?.otherBrandType;
+
+    const variations = await generatePost(
       {
         brandPersonality: brandbook.brand_personality || "",
         toneOfVoice: brandbook.tone_of_voice || "",
         visualStyle: brandbook.visual_style || {},
-        captionStructure: brandbook.caption_structure || {},
         dosAndDonts: brandbook.dos_and_donts || {},
+        brandType,
+        otherBrandType,
       },
       contentIdea,
       language,
@@ -98,9 +102,11 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({
-      imageTextOnImage: generatedPost.imageTextOnImage ?? "",
-      visualAdvice: generatedPost.visualAdvice ?? generatedPost.nanoBananaPrompt ?? generatedPost.visualDescription ?? "",
-      igCaption: generatedPost.igCaption ?? "",
+      variations: variations.map((v) => ({
+        imageTextOnImage: v.imageTextOnImage ?? "",
+        visualAdvice: v.visualAdvice ?? "",
+        igCaption: v.igCaption ?? "",
+      })),
     });
   } catch (error) {
     console.error("[posts/draft] Error:", error);

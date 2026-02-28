@@ -15,6 +15,7 @@ interface EditBrandSpaceFormProps {
       painPoints?: string;
       desiredOutcomes?: string;
       valueProposition?: string;
+      otherBrandType?: string;
     };
   };
 }
@@ -27,7 +28,10 @@ export function EditBrandSpaceForm({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: initialData.name,
-    brandType: initialData.brand_type,
+    brandType: (["shop", "agency"].includes(initialData.brand_type as string)
+      ? ((initialData.brand_type as string) === "shop" ? "ecommerce-retail" : "service-agency")
+      : initialData.brand_type) as BrandType,
+    brandTypeOther: initialData.brand_details?.otherBrandType ?? "",
     logoUrl: initialData.logo_url ?? "",
     targetAudiences: initialData.brand_details?.targetAudiences ?? "",
     painPoints: initialData.brand_details?.painPoints ?? "",
@@ -46,6 +50,7 @@ export function EditBrandSpaceForm({
         body: JSON.stringify({
           name: formData.name,
           brandType: formData.brandType,
+          brandTypeOther: formData.brandType === "other" ? formData.brandTypeOther : undefined,
           logoUrl: formData.logoUrl || null,
           targetAudiences: formData.targetAudiences,
           painPoints: formData.painPoints,
@@ -183,17 +188,35 @@ export function EditBrandSpaceForm({
         </label>
         <select
           id="brandType"
-          required
+          required={formData.brandType !== "other"}
           value={formData.brandType}
-          onChange={(e) => setFormData({ ...formData, brandType: e.target.value as BrandType })}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              brandType: e.target.value as BrandType,
+              brandTypeOther: e.target.value === "other" ? formData.brandTypeOther : "",
+            })
+          }
           className={inputClass}
         >
-          <option value="personal-brand">Personal Brand</option>
-          <option value="shop">Shop</option>
-          <option value="agency">Agency</option>
-          <option value="local-business">Local Business</option>
-          <option value="other">Other</option>
+          <option value="personal-brand">Personal Brand / Creator</option>
+          <option value="ecommerce-retail">E-commerce / Retail</option>
+          <option value="service-agency">Service Provider / Agency</option>
+          <option value="local-business">Local Business / Brick & Mortar</option>
+          <option value="tech-startup">Tech / Software / Startup</option>
+          <option value="community-nonprofit">Community / Non-Profit</option>
+          <option value="other">Other: please specify</option>
         </select>
+        {formData.brandType === "other" && (
+          <input
+            type="text"
+            required
+            value={formData.brandTypeOther}
+            onChange={(e) => setFormData({ ...formData, brandTypeOther: e.target.value })}
+            placeholder="Please specify your brand type"
+            className="mt-2 w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50"
+          />
+        )}
       </div>
 
       <div>

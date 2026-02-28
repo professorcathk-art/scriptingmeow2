@@ -26,6 +26,7 @@ export function CreateBrandSpaceForm() {
   const [formData, setFormData] = useState({
     name: "",
     brandType: "personal-brand" as BrandType,
+    brandTypeOther: "",
     targetAudiences: "",
     painPoints: "",
     desiredOutcomes: "",
@@ -138,17 +139,35 @@ export function CreateBrandSpaceForm() {
           </label>
           <select
             id="brandType"
-            required
+            required={formData.brandType !== "other"}
             value={formData.brandType}
-            onChange={(e) => setFormData({ ...formData, brandType: e.target.value as BrandType })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                brandType: e.target.value as BrandType,
+                brandTypeOther: e.target.value === "other" ? formData.brandTypeOther : "",
+              })
+            }
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50"
           >
-            <option value="personal-brand">Personal Brand</option>
-            <option value="shop">Shop</option>
-            <option value="agency">Agency</option>
-            <option value="local-business">Local Business</option>
-            <option value="other">Other</option>
+            <option value="personal-brand">Personal Brand / Creator</option>
+            <option value="ecommerce-retail">E-commerce / Retail</option>
+            <option value="service-agency">Service Provider / Agency</option>
+            <option value="local-business">Local Business / Brick & Mortar</option>
+            <option value="tech-startup">Tech / Software / Startup</option>
+            <option value="community-nonprofit">Community / Non-Profit</option>
+            <option value="other">Other: please specify</option>
           </select>
+          {formData.brandType === "other" && (
+            <input
+              type="text"
+              required
+              value={formData.brandTypeOther}
+              onChange={(e) => setFormData({ ...formData, brandTypeOther: e.target.value })}
+              placeholder="Please specify your brand type"
+              className="mt-2 w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50"
+            />
+          )}
         </div>
 
         <div className="flex gap-4">

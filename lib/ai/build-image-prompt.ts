@@ -27,15 +27,22 @@ DESIGN REQUIREMENTS (follow strictly):
 
 const LAYOUT_DESIGN_GUIDE: Record<string, string> = {
   editorial: `
-EDITORIAL LAYOUT: Magazine-style. Text block with clear typographic hierarchy. Headline (line 1) = large, bold. Subheadline (line 2) = medium. Body (line 3+) = smaller, readable. Integrate with imagery—overlay, split, or framed. Professional, not stock-photo generic.`,
+MINIMALIST EDITORIAL: Clean, magazine-like design with plenty of white space and elegant typography. Headline (line 1) = large, bold. Subheadline (line 2) = medium. Body (line 3+) = smaller, readable. Integrate with imagery—overlay, split, or framed.`,
   "text-heavy": `
-TEXT-HEAVY LAYOUT: One bold headline dominates. Large, impactful typography. Minimal supporting text. High contrast.`,
+TEXT-HEAVY / CAROUSEL: Bold, easy-to-read typography taking center stage. One bold headline dominates. Perfect for step-by-step guides. High contrast.`,
   "tweet-card": `
-QUOTE CARD LAYOUT: Key quote or statement. Elegant typography. Card or frame treatment. Shareable, quote-worthy.`,
+TWEET / QUOTE CARD: Stylized social media post or quote on attractive background. Elegant typography. Card or frame treatment. Shareable, quote-worthy.`,
   "split-screen": `
-SPLIT LAYOUT: Clear division—text on one side, image on other. Balanced composition. Headline + body.`,
+SPLIT SCREEN / COLLAGE: Dynamic mix of multiple images or side-by-side comparison with text areas. Clear division—text on one side, image on other. Balanced composition.`,
   "immersive-photo": `
-IMMERSIVE LAYOUT: Image-first. Minimal or no text overlay. Full-bleed feel.`,
+IMMERSIVE VISUAL: Focuses entirely on high-quality photography or graphics with minimal text overlay. Full-bleed feel. Image-first.`,
+};
+
+const CONTENT_FRAMEWORK_IMAGE_GUIDE: Record<string, string> = {
+  "educational-value": "Content goal: Educational/Value—teach, inform, actionable advice. Visual should support learning.",
+  "engagement-relatable": "Content goal: Engagement/Relatable—conversation-starter, shareable. Visual should feel relatable, meme-worthy or question-driven.",
+  "promotional-proof": "Content goal: Promotional/Proof—products, testimonials, sales. Visual should highlight offerings, social proof.",
+  "storytelling": "Content goal: Storytelling/Behind the Scenes—journey, team, process. Visual should feel authentic, narrative.",
 };
 
 type BrandbookVisualStyle = {
@@ -43,11 +50,12 @@ type BrandbookVisualStyle = {
   secondaryColor1?: string;
   secondaryColor2?: string;
   colors?: string[];
-  mood?: string;
   imageStyle?: string;
   image_style?: string;
   layoutTendencies?: string;
   layoutStyle?: string;
+  typographySpec?: string;
+  layoutStyleDetail?: string;
   vibe?: string[];
 } | null;
 
@@ -60,8 +68,10 @@ export function buildImagePrompt(options: {
   visualAdvice: string;
   imageTextOnImage?: string;
   postStyle?: string;
-  contentIdea?: string;
   logoUrl?: string | null;
+  brandType?: string;
+  otherBrandType?: string;
+  contentFramework?: string;
 }): string {
   const vs = options.brandbook?.visual_style as BrandbookVisualStyle;
   const colors = vs?.primaryColor
@@ -69,17 +79,19 @@ export function buildImagePrompt(options: {
     : Array.isArray(vs?.colors)
       ? vs.colors.slice(0, 5).join(", ")
       : "";
-  const mood = vs?.mood || "engaging";
   const imageStyle = vs?.imageStyle || vs?.image_style || "professional";
   const layoutTendencies = vs?.layoutTendencies || "";
   const layoutStyle = vs?.layoutStyle || "";
+  const typographySpec = vs?.typographySpec || "";
+  const layoutStyleDetail = vs?.layoutStyleDetail || "";
 
   const brandContext = [
     `Brand visual style: ${imageStyle}`,
-    `Mood: ${mood}`,
     colors ? `Colors (use these): ${colors}` : "",
     layoutTendencies ? `Layout tendencies: ${layoutTendencies}` : "",
     layoutStyle ? `Layout: ${layoutStyle}` : "",
+    typographySpec ? `Typography: ${typographySpec}` : "",
+    layoutStyleDetail ? `Layout detail: ${layoutStyleDetail}` : "",
     options.logoUrl ? "Include the brand logo in the image (user has provided a logo—place it appropriately, e.g. corner or watermark)." : "",
   ]
     .filter(Boolean)
@@ -89,6 +101,18 @@ export function buildImagePrompt(options: {
 
   parts.push(`Create a professional, scroll-stopping Instagram post. You are an expert in editorial design and IG content.`);
 
+  if (options.brandType || options.contentFramework) {
+    const brandTypeNote = options.brandType
+      ? `Brand type: ${options.brandType === "other" && options.otherBrandType ? options.otherBrandType : options.brandType}.`
+      : "";
+    const contentNote = options.contentFramework && CONTENT_FRAMEWORK_IMAGE_GUIDE[options.contentFramework]
+      ? CONTENT_FRAMEWORK_IMAGE_GUIDE[options.contentFramework]
+      : "";
+    if (brandTypeNote || contentNote) {
+      parts.push(`USER CHOICES (reflect in output): ${[brandTypeNote, contentNote].filter(Boolean).join(" ")}`);
+    }
+  }
+
   if (brandContext) {
     parts.push(`BRAND BOOK (follow strictly): ${brandContext}`);
   }
@@ -97,17 +121,13 @@ export function buildImagePrompt(options: {
     parts.push(`視覺建議 / VISUAL ADVICE (follow strictly): ${options.visualAdvice.trim()}`);
   }
 
-  if (options.contentIdea?.trim()) {
-    parts.push(`Content theme: ${options.contentIdea.trim().slice(0, 150)}`);
-  }
-
   const layout = options.postStyle || "editorial";
   const layoutGuide = LAYOUT_DESIGN_GUIDE[layout] || LAYOUT_DESIGN_GUIDE.editorial;
-  parts.push(`Layout style: ${layout}.${layoutGuide}`);
+  parts.push(`Visual layout (user chose): ${layout}.${layoutGuide}`);
 
   let basePrompt = parts.join("\n\n");
   if (!basePrompt.trim()) {
-    basePrompt = `Professional Instagram post. Style: ${imageStyle}. Mood: ${mood}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
+    basePrompt = `Professional Instagram post. Style: ${imageStyle}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
   }
 
   const rawText = (options.imageTextOnImage ?? "").trim();

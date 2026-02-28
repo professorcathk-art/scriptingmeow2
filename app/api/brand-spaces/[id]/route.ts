@@ -69,7 +69,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, brandType, targetAudiences, painPoints, desiredOutcomes, valueProposition, logoUrl } = body;
+    const { name, brandType, brandTypeOther, targetAudiences, painPoints, desiredOutcomes, valueProposition, logoUrl } = body;
 
     const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (name !== undefined) updatePayload.name = name;
@@ -81,6 +81,7 @@ export async function PATCH(
     if (painPoints !== undefined) brandDetails.painPoints = painPoints;
     if (desiredOutcomes !== undefined) brandDetails.desiredOutcomes = desiredOutcomes;
     if (valueProposition !== undefined) brandDetails.valueProposition = valueProposition;
+    if (brandType === "other" && brandTypeOther !== undefined) brandDetails.otherBrandType = brandTypeOther;
 
     if (Object.keys(brandDetails).length > 0) {
       const { data: existing } = await supabase

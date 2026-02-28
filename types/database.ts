@@ -1,8 +1,10 @@
-export type BrandType = 
+export type BrandType =
   | "personal-brand"
-  | "shop"
-  | "agency"
+  | "ecommerce-retail"
+  | "service-agency"
   | "local-business"
+  | "tech-startup"
+  | "community-nonprofit"
   | "other";
 
 export type PlanTier = "free" | "basic" | "pro";
@@ -43,7 +45,6 @@ export interface Brandbook {
   tone_of_voice: string;
   visual_style: {
     colors: string[];
-    mood: string;
     image_style: string;
     layout_tendencies: string;
     typographySpec?: string;

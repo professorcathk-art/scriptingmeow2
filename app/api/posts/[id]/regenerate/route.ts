@@ -46,12 +46,11 @@ export async function POST(
 
     const postStyle = (post as { post_style?: string }).post_style;
 
-    const generatedPost = await generatePost(
+    const variations = await generatePost(
       {
         brandPersonality: brandbook.brand_personality,
         toneOfVoice: brandbook.tone_of_voice,
         visualStyle: brandbook.visual_style,
-        captionStructure: brandbook.caption_structure,
         dosAndDonts: brandbook.dos_and_donts,
       },
       post.content_idea,
@@ -60,24 +59,22 @@ export async function POST(
       post.format,
       postStyle
     );
+    const generatedPost = variations[0];
 
     const visualAdvice =
       generatedPost.visualAdvice?.trim() ||
-      generatedPost.nanoBananaPrompt?.trim() ||
       (() => {
         const vs = brandbook.visual_style as {
           primaryColor?: string;
           secondaryColor1?: string;
           colors?: string[];
-          mood?: string;
           imageStyle?: string;
         } | null;
         const colors = vs?.primaryColor
           ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
           : vs?.colors?.join(", ") || "";
         const style = vs?.imageStyle || "professional";
-        const mood = vs?.mood || "engaging";
-        return `Professional Instagram post. Style: ${style}. Mood: ${mood}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
+        return `Professional Instagram post. Style: ${style}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
       })();
 
     const fullImagePrompt = buildImagePrompt({
@@ -85,7 +82,6 @@ export async function POST(
       visualAdvice,
       imageTextOnImage: generatedPost.imageTextOnImage ?? undefined,
       postStyle: postStyle || undefined,
-      contentIdea: post.content_idea || undefined,
     });
 
     const aspectRatio =
@@ -97,7 +93,7 @@ export async function POST(
       visualUrl = await uploadPostImage(imageBuffer, params.id, user.id);
     } else {
       visualUrl = await uploadPostPlaceholder(
-        generatedPost.visualAdvice || generatedPost.visualDescription || "Post image",
+        generatedPost.visualAdvice || "Post image",
         params.id,
         user.id
       );

@@ -34,52 +34,6 @@ function SquaresIcon({ className }: { className?: string }) {
   );
 }
 
-function EditorialIcon() {
-  return (
-    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="2" y="4" width="20" height="16" rx="1" strokeWidth={2} />
-      <line x1="2" y1="10" x2="22" y2="10" strokeWidth={2} />
-      <line x1="8" y1="14" x2="14" y2="14" strokeWidth={1.5} />
-      <line x1="8" y1="17" x2="12" y2="17" strokeWidth={1.5} />
-    </svg>
-  );
-}
-
-function TextHeavyIcon() {
-  return (
-    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h12M4 18h10" />
-    </svg>
-  );
-}
-
-function ImmersivePhotoIcon() {
-  return (
-    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="3" y="5" width="18" height="14" rx="1" strokeWidth={2} />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14l3-3 2 2 4-5 2 3" />
-    </svg>
-  );
-}
-
-function TweetCardIcon() {
-  return (
-    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-    </svg>
-  );
-}
-
-function SplitScreenIcon() {
-  return (
-    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x="2" y="4" width="9" height="16" rx="1" strokeWidth={2} />
-      <rect x="13" y="4" width="9" height="16" rx="1" strokeWidth={2} />
-      <line x1="12" y1="4" x2="12" y2="20" strokeWidth={1.5} strokeDasharray="2 2" />
-    </svg>
-  );
-}
-
 export function CreatePostForm({
   brandSpaces,
   userCredits,
@@ -88,11 +42,10 @@ export function CreatePostForm({
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [loading, setLoading] = useState(false);
-  const [draft, setDraft] = useState<{
-    imageTextOnImage: string;
-    visualAdvice: string;
-    igCaption: string;
-  } | null>(null);
+  const [draftVariations, setDraftVariations] = useState<
+    { imageTextOnImage: string; visualAdvice: string; igCaption: string }[]
+  | null>(null);
+  const [selectedDraftIndex, setSelectedDraftIndex] = useState<0 | 1>(0);
   const [formData, setFormData] = useState({
     brandSpaceId: "",
     postType: "single-image" as PostType,
@@ -143,7 +96,7 @@ export function CreatePostForm({
 
   const handleGenerateDraft = async () => {
     setLoading(true);
-    setDraft(null);
+    setDraftVariations(null);
     const payload = {
       brandSpaceId: formData.brandSpaceId,
       postType: formData.postType,
@@ -177,11 +130,22 @@ export function CreatePostForm({
           }
 
           const data = await response.json();
-          setDraft({
-            imageTextOnImage: data.imageTextOnImage ?? "",
-            visualAdvice: data.visualAdvice ?? "",
-            igCaption: data.igCaption ?? "",
-          });
+          const vars = data.variations ?? [];
+          if (vars.length >= 2) {
+            setDraftVariations(vars);
+            setSelectedDraftIndex(0);
+          } else if (vars.length === 1) {
+            setDraftVariations([vars[0], vars[0]]);
+            setSelectedDraftIndex(0);
+          } else {
+            const single = {
+              imageTextOnImage: data.imageTextOnImage ?? "",
+              visualAdvice: data.visualAdvice ?? "",
+              igCaption: data.igCaption ?? "",
+            };
+            setDraftVariations([single, single]);
+            setSelectedDraftIndex(0);
+          }
           setStep(4);
           return;
         } catch (error: unknown) {
@@ -213,6 +177,7 @@ export function CreatePostForm({
   };
 
   const handleConfirmAndGenerate = async () => {
+    const draft = draftVariations?.[selectedDraftIndex];
     if (!draft || !canGenerate) {
       alert("Not enough credits or no draft. Please upgrade your plan or regenerate.");
       return;
@@ -430,42 +395,53 @@ export function CreatePostForm({
 
   if (step === 2) {
     const CONTENT_FRAMEWORK_OPTIONS = [
-      { value: "educational-value", label: "Educational / Value", zh: "教育/乾貨" },
-      { value: "engagement-relatable", label: "Engagement / Relatable", zh: "互動/共鳴" },
-      { value: "promotional-proof", label: "Promotional / Proof", zh: "宣傳/轉換" },
-      { value: "storytelling", label: "Storytelling", zh: "品牌故事" },
+      {
+        value: "educational-value",
+        title: "Educational / Value",
+        description: "Share tips, tutorials, or actionable advice to teach your audience.",
+      },
+      {
+        value: "engagement-relatable",
+        title: "Engagement / Relatable",
+        description: "Spark conversations with memes, relatable situations, or questions.",
+      },
+      {
+        value: "promotional-proof",
+        title: "Promotional / Proof",
+        description: "Highlight your products/services, share testimonials, or announce sales.",
+      },
+      {
+        value: "storytelling",
+        title: "Storytelling / Behind the Scenes",
+        description: "Build connection by sharing your journey, team, or processes.",
+      },
     ];
 
     const VISUAL_LAYOUT_OPTIONS = [
       {
         value: "editorial",
-        label: "Editorial",
-        zh: "雜誌排版",
-        icon: EditorialIcon,
+        title: "Minimalist Editorial",
+        description: "Clean, magazine-like design with plenty of white space and elegant typography.",
       },
       {
         value: "text-heavy",
-        label: "Text-Heavy",
-        zh: "醒目大字",
-        icon: TextHeavyIcon,
+        title: "Text-Heavy / Carousel",
+        description: "Bold, easy-to-read typography taking center stage, perfect for step-by-step guides.",
       },
       {
         value: "immersive-photo",
-        label: "Immersive Photo",
-        zh: "純圖/極簡文字",
-        icon: ImmersivePhotoIcon,
+        title: "Immersive Visual",
+        description: "Focuses entirely on high-quality photography or graphics with minimal text overlay.",
       },
       {
         value: "tweet-card",
-        label: "Tweet Card",
-        zh: "推文/語錄",
-        icon: TweetCardIcon,
+        title: "Tweet / Quote Card",
+        description: "A stylized social media post or quote placed on an attractive background.",
       },
       {
         value: "split-screen",
-        label: "Split Screen",
-        zh: "圖文分割",
-        icon: SplitScreenIcon,
+        title: "Split Screen / Collage",
+        description: "Dynamic mix of multiple images or a side-by-side comparison with text areas.",
       },
     ];
 
@@ -530,29 +506,27 @@ export function CreatePostForm({
 
         <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
           <p className="text-sm font-medium text-zinc-400 mb-3">
-            Content Framework (內容架構)
+            Content Framework
           </p>
-          <p className="text-xs text-zinc-500 mb-3">
+          <p className="text-xs text-zinc-500 mb-4">
             Select the strategic goal of your post.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {CONTENT_FRAMEWORK_OPTIONS.map(({ value, label, zh }) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {CONTENT_FRAMEWORK_OPTIONS.map(({ value, title, description }) => (
               <button
                 key={value}
                 type="button"
                 onClick={() =>
                   setFormData({ ...formData, contentFramework: value })
                 }
-                className={`px-4 py-2 text-sm rounded-xl border transition-all ${
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
                   formData.contentFramework === value
-                    ? "border-indigo-500 bg-indigo-500/20 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
-                    : "border-white/10 text-zinc-400 hover:text-zinc-100 hover:border-indigo-500/30 hover:bg-zinc-800/50"
+                    ? "border-indigo-500 bg-indigo-500/20 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
+                    : "border-white/10 hover:border-indigo-500/30 hover:bg-zinc-800/50"
                 }`}
               >
-                {label}{" "}
-                <span className={formData.contentFramework === value ? "text-indigo-300/80" : "text-zinc-500"}>
-                  ({zh})
-                </span>
+                <div className="font-medium text-zinc-100 mb-1">{title}</div>
+                <div className="text-sm text-zinc-500">{description}</div>
               </button>
             ))}
           </div>
@@ -560,32 +534,27 @@ export function CreatePostForm({
 
         <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
           <p className="text-sm font-medium text-zinc-400 mb-3">
-            Visual Layout (視覺排版)
+            Visual Layout
           </p>
           <p className="text-xs text-zinc-500 mb-4">
             Choose the layout style for your post image.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {VISUAL_LAYOUT_OPTIONS.map(({ value, label, zh, icon: Icon }) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {VISUAL_LAYOUT_OPTIONS.map(({ value, title, description }) => (
               <button
                 key={value}
                 type="button"
                 onClick={() =>
                   setFormData({ ...formData, postStyle: value })
                 }
-                className={`p-4 rounded-xl border-2 text-left transition-all flex flex-col items-start gap-3 hover:border-indigo-500/50 hover:bg-zinc-800/50 ${
+                className={`p-4 rounded-xl border-2 text-left transition-all hover:border-indigo-500/50 hover:bg-zinc-800/50 ${
                   formData.postStyle === value
                     ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.2)]"
                     : "border-white/10 bg-zinc-800/20"
                 }`}
               >
-                <div className="w-10 h-10 flex items-center justify-center text-indigo-400/80">
-                  <Icon />
-                </div>
-                <div>
-                  <div className="font-medium text-zinc-100 text-sm">{label}</div>
-                  <div className="text-xs text-zinc-500">{zh}</div>
-                </div>
+                <div className="font-semibold text-zinc-100 mb-2">{title}</div>
+                <p className="text-sm text-zinc-500">{description}</p>
               </button>
             ))}
           </div>
@@ -626,58 +595,6 @@ export function CreatePostForm({
           AI will generate the post caption and visual advice. Review and confirm before generating the image.
         </p>
 
-        <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-2">
-            Number of Variations
-          </label>
-          <select
-            value={formData.variations}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                variations: parseInt(e.target.value),
-              })
-            }
-            className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-          >
-            <option value={1}>1 variation</option>
-            <option value={3}>3 variations</option>
-            <option value={5}>5 variations</option>
-          </select>
-          <p className="text-sm text-zinc-500 mt-1">
-            1 credit = 1 generated variation for one size
-          </p>
-        </div>
-
-        <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-zinc-400">
-              Credits Needed:
-            </span>
-            <span className="text-lg font-bold text-zinc-100">
-              {creditsNeeded} credits
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-zinc-400">Your Credits:</span>
-            <span
-              className={`text-sm font-medium ${
-                canGenerate ? "text-emerald-400" : "text-red-400"
-              }`}
-            >
-              {userCredits} / {PLAN_LIMITS[planTier].monthly_credits}
-            </span>
-          </div>
-          {!canGenerate && (
-            <p className="text-sm text-red-400 mt-2">
-              Not enough credits.{" "}
-              <a href="/billing" className="underline text-violet-400">
-                Upgrade your plan
-              </a>
-            </p>
-          )}
-        </div>
-
         <div className="flex gap-4 pt-4">
           <button
             type="button"
@@ -699,7 +616,7 @@ export function CreatePostForm({
     );
   }
 
-  if (step === 4 && !draft) {
+  if (step === 4 && !draftVariations?.length) {
     return (
       <div className={cardClass}>
         <Stepper />
@@ -715,7 +632,16 @@ export function CreatePostForm({
     );
   }
 
-  if (step === 4 && draft) {
+  if (step === 4 && draftVariations?.length) {
+    const draft = draftVariations[selectedDraftIndex];
+    const setDraftField = (field: "imageTextOnImage" | "visualAdvice" | "igCaption", value: string) => {
+      setDraftVariations((prev) => {
+        if (!prev) return prev;
+        const next = [...prev];
+        next[selectedDraftIndex] = { ...next[selectedDraftIndex], [field]: value };
+        return next;
+      });
+    };
     return (
       <div className={cardClass}>
         <Stepper />
@@ -727,6 +653,33 @@ export function CreatePostForm({
         </p>
 
         <div className="space-y-4">
+          {draftVariations.length >= 2 && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">
+                Choose a draft variation
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {draftVariations.map((v, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedDraftIndex(i as 0 | 1)}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${
+                      selectedDraftIndex === i
+                        ? "border-violet-500 bg-violet-500/10"
+                        : "border-white/10 bg-zinc-800/30 hover:border-white/20"
+                    }`}
+                  >
+                    <span className="text-xs font-medium text-zinc-500">Variation {i + 1}</span>
+                    <p className="mt-2 text-sm text-zinc-200 line-clamp-3">
+                      {v.imageTextOnImage || v.igCaption || "—"}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Text on Image (可編輯) — Plain text only, no markdown
@@ -741,7 +694,7 @@ export function CreatePostForm({
             <textarea
               value={draft.imageTextOnImage}
               onChange={(e) =>
-                setDraft({ ...draft, imageTextOnImage: e.target.value })
+                setDraftField("imageTextOnImage", e.target.value)
               }
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
               rows={4}
@@ -756,7 +709,7 @@ export function CreatePostForm({
             <textarea
               value={draft.visualAdvice}
               onChange={(e) =>
-                setDraft({ ...draft, visualAdvice: e.target.value })
+                setDraftField("visualAdvice", e.target.value)
               }
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
               rows={5}
@@ -820,10 +773,7 @@ export function CreatePostForm({
             <textarea
               value={draft.igCaption}
               onChange={(e) =>
-                setDraft({
-                  ...draft,
-                  igCaption: e.target.value.slice(0, 400),
-                })
+                setDraftField("igCaption", e.target.value.slice(0, 400))
               }
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
               rows={5}
@@ -831,6 +781,58 @@ export function CreatePostForm({
               placeholder="Full caption for Instagram post..."
             />
             <p className="text-xs text-zinc-500 mt-1">{draft.igCaption.length}/400</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Number of Image Variations
+            </label>
+            <select
+              value={formData.variations}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  variations: parseInt(e.target.value),
+                })
+              }
+              className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+            >
+              <option value={1}>1 variation</option>
+              <option value={3}>3 variations</option>
+              <option value={5}>5 variations</option>
+            </select>
+            <p className="text-sm text-zinc-500 mt-1">
+              1 credit = 1 generated image. Draft generation does not consume credits.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-zinc-400">
+                Credits Needed:
+              </span>
+              <span className="text-lg font-bold text-zinc-100">
+                {creditsNeeded} credits
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-400">Your Credits:</span>
+              <span
+                className={`text-sm font-medium ${
+                  canGenerate ? "text-emerald-400" : "text-red-400"
+                }`}
+              >
+                {userCredits} / {PLAN_LIMITS[planTier].monthly_credits}
+              </span>
+            </div>
+            {!canGenerate && (
+              <p className="text-sm text-red-400 mt-2">
+                Not enough credits.{" "}
+                <a href="/billing" className="underline text-violet-400">
+                  Upgrade your plan
+                </a>
+              </p>
+            )}
           </div>
         </div>
 

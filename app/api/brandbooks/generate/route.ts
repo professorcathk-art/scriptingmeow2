@@ -50,6 +50,7 @@ export async function POST(request: Request) {
     const brandData = {
       name: brandSpace.name,
       type: brandSpace.brand_type,
+      otherBrandType: (brandSpace.brand_type === "other" && typeof stored?.otherBrandType === "string") ? stored.otherBrandType : undefined,
       targetAudiences: toArray(stored?.targetAudiences),
       painPoints: toArray(stored?.painPoints),
       desiredOutcomes: toArray(stored?.desiredOutcomes),

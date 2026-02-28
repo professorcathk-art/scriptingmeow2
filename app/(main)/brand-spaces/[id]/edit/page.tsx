@@ -34,6 +34,7 @@ export default async function EditBrandSpacePage({
       painPoints?: string;
       desiredOutcomes?: string;
       valueProposition?: string;
+      otherBrandType?: string;
     };
   };
 

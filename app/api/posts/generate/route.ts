@@ -68,10 +68,10 @@ export async function POST(request: Request) {
   const creditsNeeded = typeof variations === "number" ? variations : 1;
 
   try {
-    // Verify brand space ownership and get logo
+    // Verify brand space ownership and get logo, brand type
     const { data: brandSpace } = await supabase
       .from("brand_spaces")
-      .select("id, logo_url")
+      .select("id, logo_url, brand_type, brand_details")
       .eq("id", brandSpaceId)
       .eq("user_id", user.id)
       .single();
@@ -119,12 +119,11 @@ export async function POST(request: Request) {
       imageTextOnImage = (confirmedImageTextOnImage ?? "").trim();
       imagePrompt = (confirmedVisualAdvice ?? "").trim();
     } else {
-      const generatedPost = await generatePost(
+      const variations = await generatePost(
         {
           brandPersonality: brandbook.brand_personality,
           toneOfVoice: brandbook.tone_of_voice,
           visualStyle: brandbook.visual_style,
-          captionStructure: brandbook.caption_structure,
           dosAndDonts: brandbook.dos_and_donts,
         },
         contentIdea || "",
@@ -135,13 +134,10 @@ export async function POST(request: Request) {
         false,
         contentFramework
       );
+      const generatedPost = variations[0];
       caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, 400) };
       imageTextOnImage = generatedPost.imageTextOnImage ?? "";
-      imagePrompt =
-        generatedPost.visualAdvice?.trim() ||
-        generatedPost.nanoBananaPrompt?.trim() ||
-        generatedPost.visualDescription ||
-        "";
+      imagePrompt = generatedPost.visualAdvice?.trim() || "";
     }
 
     if (!imagePrompt) {
@@ -156,17 +152,19 @@ export async function POST(request: Request) {
         ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
         : vs?.colors?.join(", ") || "";
       const style = vs?.imageStyle || "professional";
-      const mood = vs?.mood || "engaging";
-      imagePrompt = `Professional Instagram post. Style: ${style}. Mood: ${mood}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
+      imagePrompt = `Professional Instagram post. Style: ${style}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
     }
 
+    const brandDetails = brandSpace as { brand_details?: { otherBrandType?: string } } | undefined;
     const fullImagePrompt = buildImagePrompt({
       brandbook,
       visualAdvice: imagePrompt,
       imageTextOnImage: imageTextOnImage || undefined,
       postStyle: postStyle || undefined,
-      contentIdea: contentIdea || undefined,
       logoUrl: brandSpace?.logo_url ?? null,
+      brandType: brandSpace?.brand_type,
+      otherBrandType: brandDetails?.brand_details?.otherBrandType,
+      contentFramework: contentFramework as string | undefined,
     });
 
     // Check credits

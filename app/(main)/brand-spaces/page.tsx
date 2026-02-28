@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PLAN_LIMITS, type PlanTier } from "@/types/database";
+import { getBrandTypeLabel } from "@/lib/utils";
 import { redirect } from "next/navigation";
 
 export default async function BrandSpacesPage() {
@@ -84,7 +85,10 @@ export default async function BrandSpacesPage() {
                     {brandSpace.name}
                   </h3>
                   <p className="text-sm text-zinc-500 mb-2">
-                    {brandSpace.brand_type.replace("-", " ")}
+                    {getBrandTypeLabel(
+                      brandSpace.brand_type,
+                      (brandSpace as { brand_details?: { otherBrandType?: string } }).brand_details?.otherBrandType
+                    )}
                   </p>
                   {brandSpace.style_summary && (
                     <p className="text-xs text-zinc-400 line-clamp-2">

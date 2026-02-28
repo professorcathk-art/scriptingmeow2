@@ -112,7 +112,17 @@ function stripMarkdownFromText(s: string): string {
     .trim();
 }
 
-/** Parse JSON from model output, fixing common issues. */
+/** Parse single draft from JSON. */
+function parseSingleDraft(post: Record<string, unknown>): DraftOutput {
+  const raw = String(post.imageTextOnImage ?? post.imageText ?? "").trim();
+  return {
+    imageTextOnImage: stripMarkdownFromText(raw),
+    visualAdvice: String(post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
+    igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, 400),
+  };
+}
+
+/** Parse JSON from model output, fixing common issues. Returns single draft or null. */
 function parsePostJson(text: string): DraftOutput | null {
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
@@ -122,13 +132,35 @@ function parsePostJson(text: string): DraftOutput | null {
     `"${inner.replace(/\r?\n/g, " ")}"`
   );
   try {
-    const post = JSON.parse(jsonStr);
-    const raw = String(post.imageTextOnImage ?? post.imageText ?? "").trim();
-    return {
-      imageTextOnImage: stripMarkdownFromText(raw),
-      visualAdvice: String(post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
-      igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, 400),
-    };
+    const parsed = JSON.parse(jsonStr);
+    if (parsed.variation1 && parsed.variation2) {
+      return parseSingleDraft(parsed.variation1);
+    }
+    return parseSingleDraft(parsed);
+  } catch {
+    return null;
+  }
+}
+
+/** Parse 2 variations from model output. */
+function parsePostJsonVariations(text: string): DraftOutput[] | null {
+  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  let jsonStr = match ? match[0] : cleaned;
+  jsonStr = jsonStr.replace(/,(\s*[}\]])/g, "$1");
+  jsonStr = jsonStr.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, (_, inner) =>
+    `"${inner.replace(/\r?\n/g, " ")}"`
+  );
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (parsed.variation1 && parsed.variation2) {
+      return [
+        parseSingleDraft(parsed.variation1),
+        parseSingleDraft(parsed.variation2),
+      ];
+    }
+    const single = parseSingleDraft(parsed);
+    return [single, { ...single }];
   } catch {
     return null;
   }
@@ -184,10 +216,21 @@ export async function generateImage(prompt: string): Promise<string> {
   }
 }
 
+const BRAND_TYPE_GUIDANCE: Record<string, string> = {
+  "personal-brand": "Personal Brand / Creator: Tailor for individuals building authority. Warm, authentic, thought-leader tone.",
+  "ecommerce-retail": "E-commerce / Retail: Product-focused, aspirational. Lifestyle imagery, clear CTAs, shoppable feel.",
+  "service-agency": "Service Provider / Agency: Professional, results-oriented. Case studies, expertise, trust signals.",
+  "local-business": "Local Business / Brick & Mortar: Community-focused, approachable. Local relevance, neighborhood feel.",
+  "tech-startup": "Tech / Software / Startup: Modern, innovative. Clean aesthetics, product demos, growth mindset.",
+  "community-nonprofit": "Community / Non-Profit: Mission-driven, inclusive. Impact stories, calls to action, authenticity.",
+  other: "Other: Adapt to the brand's unique positioning based on the details provided.",
+};
+
 export async function generateBrandbook(
   brandData: {
     name: string;
     type: string;
+    otherBrandType?: string;
     targetAudiences: string[];
     painPoints: string[];
     desiredOutcomes: string[];
@@ -203,7 +246,6 @@ export async function generateBrandbook(
     secondaryColor1?: string;
     secondaryColor2?: string;
     backgroundColor?: string;
-    mood: string;
     imageStyle: string;
     layoutTendencies: string;
     layoutStyle?: string;
@@ -211,6 +253,7 @@ export async function generateBrandbook(
     typographySpec?: string;
     layoutStyleDetail?: string;
   };
+  /** Kept for DB compatibility; always empty (not generated). */
   captionStructure: {
     hookPatterns: string[];
     bodyPatterns: string[];
@@ -237,11 +280,16 @@ export async function generateBrandbook(
     : "General goals";
   const valueProp = brandData.valueProposition || "Unique value to customers";
 
-  const prompt = `You are an expert brand visual design consultant. Create a SPECIFIC, ACTIONABLE Brand Book for Instagram. Output each field in the format and depth shown in the examples below. Use the brand's primary language (e.g. Traditional Chinese if appropriate). Max ~300 chars per field unless the example shows more structure.
+  const brandTypeLabel = BRAND_TYPE_GUIDANCE[brandData.type] || BRAND_TYPE_GUIDANCE.other;
+  const brandTypeContext = brandData.type === "other" && brandData.otherBrandType?.trim()
+    ? `Other (user specified: "${brandData.otherBrandType.trim()}")`
+    : brandTypeLabel;
+
+  const prompt = `You are an expert brand visual design consultant. Create a SPECIFIC, ACTIONABLE Brand Book for Instagram. Output each field in concrete, usable form. Use the brand's primary language when appropriate. Max ~300 chars per field unless structure requires more.
 
 ## Brand Information
 - Name: ${brandData.name}
-- Type: ${brandData.type}
+- Brand Type: ${brandTypeContext}
 - Target Audiences: ${audiences}
 - Audience Pain Points: ${painPoints}
 - Desired Outcomes: ${outcomes}
@@ -251,27 +299,34 @@ ${
   brandData.referenceImages && brandData.referenceImages.length > 0
     ? `## Reference Images (${brandData.referenceImages.length} provided)
 
-**IMPORTANT:** Extract and analyze ONLY the actual post content. Ignore status bars, navigation, surrounding UI. Focus on: colors (exact Hex), typography, layout, imagery style, mood. Reflect these findings in the brandbook.`
+**IMPORTANT:** Extract and analyze ONLY the actual post content. Ignore status bars, navigation, surrounding UI. Focus on: colors (exact Hex), typography, layout, imagery style. Reflect these findings in the brandbook.`
     : "## No Reference Images\nCreate a cohesive, specific visual system—no generic phrases without concrete details."
 }
 
-## Output Format (follow these examples closely)
+## Output Format (tailor output for this brand type: ${brandTypeContext})
 
-**mood** – Vivid visual description, like: "一張日系療癒風格水彩插畫，圓潤棉花糖般的擬人小貓，一隻黑白奶牛貓戴眼鏡背著黑色背包，表情溫柔可愛。線條乾淨圓滑，顏色柔和，少量陰影，整體像童書封面，給人『今天也辛苦了』的療癒感。"
+**toneOfVoice** – Personified role + personality + voice. Examples:
+- Personal/creator: "A trusted friend who shares real insights. Warm, direct, no corporate speak."
+- E-commerce: "A helpful stylist. Confident, aspirational, product-focused without being pushy."
+- B2B/Agency: "A strategic partner. Professional, data-backed, reassuring. Speaks to decision-makers."
+- Local business: "A neighborhood expert. Approachable, community-focused, authentic."
 
-**toneOfVoice** – Personified role + personality + voice rules, like: "如果要把這個品牌擬人化，他會是：一位溫柔的貓咪心理諮商師。性格：Empathetic、Scientific、Reassuring。口吻：不說教、第一人稱視角代替貓咪說話。"
+**imageStyle** – Technique + subject + image-to-text ratio. DO NOT specify aspect ratio (user chooses later). Examples:
+- Illustration: "Digital watercolor. Rounded characters, soft edges. Cover 40% image : 60% text; content 50:50."
+- Photography: "Lifestyle product shots. Natural light, clean backgrounds. Minimal text overlay."
+- Mixed: "Bold typography over candid photos. High contrast. Text dominates, image supports."
 
-**typographySpec** (layoutStyleDetail) – Typography & Layout strategy with structure:
-字型使用
-* 主標題：風格、特徵、範例字體
-* 內文：風格、特徵、範例字體
-* 裝飾/署名：用途、風格
+**typographySpec** – Headings, body, hierarchy. Examples:
+- Editorial: "Headings: bold sans (e.g. Helvetica Bold). Body: readable serif. Decorative: script for signatures."
+- Minimal: "Single font family. Headings = weight 700, body = 400. Generous line height."
 
-**imageStyle** – Illustration technique + character design + image-to-text ratio. DO NOT specify aspect ratio (user chooses later). Example:
-插畫風格：技法（數位水彩等）、主角設定（形象、配件、表情）、圖文比例（封面、內容頁）
+**layoutStyleDetail** – Structure, spacing, placement. Examples:
+- Card layout: "Rounded corners, subtle shadow. Text block bottom-third. Consistent padding."
+- Magazine: "Clear hierarchy. Headline top, subhead, body. Image full-bleed or framed."
 
-**colors** – Hex codes with purpose and visual 氣質. Example:
-整體色調：低飽和度、高明度。主色調：#3E332A、#F9F7F2。輔助色：#8FB995、#E68A81、#AECBDA。視覺氣質：留白適中、線條風格。
+**colors** – Hex codes with purpose. Examples:
+- Warm: "Primary #E85D04, secondary #F4A261, bg #FFF8F0. Energetic, approachable."
+- Cool: "Primary #2C3E50, accent #3498DB, bg #ECF0F1. Professional, trustworthy."
 
 ## Output
 Valid JSON only. No markdown.
@@ -285,19 +340,12 @@ Valid JSON only. No markdown.
     "secondaryColor1": "hex",
     "secondaryColor2": "hex",
     "backgroundColor": "string",
-    "mood": "string",
     "imageStyle": "string",
     "layoutTendencies": "string",
     "layoutStyle": "string",
     "vibe": ["string"],
     "typographySpec": "string",
     "layoutStyleDetail": "string"
-  },
-  "captionStructure": {
-    "hookPatterns": ["string"],
-    "bodyPatterns": ["string"],
-    "ctaPatterns": ["string"],
-    "hashtagStyle": "string"
   },
   "dosAndDonts": {
     "dos": ["string"],
@@ -358,7 +406,6 @@ Valid JSON only. No markdown.
             secondaryColor1: vs.secondaryColor1 || (Array.isArray(vs.colors) ? vs.colors[1] : ""),
             secondaryColor2: vs.secondaryColor2 || (Array.isArray(vs.colors) ? vs.colors[2] : ""),
             backgroundColor: vs.backgroundColor || "light",
-            mood: vs.mood || "",
             imageStyle: (vs as { imageStyle?: string; image_style?: string }).imageStyle || (vs as { image_style?: string }).image_style || "",
             layoutTendencies: vs.layoutTendencies || "",
             layoutStyle: vs.layoutStyle || "",
@@ -367,16 +414,10 @@ Valid JSON only. No markdown.
             layoutStyleDetail: vs.layoutStyleDetail || "",
           },
           captionStructure: {
-            hookPatterns: Array.isArray(brandbook.captionStructure?.hookPatterns)
-              ? brandbook.captionStructure.hookPatterns
-              : [],
-            bodyPatterns: Array.isArray(brandbook.captionStructure?.bodyPatterns)
-              ? brandbook.captionStructure.bodyPatterns
-              : [],
-            ctaPatterns: Array.isArray(brandbook.captionStructure?.ctaPatterns)
-              ? brandbook.captionStructure.ctaPatterns
-              : [],
-            hashtagStyle: brandbook.captionStructure?.hashtagStyle || "",
+            hookPatterns: [],
+            bodyPatterns: [],
+            ctaPatterns: [],
+            hashtagStyle: "",
           },
           dosAndDonts: {
             dos: Array.isArray(brandbook.dosAndDonts?.dos) ? brandbook.dosAndDonts.dos : [],
@@ -400,11 +441,38 @@ function truncate(s: string, max: number): string {
 }
 
 const LAYOUT_TEXT_GUIDE: Record<string, string> = {
-  "immersive-photo": "No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line.",
-  editorial: "Magazine layout. Output PLAIN TEXT only—NO markdown (#, ##, ###, **). Use line breaks. Line 1 = headline (主標題). Line 2 = subheadline (副標題). Line 3+ = body (正文). Each line is the actual text only, no labels.",
-  "text-heavy": "One big bold headline. imageTextOnImage: single impactful line, plain text only, no markdown.",
-  "tweet-card": "Quote card. imageTextOnImage: the key quote, plain text only, no markdown.",
-  "split-screen": "Split layout. imageTextOnImage: Line 1 = headline, Line 2+ = body. Plain text only, no markdown.",
+  "immersive-photo": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
+  editorial: "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown (#, ##, ###, **). Line 1 = headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography.",
+  "text-heavy": "Text-Heavy / Carousel: Bold typography center stage. imageTextOnImage: single impactful line or step headline, plain text only. Perfect for step-by-step guides.",
+  "tweet-card": "Tweet / Quote Card: Stylized quote or social post. imageTextOnImage: the key quote, plain text only, no markdown. Attractive background.",
+  "split-screen": "Split Screen / Collage: Dynamic mix. imageTextOnImage: Line 1 = headline, Line 2+ = body. Side-by-side or collage layout with text areas.",
+};
+
+/** Single post (單頁圖表): impress target audience. Carousel (複頁教學貼文): save value. */
+const POST_QUALITY_GUIDE = {
+  single: `【單頁圖表 Single Post】目標：impress 目標受眾
+- 讓陌生人快速明白一個觀念
+- 建立「我有料」的第一印象
+- 令人停一停，覺得「哦，原來係咁」
+- 文字精煉、一圖說清，適合快速滑動時抓住注意力`,
+
+  carousel: `【複頁教學貼文 Carousel】目標：保存價值
+- 深入解釋一個實用主題
+- 令人想 Save、Share
+- 培養信任，為之後查詢／轉化鋪路
+- 每頁有明確價值，整體有邏輯、可收藏`,
+
+  outputRules: `### 輸出要求（很重要）：
+- 避免與品牌定位無關的內容（例如旅遊、食譜、純娛樂）
+- 所有建議都必須能夠幫助吸引「正確受眾」
+- 語氣清晰、實用，不需要行銷話術`,
+};
+
+const CONTENT_FRAMEWORK_GUIDE: Record<string, string> = {
+  "educational-value": "Educational / Value: Share tips, tutorials, or actionable advice. Teach the audience. Value-first, informative tone.",
+  "engagement-relatable": "Engagement / Relatable: Spark conversations. Use memes, relatable situations, or questions. Conversational, shareable.",
+  "promotional-proof": "Promotional / Proof: Highlight products/services, testimonials, or sales. Proof-driven, conversion-focused.",
+  "storytelling": "Storytelling / Behind the Scenes: Build connection. Share journey, team, or processes. Authentic, narrative-driven.",
 };
 
 export async function generatePost(
@@ -412,8 +480,9 @@ export async function generatePost(
     brandPersonality: string;
     toneOfVoice: string;
     visualStyle: unknown;
-    captionStructure: unknown;
     dosAndDonts: unknown;
+    brandType?: string;
+    otherBrandType?: string;
   },
   contentIdea: string,
   language: string,
@@ -422,39 +491,75 @@ export async function generatePost(
   postStyle?: string,
   preferPro?: boolean,
   contentFramework?: string
-): Promise<DraftOutput & { caption?: { hook: string; body: string; cta: string; hashtags: string[] }; visualDescription?: string; nanoBananaPrompt?: string }> {
+): Promise<DraftOutput[]> {
   const idea = truncate(contentIdea, 400);
   const vs = brandbook.visualStyle as {
     primaryColor?: string;
     secondaryColor1?: string;
     colors?: string[];
-    mood?: string;
     imageStyle?: string;
     image_style?: string;
+    typographySpec?: string;
+    layoutStyleDetail?: string;
   } | null;
   const colors = vs?.primaryColor
     ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
     : Array.isArray(vs?.colors) ? vs.colors.slice(0, 3).join(", ") : "";
   const style = vs?.imageStyle || vs?.image_style || "professional";
+  const typography = truncate(vs?.typographySpec || "", 150);
+  const layoutDetail = truncate(vs?.layoutStyleDetail || "", 150);
   const personality = truncate(brandbook.brandPersonality, 200);
   const tone = truncate(brandbook.toneOfVoice, 150);
   const layout = postStyle || "immersive-photo";
   const textGuide = LAYOUT_TEXT_GUIDE[layout] || LAYOUT_TEXT_GUIDE["immersive-photo"];
   const aspectNote = format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
 
-  const prompt = `IG post. Brand: ${personality}. Tone: ${tone}. Style: ${style}. Colors: ${colors || "professional palette"}.
+  const contentFrameworkDesc = CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"];
+  const brandTypeLabel = brandbook.brandType === "other" && brandbook.otherBrandType?.trim()
+    ? `Other (${brandbook.otherBrandType.trim()})`
+    : BRAND_TYPE_GUIDANCE[brandbook.brandType || ""]?.split(":")[0] || brandbook.brandType || "";
 
-Brief: ${idea}
-Lang: ${language}. Format: ${format}. Layout: ${layout}. Goal: ${contentFramework || "educational-value"}.
+  const visualLayoutContext = [
+    `Visual layout (user chose): ${layout}. ${LAYOUT_TEXT_GUIDE[layout] || ""}`,
+    typography ? `Typography: ${typography}` : "",
+    layoutDetail ? `Layout: ${layoutDetail}` : "",
+  ]
+    .filter(Boolean)
+    .join(". ");
 
-Output JSON only:
-{"imageTextOnImage":"","visualAdvice":"","igCaption":""}
+  const isCarousel = layout === "text-heavy";
+  const qualityGuide = isCarousel ? POST_QUALITY_GUIDE.carousel : POST_QUALITY_GUIDE.single;
 
+  const prompt = `You are an IG posts expert and prompt engineer. Create 2 DISTINCT draft variations for the user to choose from.
+
+## Brand & Context
+- Brand: ${personality}. Tone: ${tone}. Style: ${style}. Colors: ${colors || "professional palette"}.
+- Brand type: ${brandTypeLabel}.
+- Content goal (user chose): ${contentFrameworkDesc}
+${visualLayoutContext ? `\n${visualLayoutContext}` : ""}
+
+## Quality Focus (apply to BOTH variations)
+${qualityGuide}
+
+${POST_QUALITY_GUIDE.outputRules}
+
+## Brief
+${idea}
+Lang: ${language}. Format: ${format}.
+
+## Output Format
+Return JSON only with 2 variations. Make them meaningfully different (e.g. different hooks, angles, or emphasis):
+{
+  "variation1": {"imageTextOnImage":"","visualAdvice":"","igCaption":""},
+  "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
+}
+
+### Field rules (for each variation):
 1. imageTextOnImage: Text to RENDER ON THE IMAGE. ${textGuide} NEVER use markdown (#, ##, ###, **). Output only the actual display text. If no text on image, use "".
 
-2. visualAdvice: 視覺建議. Detailed scene, composition, colors ${colors || ""}, mood, aspect ${aspectNote}. Describe the VISUAL (photo/illustration style, lighting, framing). For editorial: describe how text integrates with image (e.g. "text overlay in top third, magazine-style typography, image below"). Be specific about brand alignment.
+2. visualAdvice: 視覺建議. Detailed scene, composition, colors ${colors || ""}, aspect ${aspectNote}. Describe the VISUAL (photo/illustration style, lighting, framing). For editorial: describe how text integrates with image. Be specific about brand alignment.
 
-3. igCaption: Full IG caption. Max 400 chars. Max 3 hashtags at end. Engaging, on-brand.`;
+3. igCaption: Full IG caption. Max 400 chars. Max 3 hashtags at end. Engaging, on-brand, clear, practical.`;
 
   const modelOrder = preferPro
     ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
@@ -469,7 +574,7 @@ Output JSON only:
         if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 1.0,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048,
             thinkingLevel: "low",
             safetySettings: safetyToV1Beta(safetySettings),
           });
@@ -477,7 +582,7 @@ Output JSON only:
         } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.6, maxOutputTokens: 1024 },
+            generationConfig: { temperature: 0.6, maxOutputTokens: 2048 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(prompt);
@@ -485,13 +590,9 @@ Output JSON only:
         }
 
         if (text) {
-          const parsed = parsePostJson(text);
-          if (parsed) {
-            return {
-              ...parsed,
-              visualDescription: parsed.visualAdvice,
-              nanoBananaPrompt: parsed.visualAdvice,
-            };
+          const variations = parsePostJsonVariations(text);
+          if (variations && variations.length >= 2) {
+            return variations;
           }
         }
         lastError = new Error("Empty or blocked response");
@@ -507,9 +608,5 @@ Output JSON only:
     igCaption: `${contentIdea.slice(0, 200)}${contentIdea.length > 200 ? "..." : ""}\n\nFollow for more.\n\n#instagram #content`,
   };
   console.warn("[generatePost] All models failed, using fallback");
-  return {
-    ...fallback,
-    visualDescription: fallback.visualAdvice,
-    nanoBananaPrompt: fallback.visualAdvice,
-  };
+  return [fallback, { ...fallback }];
 }

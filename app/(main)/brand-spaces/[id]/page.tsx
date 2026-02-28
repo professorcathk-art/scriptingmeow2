@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getBrandTypeLabel } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import { DeleteBrandButton } from "@/components/brand-spaces/delete-brand-button";
 
@@ -40,8 +41,11 @@ export default async function BrandSpaceDetailPage({
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
           {brandSpace.name}
         </h1>
-        <p className="text-zinc-400 capitalize">
-          {brandSpace.brand_type.replace("-", " ")}
+        <p className="text-zinc-400">
+          {getBrandTypeLabel(
+            brandSpace.brand_type,
+            (brandSpace as { brand_details?: { otherBrandType?: string } }).brand_details?.otherBrandType
+          )}
         </p>
       </div>
 

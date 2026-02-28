@@ -164,23 +164,6 @@ export function BrandbookForm({
                 />
               </div>
               <div>
-                <label className={labelClass}>Mood</label>
-                <textarea
-                  value={brandbook.visual_style?.mood || ""}
-                  onChange={(e) =>
-                    setBrandbook({
-                      ...brandbook,
-                      visual_style: {
-                        ...brandbook.visual_style,
-                        mood: e.target.value,
-                      },
-                    })
-                  }
-                  className={inputClass}
-                  rows={4}
-                />
-              </div>
-              <div>
                 <label className={labelClass}>Image Style</label>
                 <textarea
                   value={brandbook.visual_style?.image_style || (brandbook.visual_style as { imageStyle?: string })?.imageStyle || ""}

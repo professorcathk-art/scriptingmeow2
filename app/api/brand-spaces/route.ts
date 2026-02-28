@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, brandType, targetAudiences, painPoints, desiredOutcomes, valueProposition } = body;
+    const { name, brandType, brandTypeOther, targetAudiences, painPoints, desiredOutcomes, valueProposition } = body;
 
     // Check brand space limit
     const { data: userProfile } = await supabase
@@ -47,6 +47,7 @@ export async function POST(request: Request) {
       painPoints: painPoints || "",
       desiredOutcomes: desiredOutcomes || "",
       valueProposition: valueProposition || "",
+      ...(brandType === "other" && brandTypeOther ? { otherBrandType: brandTypeOther } : {}),
     };
 
     const { data: brandSpace, error } = await supabase
