@@ -3,6 +3,7 @@ import {
   HarmCategory,
   HarmBlockThreshold,
 } from "@google/generative-ai";
+import { getBrandbookPrompt, getSingleImageDraftPrompt, getCarouselDraftPrompt } from "./load-prompts";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -267,6 +268,7 @@ export async function generateBrandbook(
     vibe?: string[];
     typographySpec?: string;
     layoutStyleDetail?: string;
+    imageGenerationPrompt?: string;
   };
   /** Kept for DB compatibility; always empty (not generated). */
   captionStructure: {
@@ -304,79 +306,27 @@ export async function generateBrandbook(
   const refImagesSection = hasRefImages
     ? `## CRITICAL: Reference Images (${brandData.referenceImages!.length} sample posts attached below)
 
-**YOU MUST analyze the attached images.** They are the user's actual IG posts or style references. Your brandbook output MUST be derived from what you see—not generic templates.
+**YOU MUST analyze the attached images.** They are the user's actual IG posts or style references. Your output MUST be derived from what you see—not generic templates.
 
-1. **Colors**: Extract exact hex codes from the images. Use them in the colors array and colorDescriptionDetailed. If you see warm browns, specify #hex. If cream backgrounds, specify #hex.
-2. **Typography**: Describe the actual fonts, weights, and hierarchy you see (e.g. bold sans headlines, serif body).
-3. **Layout**: Describe the structure—text placement, image-to-text ratio, spacing.
-4. **Style**: Line quality (hand-drawn vs vector), texture (matte, glossy, paper), mood.
-5. **Do NOT** output generic content. Every field must reflect the visual language of the provided images.
-6. **Ignore** status bars, navigation, UI chrome—focus only on post content.`
+**Style extraction (highest priority):**
+1. **Art/medium style**: Name the exact style (e.g. watercolor, oil painting, flat design, minimal line art, collage, photography, illustration, hand-drawn, digital art). If watercolor—say "watercolor". If mixed media—describe it.
+2. **Colors**: Extract hex codes from the images. Use them in colors array and colorDescriptionDetailed.
+3. **Texture & mood**: Paper texture, brush strokes, saturation, brightness. e.g. "watercolor on paper, soft bleed, muted tones".
+4. **Typography**: Font style, weights, hierarchy you see.
+5. **Layout**: Text placement, spacing, image-to-text ratio.
+6. **Ignore** status bars, navigation, UI chrome—focus only on post content.
+7. **Do NOT** output generic content. Every field must reflect the visual language of the provided images.`
     : "## No Reference Images\nCreate a cohesive, highly specific visual system. No generic phrases—every detail must be concrete and usable for image generation.";
 
-  const prompt = `You are a pro IG post expert and brand visual design consultant. Create a DETAILED, INSTITUTIONAL-GRADE Brand Book for Instagram. **Output all content in English.**
-
-Each field must be rich, specific, and actionable—not generic. Fields may use markdown (**, *, bullet points) for structure and emphasis.
-
-## Brand Information
-- Name: ${brandData.name}
-- Brand Type: ${brandTypeContext}
-- Target Audiences: ${audiences}
-- Audience Pain Points: ${painPoints}
-- Desired Outcomes: ${outcomes}
-- Value Proposition: ${valueProp}
-
-${refImagesSection}
-
-## Output Format (institutional-grade, tailor for ${brandTypeContext})
-
-**toneOfVoice** – Personified role + personality + voice. 2–3 sentences. Markdown allowed.
-
-**imageStyle** – Technique + subject + image-to-text ratio. Describe texture (e.g. watercolor on paper, matte photo, glossy). DO NOT specify aspect ratio. Markdown allowed.
-
-**colorDescriptionDetailed** – RICH color spec in English. Structure like:
-- Overall tone: e.g. "Watercolor-on-paper texture, low saturation, high brightness"
-- Primary: e.g. "Text dark brown #3E332A (not pure black, softer)", "Background paper #F9F7F2 (cream/watercolor paper)"
-- Secondary: e.g. "Healing green #8FB995 (muted green)", "Alert coral #E68A81 (soft pink-red)"
-Include hex + purpose for each. Markdown allowed. 200–400 chars.
-
-**visualAura** – Layout mood, breathing room, spacing philosophy. e.g. "Moderate whitespace, strong breathing room. Never cram information—let readers digest." Markdown allowed.
-
-**lineStyle** – Edge quality, stroke feel. e.g. "Hand-drawn pencil/ink lines. Soft edges, subtle stroke variation (bleed effect), not vector geometric." Markdown allowed.
-
-**typographySpec** – Headings, body, hierarchy. Concrete font suggestions. Markdown allowed.
-
-**layoutStyleDetail** – Structure, spacing, placement. Markdown allowed.
-
-**colors** – Array of 3–5 hex codes (e.g. ["#3E332A", "#F9F7F2", "#8FB995", "#E68A81", "#AECBDA"]). Extract from colorDescriptionDetailed. Order: primary first, then secondary.
-
-## Output
-Valid JSON only. Escape newlines in strings as \\n. No raw newlines inside string values.
-
-{
-  "brandPersonality": "string",
-  "toneOfVoice": "string",
-  "visualStyle": {
-    "colors": ["#hex", "#hex", ...],
-    "primaryColor": "#hex",
-    "secondaryColor1": "#hex",
-    "secondaryColor2": "#hex",
-    "backgroundColor": "string",
-    "imageStyle": "string",
-    "colorDescriptionDetailed": "string",
-    "visualAura": "string",
-    "lineStyle": "string",
-    "layoutTendencies": "string",
-    "layoutStyle": "string",
-    "vibe": ["string"],
-    "typographySpec": "string",
-    "layoutStyleDetail": "string"
-  },
-  "dosAndDonts": {
-    "dos": ["string"],
-    "donts": ["string"]
-  }
-}`;
+  const prompt = getBrandbookPrompt({
+    brandName: brandData.name,
+    brandTypeContext,
+    audiences,
+    painPoints: painPoints,
+    outcomes,
+    valueProp,
+    refImagesSection,
+  });
 
   const imageParts: Array<{ inlineData: { mimeType: string; data: string } }> = [];
   const validUrls = (brandData.referenceImages ?? []).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")));
@@ -398,7 +348,7 @@ Valid JSON only. Escape newlines in strings as \\n. No raw newlines inside strin
       if (isV1BetaModel(modelName)) {
         const response = await generateContentV1Beta(modelName, v1BetaParts, {
           temperature: 1.0,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 2048,
           thinkingLevel: "low",
           safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
         });
@@ -406,7 +356,7 @@ Valid JSON only. Escape newlines in strings as \\n. No raw newlines inside strin
       } else {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
           safetySettings: [...DEFAULT_SAFETY],
         });
         const result = await model.generateContent(contentParts);
@@ -440,6 +390,7 @@ Valid JSON only. Escape newlines in strings as \\n. No raw newlines inside strin
             vibe: Array.isArray(vs.vibe) ? vs.vibe : [],
             typographySpec: vs.typographySpec || "",
             layoutStyleDetail: vs.layoutStyleDetail || "",
+            imageGenerationPrompt: (vs as { imageGenerationPrompt?: string }).imageGenerationPrompt || "",
           },
           captionStructure: {
             hookPatterns: [],
@@ -577,43 +528,20 @@ export async function generatePost(
     const isTextHeavy = postStyle === "text-heavy";
     const layoutGuide = LAYOUT_TEXT_GUIDE[postStyle || "text-heavy"] || LAYOUT_TEXT_GUIDE["text-heavy"];
 
-    const carouselPrompt = `You are an expert Instagram carousel designer and marketer. Create a ${pageCount}-page carousel. Output language: ${language}.
-
-## TERMINOLOGY (research-backed)
-- **header** = 主標題 = The MAIN HEADLINE/TITLE that appears INSIDE the image. It is the content headline that stops the scroll—concrete, specific, value-driven. Examples: "5 Mistakes That Kill Your Growth", "The Real Reason You're Stuck", "The One Thing That Changed Everything", "3 Action Steps to Get Started".
-- **header is NOT**: "Step 1", "Step 2", "Tip 1" (those are slide labels). NOT abstract aims like "引發共鳴" or "trigger resonance". NOT vague themes like "趣味解析" or "fun analysis". The header IS the actual content headline the viewer reads on the slide.
-- **imageTextOnImage** = The full text to RENDER ON the image. For text-heavy: 2–4 lines (header as line 1 + subheadline + body). Use \\n for line breaks. Max ~125 chars per slide for mobile readability. Plain text only, no markdown.
-
-## Brand & Context
-- Brand: ${personality}. Tone: ${tone}. Visual style: ${style}. Colors: ${colors || "professional palette"}.
-- Content framework: ${CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"]}
-- Visual layout: ${layoutGuide}
-
-## User Brief
-${idea}
-
-Format: ${format}. Aspect ratio: ${aspectNote}.
-
-## Carousel Structure (IG best practices)
-- Slide 1: Hook that stops the scroll—bold headline, intriguing or specific outcome.
-- Slides 2–${Math.max(2, pageCount - 1)}: Deliver value. Each slide has a clear content headline (header) + supporting text.
-- Final slide: CTA or key takeaway.
-
-## Output Format
-Return valid JSON only:
-{
-  "pages": [
-    { "pageIndex": 1, "header": "Concrete content headline for this slide", "imageTextOnImage": "Full text to render (use \\n for line breaks)", "visualAdvice": "Detailed visual description for image generation" },
-    ... repeat for each of ${pageCount} pages
-  ],
-  "igCaption": "Full IG caption (max 400 chars, max 3 hashtags at end). Engaging, on-brand, encourages save/share."
-}
-
-### Rules
-- header = Main headline 主標題 INSIDE the image. Concrete, specific, value-driven. NEVER "Step 1" or abstract aims.
-- imageTextOnImage: ${isTextHeavy ? "2–4 lines. Line 1 = header. Lines 2+ = subheadline/body. Use \\n. Max ~125 chars per slide." : "Text to render on image. Plain text only."}
-- visualAdvice: Scene, composition, colors, typography placement for image generation.
-- igCaption: One caption for the whole carousel.`;
+    const carouselPrompt = getCarouselDraftPrompt({
+      pageCount,
+      language,
+      personality,
+      tone,
+      style,
+      colors: colors || "professional palette",
+      contentFrameworkDesc: CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"],
+      layoutGuide,
+      idea,
+      format,
+      aspectNote,
+      isTextHeavy,
+    });
 
     const modelOrder = preferPro
       ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
@@ -627,7 +555,7 @@ Return valid JSON only:
           if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 0.8,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 2048,
             thinkingLevel: "low",
               safetySettings: safetyToV1Beta(safetySettings),
             });
@@ -635,7 +563,7 @@ Return valid JSON only:
           } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(carouselPrompt);
@@ -700,36 +628,21 @@ Return valid JSON only:
   const isCarousel = layout === "text-heavy";
   const qualityGuide = isCarousel ? POST_QUALITY_GUIDE.carousel : POST_QUALITY_GUIDE.single;
 
-  const prompt = `You are an IG posts expert and prompt engineer. Create 2 DISTINCT draft variations for the user to choose from.
-
-## Brand & Context
-- Brand: ${personality}. Tone: ${tone}. Style: ${style}. Colors: ${colors || "professional palette"}.
-- Brand type: ${brandTypeLabel}.
-- Content goal (user chose): ${contentFrameworkDesc}
-${visualLayoutContext ? `\n${visualLayoutContext}` : ""}
-
-## Quality Focus (apply to BOTH variations)
-${qualityGuide}
-
-${POST_QUALITY_GUIDE.outputRules}
-
-## Brief
-${idea}
-Lang: ${language}. Format: ${format}.
-
-## Output Format
-Return JSON only with 2 variations. Make them meaningfully different (e.g. different hooks, angles, or emphasis):
-{
-  "variation1": {"imageTextOnImage":"","visualAdvice":"","igCaption":""},
-  "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
-}
-
-### Field rules (for each variation):
-1. imageTextOnImage: Text to RENDER ON THE IMAGE. ${textGuide} NEVER use markdown (#, ##, ###, **). Output only the actual display text. If no text on image, use "".
-
-2. visualAdvice: 視覺建議. Detailed scene, composition, colors ${colors || ""}, aspect ${aspectNote}. Describe the VISUAL (photo/illustration style, lighting, framing). For editorial: describe how text integrates with image. Be specific about brand alignment.
-
-3. igCaption: Full IG caption. Max 400 chars. Max 3 hashtags at end. Engaging, on-brand, clear, practical.`;
+  const prompt = getSingleImageDraftPrompt({
+    personality,
+    tone,
+    style,
+    colors: colors || "professional palette",
+    brandTypeLabel,
+    contentFrameworkDesc,
+    visualLayoutContext: visualLayoutContext || "",
+    qualityGuide,
+    idea,
+    language,
+    format,
+    textGuide,
+    aspectNote,
+  });
 
   const modelOrder = preferPro
     ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
@@ -744,7 +657,7 @@ Return JSON only with 2 variations. Make them meaningfully different (e.g. diffe
         if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 1.0,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 2048,
             thinkingLevel: "low",
             safetySettings: safetyToV1Beta(safetySettings),
           });
@@ -752,7 +665,7 @@ Return JSON only with 2 variations. Make them meaningfully different (e.g. diffe
         } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.6, maxOutputTokens: 4096 },
+            generationConfig: { temperature: 0.6, maxOutputTokens: 2048 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(prompt);

@@ -93,6 +93,35 @@ async function healthCheck() {
     console.log('   Please check your .env.local file');
   }
 
+  // Check 2b: Stripe (for sandbox testing)
+  console.log('\n2b. Checking Stripe configuration...');
+  const stripeVars = ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_BASIC', 'STRIPE_PRICE_PRO', 'STRIPE_WEBHOOK_SECRET'];
+  let stripeOk = true;
+  stripeVars.forEach((varName) => {
+    const val = process.env[varName];
+    if (!val || !val.trim()) {
+      console.log(`   ⚠️  Missing or empty: ${varName}`);
+      stripeOk = false;
+    } else {
+      const masked = varName.includes('SECRET') ? val.slice(0, 12) + '...' : val;
+      console.log(`   ✅ ${varName}: ${masked}`);
+    }
+  });
+  if (stripeOk) {
+    try {
+      const Stripe = require('stripe');
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+      const price = await stripe.prices.retrieve(process.env.STRIPE_PRICE_BASIC);
+      if (price && price.id) {
+        console.log(`   ✅ Stripe API connected (Basic price: ${price.id})`);
+      }
+    } catch (err) {
+      console.log(`   ⚠️  Stripe API test failed:`, err.message?.slice(0, 60));
+    }
+  } else {
+    console.log('   ⚠️  Stripe not fully configured. Add keys for sandbox testing.');
+  }
+
   // Check 3: Gemini API (if available)
   if (process.env.GEMINI_API_KEY) {
     console.log('\n3. Testing Gemini API connection...');

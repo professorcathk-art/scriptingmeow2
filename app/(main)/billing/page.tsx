@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+import { BillingCheckoutButton } from "@/components/billing/billing-checkout-button";
 
 function CheckIcon() {
   return (
@@ -116,12 +117,12 @@ export default async function BillingPage() {
             </p>
           </div>
           {userProfile.plan_tier !== "pro" && (
-            <Link
-              href="/billing/upgrade"
-              className="px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity"
+            <BillingCheckoutButton
+              plan={userProfile.plan_tier === "free" ? "basic" : "pro"}
+              className="px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-70"
             >
               Upgrade
-            </Link>
+            </BillingCheckoutButton>
           )}
         </div>
       </div>
@@ -186,12 +187,12 @@ export default async function BillingPage() {
                     Current Plan
                   </button>
                 ) : isUpgrade ? (
-                  <Link
-                    href={`/billing/upgrade?plan=${plan.tier}`}
-                    className="block w-full px-4 py-2.5 rounded-xl gradient-ai text-white font-medium text-center hover:opacity-90 transition-opacity"
+                  <BillingCheckoutButton
+                    plan={plan.tier as "basic" | "pro"}
+                    className="block w-full px-4 py-2.5 rounded-xl gradient-ai text-white font-medium text-center hover:opacity-90 transition-opacity disabled:opacity-70"
                   >
                     Upgrade
-                  </Link>
+                  </BillingCheckoutButton>
                 ) : (
                   <button
                     disabled

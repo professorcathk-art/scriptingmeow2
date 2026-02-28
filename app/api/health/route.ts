@@ -1,42 +1,79 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getBrandbookPrompt } from "@/lib/ai/load-prompts";
 
 export async function GET() {
-  const checks = {
-    timestamp: new Date().toISOString(),
-    status: "healthy",
-    checks: {
-      database: "unknown",
-      gemini: "unknown",
-      environment: "unknown",
-    },
+  const checks: Record<string, string> = {
+    database: "unknown",
+    gemini: "unknown",
+    environment: "unknown",
+    stripe: "unknown",
+    prompts: "unknown",
   };
 
   try {
     // Check database connection
     const supabase = await createClient();
     const { error: dbError } = await supabase.from("users").select("count").limit(1);
-    checks.checks.database = dbError ? "unhealthy" : "healthy";
+    checks.database = dbError ? "unhealthy" : "healthy";
 
     // Check Gemini API
     const geminiKey = process.env.GEMINI_API_KEY;
-    checks.checks.gemini = geminiKey && geminiKey.length > 0 ? "healthy" : "unhealthy";
+    checks.gemini = geminiKey && geminiKey.length > 0 ? "healthy" : "unhealthy";
 
     // Check environment variables
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    checks.checks.environment =
-      supabaseUrl && supabaseKey ? "healthy" : "unhealthy";
+    checks.environment = supabaseUrl && supabaseKey ? "healthy" : "unhealthy";
 
-    // Overall status
-    const allHealthy = Object.values(checks.checks).every((status) => status === "healthy");
-    checks.status = allHealthy ? "healthy" : "degraded";
+    // Check Stripe (sandbox)
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    const stripeBasic = process.env.STRIPE_PRICE_BASIC;
+    const stripePro = process.env.STRIPE_PRICE_PRO;
+    const stripeWebhook = process.env.STRIPE_WEBHOOK_SECRET;
+    checks.stripe =
+      stripeKey?.startsWith("sk_") && stripeBasic && stripePro && stripeWebhook?.startsWith("whsec_")
+        ? "healthy"
+        : stripeKey ? "degraded"
+        : "unhealthy";
 
-    return NextResponse.json(checks, {
-      status: allHealthy ? 200 : 503,
-    });
+    // Check prompts load
+    try {
+      const testPrompt = getBrandbookPrompt({
+        brandName: "Test",
+        brandTypeContext: "Personal Brand",
+        audiences: "Test",
+        painPoints: "Test",
+        outcomes: "Test",
+        valueProp: "Test",
+        refImagesSection: "No reference images",
+      });
+      checks.prompts = testPrompt && testPrompt.length > 100 ? "healthy" : "degraded";
+    } catch {
+      checks.prompts = "unhealthy";
+    }
+
+    const critical = ["database", "gemini", "environment"];
+    const allCritical = critical.every((k) => checks[k] === "healthy");
+    const status = allCritical ? "healthy" : "degraded";
+
+    return NextResponse.json(
+      {
+        timestamp: new Date().toISOString(),
+        status,
+        checks,
+      },
+      { status: allCritical ? 200 : 503 }
+    );
   } catch (error) {
-    checks.status = "unhealthy";
-    return NextResponse.json(checks, { status: 503 });
+    return NextResponse.json(
+      {
+        timestamp: new Date().toISOString(),
+        status: "unhealthy",
+        checks,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 503 }
+    );
   }
 }

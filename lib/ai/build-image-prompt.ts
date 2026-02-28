@@ -15,34 +15,40 @@ function stripMarkdown(s: string): string {
     .trim();
 }
 
-const EDITORIAL_DESIGN_GUIDE = `
-DESIGN REQUIREMENTS (follow strictly):
-- Magazine-quality editorial layout. Sophisticated, not generic.
-- Typography hierarchy: headline = largest, bold, impactful. Subheadline = medium, supporting. Body = readable, smaller.
-- NEVER render markdown symbols (#, ##, ###, **). Render ONLY the actual text content.
-- Text and image must feel integrated—consider overlay, transparency, or creative placement.
-- Use brand colors for text accents or backgrounds. Professional contrast for readability.
-- Spacing and alignment: clean, intentional. Avoid cramped or amateur layouts.
-- Overall: scroll-stopping, premium, Instagram-worthy.`;
+const BASE_PROMPT =
+  "Generate a high-end, scroll-stopping Instagram graphic. Act as a master Art Director and Editorial Designer. Every visual element must be polished, cohesive, and meticulously composed.";
+
+const FINAL_DESIGN_COMMANDS = `
+FINAL DESIGN COMMANDS (strictly enforce):
+- Magazine-quality execution. Sophisticated, premium, and intentional.
+- Perfect Typographic Hierarchy: The Headline must be the largest and boldest, immediately drawing the eye. Subheadlines are medium weight.
+- Color Harmony: Use the defined brand colors strategically for text accents, shapes, or backgrounds. Ensure flawless contrast between text and background for mobile readability.
+- Integration: Text and image must not fight for attention. Use intentional negative space, subtle gradients behind text, or creative overlay techniques to blend them smoothly.
+- Spacing: Generous, clean margins. Avoid cramped, cluttered, or amateur layouts at all costs.`;
 
 const LAYOUT_DESIGN_GUIDE: Record<string, string> = {
   editorial: `
-MINIMALIST EDITORIAL: Clean, magazine-like design with plenty of white space and elegant typography. Headline (line 1) = large, bold. Subheadline (line 2) = medium. Body (line 3+) = smaller, readable. Integrate with imagery—overlay, split, or framed.`,
+VISUAL LAYOUT & SPATIAL RULES: editorial.
+MINIMALIST EDITORIAL: Clean, high-end magazine aesthetic. High whitespace. Frame the subject beautifully using negative space. Text is elegantly integrated into the composition, not just slapped on top.`,
   "text-heavy": `
-TEXT-HEAVY / CAROUSEL: Bold, easy-to-read typography. Main headline (主標題) = largest, dominant. Subheadline + body = supporting. 2–4 lines per slide. High contrast. Max ~125 chars per slide for mobile.`,
+VISUAL LAYOUT & SPATIAL RULES: text-heavy.
+TEXT-HEAVY / INFOGRAPHIC: The text is the hero. Use bold, highly legible typography against a clean, uncluttered background area or soft brand-color gradient to ensure perfect readability.`,
   "tweet-card": `
-TWEET / QUOTE CARD: Stylized social media post or quote on attractive background. Elegant typography. Card or frame treatment. Shareable, quote-worthy.`,
+VISUAL LAYOUT & SPATIAL RULES: tweet-card.
+TWEET / QUOTE CARD: Central stylized text block or UI-like card, resting on an aesthetically pleasing, soft background that matches the brand aura.`,
   "split-screen": `
-SPLIT SCREEN / COLLAGE: Dynamic mix of multiple images or side-by-side comparison with text areas. Clear division—text on one side, image on other. Balanced composition.`,
+VISUAL LAYOUT & SPATIAL RULES: split-screen.
+SPLIT SCREEN / COLLAGE: Distinct visual zones (e.g., top/bottom or left/right) separating the subject/illustration from the text block. Use sharp, modern geometric divisions.`,
   "immersive-photo": `
-IMMERSIVE VISUAL: Focuses entirely on high-quality photography or graphics with minimal text overlay. Full-bleed feel. Image-first.`,
+VISUAL LAYOUT & SPATIAL RULES: immersive-photo.
+IMMERSIVE VISUAL: Edge-to-edge premium illustration or photography. Text is minimal and acts as a subtle overlay placed specifically in a naturally empty/clean area of the image.`,
 };
 
 const CONTENT_FRAMEWORK_IMAGE_GUIDE: Record<string, string> = {
-  "educational-value": "Content goal: Educational/Value—teach, inform, actionable advice. Visual should support learning.",
-  "engagement-relatable": "Content goal: Engagement/Relatable—conversation-starter, shareable. Visual should feel relatable, meme-worthy or question-driven.",
-  "promotional-proof": "Content goal: Promotional/Proof—products, testimonials, sales. Visual should highlight offerings, social proof.",
-  "storytelling": "Content goal: Storytelling/Behind the Scenes—journey, team, process. Visual should feel authentic, narrative.",
+  "educational-value": "Content Goal: Educational/Value—teach, inform, actionable advice. Visual should support learning.",
+  "engagement-relatable": "Content Goal: Engagement/Relatable—conversation-starter, shareable. Visual should feel relatable, meme-worthy or question-driven.",
+  "promotional-proof": "Content Goal: Promotional/Proof—products, testimonials, sales. Visual should highlight offerings, social proof.",
+  "storytelling": "Content Goal: Storytelling/Behind the Scenes—journey, team, process. Visual should feel authentic, narrative.",
 };
 
 type BrandbookVisualStyle = {
@@ -52,6 +58,7 @@ type BrandbookVisualStyle = {
   colors?: string[];
   imageStyle?: string;
   image_style?: string;
+  imageGenerationPrompt?: string;
   colorDescriptionDetailed?: string;
   visualAura?: string;
   lineStyle?: string;
@@ -77,6 +84,7 @@ export function buildImagePrompt(options: {
   contentFramework?: string;
 }): string {
   const vs = options.brandbook?.visual_style as BrandbookVisualStyle;
+  const imageGenPrompt = vs?.imageGenerationPrompt?.trim();
   const colors = vs?.primaryColor
     ? [vs.primaryColor, vs.secondaryColor1, vs.secondaryColor2].filter(Boolean).join(", ")
     : Array.isArray(vs?.colors)
@@ -91,47 +99,50 @@ export function buildImagePrompt(options: {
   const typographySpec = vs?.typographySpec || "";
   const layoutStyleDetail = vs?.layoutStyleDetail || "";
 
-  const brandContext = [
-    `Brand visual style: ${imageStyle}`,
-    colorDescriptionDetailed ? `Color spec (follow strictly): ${colorDescriptionDetailed}` : colors ? `Colors (use these): ${colors}` : "",
-    visualAura ? `Visual aura: ${visualAura}` : "",
-    lineStyle ? `Line style: ${lineStyle}` : "",
-    layoutTendencies ? `Layout tendencies: ${layoutTendencies}` : "",
-    layoutStyle ? `Layout: ${layoutStyle}` : "",
-    typographySpec ? `Typography: ${typographySpec}` : "",
-    layoutStyleDetail ? `Layout detail: ${layoutStyleDetail}` : "",
-    options.logoUrl ? "Include the brand logo in the image (user has provided a logo—place it appropriately, e.g. corner or watermark)." : "",
-  ]
-    .filter(Boolean)
-    .join(". ");
+  const brandContextParts: string[] = [];
+  if (imageGenPrompt) {
+    brandContextParts.push(`Brand image generation prompt (use as primary style): ${imageGenPrompt}`);
+  } else {
+    brandContextParts.push(`Brand visual style: ${imageStyle}`);
+    if (colorDescriptionDetailed) brandContextParts.push(`Color palette & lighting: ${colorDescriptionDetailed}`);
+    if (visualAura) brandContextParts.push(`Visual aura & whitespace rules: ${visualAura}`);
+    if (lineStyle) brandContextParts.push(`Line/stroke characteristics: ${lineStyle}`);
+    if (layoutStyle) brandContextParts.push(`Layout rules: ${layoutStyle}`);
+    if (typographySpec) brandContextParts.push(`Typography aesthetic: ${typographySpec}`);
+    if (!colorDescriptionDetailed && colors) brandContextParts.push(`Colors (use these): ${colors}`);
+  }
+  if (options.logoUrl) {
+    brandContextParts.push("Include logo integration seamlessly into the composition.");
+  }
+  const brandContext = brandContextParts.length > 0
+    ? `CORE VISUAL IDENTITY (MANDATORY):\n${brandContextParts.join("\n")}`
+    : "";
 
-  const parts: string[] = [];
-
-  parts.push(`Create a professional, scroll-stopping Instagram post. You are an expert in editorial design and IG content.`);
+  const parts: string[] = [BASE_PROMPT];
 
   if (options.brandType || options.contentFramework) {
     const brandTypeNote = options.brandType
-      ? `Brand type: ${options.brandType === "other" && options.otherBrandType ? options.otherBrandType : options.brandType}.`
+      ? `Brand Type: ${options.brandType === "other" && options.otherBrandType ? options.otherBrandType : options.brandType}`
       : "";
     const contentNote = options.contentFramework && CONTENT_FRAMEWORK_IMAGE_GUIDE[options.contentFramework]
       ? CONTENT_FRAMEWORK_IMAGE_GUIDE[options.contentFramework]
       : "";
     if (brandTypeNote || contentNote) {
-      parts.push(`USER CHOICES (reflect in output): ${[brandTypeNote, contentNote].filter(Boolean).join(" ")}`);
+      parts.push(`CONTEXT & VIBE: ${[brandTypeNote, contentNote].filter(Boolean).join(". ")} Ensure the overall mood, lighting, and composition reflect this specific industry and intent.`);
     }
   }
 
   if (brandContext) {
-    parts.push(`BRAND BOOK (follow strictly): ${brandContext}`);
+    parts.push(brandContext);
   }
 
   if (options.visualAdvice?.trim()) {
-    parts.push(`視覺建議 / VISUAL ADVICE (follow strictly): ${options.visualAdvice.trim()}`);
+    parts.push(`SCENE & SUBJECT ACTION (CRITICAL): ${options.visualAdvice.trim()}\n*Instruction: Merge this specific scene description seamlessly into the Core Visual Identity defined above. Do not alter the brand's art style to fit the scene; force the scene to match the brand's aesthetic medium and colors exactly.*`);
   }
 
   const layout = options.postStyle || "editorial";
   const layoutGuide = LAYOUT_DESIGN_GUIDE[layout] || LAYOUT_DESIGN_GUIDE.editorial;
-  parts.push(`Visual layout (user chose): ${layout}.${layoutGuide}`);
+  parts.push(layoutGuide);
 
   let basePrompt = parts.join("\n\n");
   if (!basePrompt.trim()) {
@@ -144,12 +155,12 @@ export function buildImagePrompt(options: {
     const lines = textOnImage.split(/\n+/).map((l) => l.trim()).filter(Boolean);
     const textInstruction =
       lines.length >= 3
-        ? `TEXT TO RENDER (editorial hierarchy): Line 1 (headline): "${lines[0]}". Line 2 (subheadline): "${lines[1]}". Line 3+ (body): "${lines.slice(2).join(" ")}".`
+        ? `Line 1 (Headline): "${lines[0]}"\nLine 2 (Subheadline): "${lines[1]}"\nLine 3+ (Body): "${lines.slice(2).join(" ")}"`
         : lines.length === 2
-          ? `TEXT TO RENDER: Headline: "${lines[0]}". Subheadline: "${lines[1]}".`
-          : `TEXT TO RENDER: "${textOnImage}".`;
-    basePrompt += `\n\nCRITICAL - ${textInstruction} Render ONLY the actual text. NEVER show #, ##, ###, or **. Use proper typography hierarchy.`;
+          ? `Headline: "${lines[0]}"\nSubheadline: "${lines[1]}"`
+          : `"${textOnImage}"`;
+    basePrompt += `\n\nEXACT TEXT TO RENDER (CRITICAL): Render the following text perfectly, with zero typos. Do NOT render markdown tags like #, ##, ###, or **. Observe strict typographic hierarchy:\n${textInstruction}`;
   }
 
-  return basePrompt + EDITORIAL_DESIGN_GUIDE;
+  return basePrompt + FINAL_DESIGN_COMMANDS;
 }

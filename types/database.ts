@@ -47,6 +47,7 @@ export interface Brandbook {
     colors?: string[];
     image_style?: string;
     imageStyle?: string;
+    imageGenerationPrompt?: string;
     layout_tendencies?: string;
     typographySpec?: string;
     layoutStyleDetail?: string;
@@ -101,6 +102,9 @@ export interface User {
   plan_tier: PlanTier;
   credits_remaining: number;
   credits_reset_date: string;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_price_id?: string | null;
   created_at: string;
 }
 
@@ -121,21 +125,26 @@ export interface PlanLimits {
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   free: {
-    brand_spaces: 999,
-    monthly_credits: 9999,
+    brand_spaces: 2,
+    monthly_credits: 5,
     priority_support: false,
     batch_generation: false,
   },
   basic: {
-    brand_spaces: 3,
-    monthly_credits: 100,
+    brand_spaces: 5,
+    monthly_credits: 50,
     priority_support: false,
     batch_generation: false,
   },
   pro: {
-    brand_spaces: 10,
-    monthly_credits: 500,
+    brand_spaces: 15,
+    monthly_credits: 200,
     priority_support: true,
     batch_generation: true,
   },
+};
+
+export const PLAN_PRICES: Record<Exclude<PlanTier, "free">, { monthly_price_cents: number; stripe_price_id?: string }> = {
+  basic: { monthly_price_cents: 990 },
+  pro: { monthly_price_cents: 1999 },
 };
