@@ -142,25 +142,109 @@ export function BrandbookForm({
             <h3 className="font-semibold text-zinc-100 mb-2">Visual Style</h3>
             <div className="space-y-3">
               <div>
-                <label className={labelClass}>Colors</label>
+                <label className={labelClass}>Color Palette (up to 5 colors)</label>
+                <p className="text-xs text-zinc-500 mb-2">Choose or enter hex codes. Used for consistent IG post generation.</p>
+                <div className="flex flex-wrap gap-3">
+                  {[0, 1, 2, 3, 4].map((i) => {
+                    const colors = Array.isArray(brandbook.visual_style?.colors) ? [...brandbook.visual_style.colors] : [];
+                    const padded = [...colors];
+                    while (padded.length < 5) padded.push("");
+                    const hex = (padded[i] ?? "").trim();
+                    const normalizedHex = hex.startsWith("#") ? hex : hex ? `#${hex}` : "#808080";
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={normalizedHex}
+                          onChange={(e) => {
+                            const next = [...padded];
+                            next[i] = e.target.value;
+                            setBrandbook({
+                              ...brandbook,
+                              visual_style: {
+                                ...brandbook.visual_style,
+                                colors: next.filter((c) => c && String(c).trim()),
+                              },
+                            });
+                          }}
+                          className="w-12 h-12 rounded-xl cursor-pointer border-2 border-white/20 bg-transparent"
+                          title={`Color ${i + 1}`}
+                        />
+                        <input
+                          type="text"
+                          value={hex}
+                          onChange={(e) => {
+                            const val = e.target.value.trim();
+                            const next = [...padded];
+                            next[i] = val ? (val.startsWith("#") ? val : `#${val}`) : "";
+                            setBrandbook({
+                              ...brandbook,
+                              visual_style: {
+                                ...brandbook.visual_style,
+                                colors: next.filter((c) => c && String(c).trim()),
+                              },
+                            });
+                          }}
+                          placeholder="#hex"
+                          className="w-24 px-2 py-1.5 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Color Description (Detailed)</label>
                 <textarea
-                  value={
-                    Array.isArray(brandbook.visual_style?.colors)
-                      ? brandbook.visual_style.colors.join(", ")
-                      : ""
-                  }
+                  value={(brandbook.visual_style as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed || ""}
                   onChange={(e) =>
                     setBrandbook({
                       ...brandbook,
                       visual_style: {
                         ...brandbook.visual_style,
-                        colors: e.target.value.split(",").map((c) => c.trim()),
+                        colorDescriptionDetailed: e.target.value,
                       },
                     })
                   }
                   className={inputClass}
                   rows={4}
-                  placeholder="e.g., #FF5733, #33C3F0, #FFC300 or full color spec with hex and purpose"
+                  placeholder="Overall tone, primary colors with hex + purpose, secondary colors with hex + purpose. Markdown allowed."
+                />
+              </div>
+              <div>
+                <label className={labelClass}>視覺氣質 (Visual Aura)</label>
+                <textarea
+                  value={(brandbook.visual_style as { visualAura?: string })?.visualAura || ""}
+                  onChange={(e) =>
+                    setBrandbook({
+                      ...brandbook,
+                      visual_style: {
+                        ...brandbook.visual_style,
+                        visualAura: e.target.value,
+                      },
+                    })
+                  }
+                  className={inputClass}
+                  rows={2}
+                  placeholder="Layout mood, breathing room, spacing philosophy. Markdown allowed."
+                />
+              </div>
+              <div>
+                <label className={labelClass}>線條風格 (Line Style)</label>
+                <textarea
+                  value={(brandbook.visual_style as { lineStyle?: string })?.lineStyle || ""}
+                  onChange={(e) =>
+                    setBrandbook({
+                      ...brandbook,
+                      visual_style: {
+                        ...brandbook.visual_style,
+                        lineStyle: e.target.value,
+                      },
+                    })
+                  }
+                  className={inputClass}
+                  rows={2}
+                  placeholder="Edge quality, stroke feel. e.g. hand-drawn pencil/ink, bleed effect. Markdown allowed."
                 />
               </div>
               <div>

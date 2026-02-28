@@ -44,11 +44,15 @@ export interface Brandbook {
   brand_personality: string;
   tone_of_voice: string;
   visual_style: {
-    colors: string[];
-    image_style: string;
-    layout_tendencies: string;
+    colors?: string[];
+    image_style?: string;
+    imageStyle?: string;
+    layout_tendencies?: string;
     typographySpec?: string;
     layoutStyleDetail?: string;
+    colorDescriptionDetailed?: string;
+    visualAura?: string;
+    lineStyle?: string;
   };
   caption_structure: {
     hook_patterns: string[];
@@ -80,6 +84,7 @@ export interface GeneratedPost {
   language: string;
   content_idea: string;
   visual_url?: string;
+  carousel_urls?: string[];
   caption:
     | { igCaption: string }
     | { hook: string; body: string; cta: string; hashtags: string[] };

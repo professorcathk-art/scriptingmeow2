@@ -36,14 +36,17 @@ export async function POST(request: Request) {
       },
     };
 
-    const variations = await generatePost(
+    const result = await generatePost(
       demoBrandbook,
       `Create an engaging Instagram post that introduces this brand: ${trimmed}`,
       "English",
       "single-image",
       "square"
     );
-    const generatedPost = variations[0];
+    const generatedPost = Array.isArray(result) ? result[0] : null;
+    if (!generatedPost || "pages" in generatedPost) {
+      throw new Error("Failed to generate demo draft");
+    }
 
     return NextResponse.json({
       caption: { igCaption: generatedPost.igCaption },

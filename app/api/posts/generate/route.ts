@@ -35,6 +35,8 @@ export async function POST(request: Request) {
     language,
     contentIdea,
     variations,
+    carouselPageCount,
+    carouselPages,
     postStyle,
     contentFramework,
     confirmedImageTextOnImage,
@@ -49,6 +51,13 @@ export async function POST(request: Request) {
     language?: string;
     contentIdea?: string;
     variations?: number;
+    carouselPageCount?: number;
+    carouselPages?: Array<{
+      pageIndex: number;
+      header: string;
+      imageTextOnImage: string;
+      visualAdvice: string;
+    }>;
     postStyle?: string;
     contentFramework?: string;
     confirmedImageTextOnImage?: string;
@@ -65,7 +74,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const creditsNeeded = typeof variations === "number" ? variations : 1;
+  const isCarousel = postType === "carousel" && Array.isArray(carouselPages) && carouselPages.length > 0;
+  const creditsNeeded = isCarousel
+    ? carouselPages.length
+    : typeof variations === "number"
+      ? variations
+      : 1;
 
   try {
     // Verify brand space ownership and get logo, brand type
@@ -96,30 +110,34 @@ export async function POST(request: Request) {
 
     // Use confirmed draft or generate new
     let caption: { igCaption: string } | { hook: string; body: string; cta: string; hashtags: string[] };
-    let imagePrompt: string;
-    let imageTextOnImage: string;
+    let imagePrompt = "";
+    let imageTextOnImage = "";
+
+    const igCaptionFromConfirmed =
+      confirmedIgCaption !== undefined
+        ? (confirmedIgCaption ?? "").trim()
+        : confirmedCaption
+          ? [confirmedCaption.hook, confirmedCaption.body, confirmedCaption.cta]
+              .filter(Boolean)
+              .join("\n\n") +
+            (Array.isArray(confirmedCaption.hashtags) && confirmedCaption.hashtags.length
+              ? "\n\n" + confirmedCaption.hashtags.join(" ")
+              : "")
+          : "";
 
     const hasConfirmedDraft =
       confirmedVisualAdvice !== undefined ||
       confirmedIgCaption !== undefined ||
       (confirmedCaption && (confirmedCaption.hook || confirmedCaption.body || confirmedCaption.cta));
-    if (hasConfirmedDraft) {
-      const igCaptionFromConfirmed =
-        confirmedIgCaption !== undefined
-          ? (confirmedIgCaption ?? "").trim()
-          : confirmedCaption
-            ? [confirmedCaption.hook, confirmedCaption.body, confirmedCaption.cta]
-                .filter(Boolean)
-                .join("\n\n") +
-              (Array.isArray(confirmedCaption.hashtags) && confirmedCaption.hashtags.length
-                ? "\n\n" + confirmedCaption.hashtags.join(" ")
-                : "")
-            : "";
+
+    if (isCarousel) {
+      caption = { igCaption: igCaptionFromConfirmed.slice(0, 400) || "Carousel post." };
+    } else if (hasConfirmedDraft) {
       caption = { igCaption: igCaptionFromConfirmed.slice(0, 400) };
       imageTextOnImage = (confirmedImageTextOnImage ?? "").trim();
       imagePrompt = (confirmedVisualAdvice ?? "").trim();
     } else {
-      const variations = await generatePost(
+      const genResult = await generatePost(
         {
           brandPersonality: brandbook.brand_personality,
           toneOfVoice: brandbook.tone_of_voice,
@@ -134,13 +152,19 @@ export async function POST(request: Request) {
         false,
         contentFramework
       );
-      const generatedPost = variations[0];
-      caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, 400) };
-      imageTextOnImage = generatedPost.imageTextOnImage ?? "";
-      imagePrompt = generatedPost.visualAdvice?.trim() || "";
+      const generatedPost = Array.isArray(genResult) ? genResult[0] : null;
+      if (generatedPost && "imageTextOnImage" in generatedPost) {
+        caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, 400) };
+        imageTextOnImage = generatedPost.imageTextOnImage ?? "";
+        imagePrompt = generatedPost.visualAdvice?.trim() || "";
+      } else {
+        caption = { igCaption: "" };
+        imageTextOnImage = "";
+        imagePrompt = "";
+      }
     }
 
-    if (!imagePrompt) {
+    if (!isCarousel && !imagePrompt) {
       const vs = brandbook.visual_style as {
         primaryColor?: string;
         secondaryColor1?: string;
@@ -156,16 +180,6 @@ export async function POST(request: Request) {
     }
 
     const brandDetails = brandSpace as { brand_details?: { otherBrandType?: string } } | undefined;
-    const fullImagePrompt = buildImagePrompt({
-      brandbook,
-      visualAdvice: imagePrompt,
-      imageTextOnImage: imageTextOnImage || undefined,
-      postStyle: postStyle || undefined,
-      logoUrl: brandSpace?.logo_url ?? null,
-      brandType: brandSpace?.brand_type,
-      otherBrandType: brandDetails?.brand_details?.otherBrandType,
-      contentFramework: contentFramework as string | undefined,
-    });
 
     // Check credits
     const { data: userProfile } = await supabase
@@ -200,6 +214,7 @@ export async function POST(request: Request) {
         language,
         content_idea: contentIdea || "",
         visual_url: null,
+        carousel_urls: isCarousel ? [] : undefined,
         caption,
         status: "generated",
         credits_used: creditsNeeded,
@@ -212,31 +227,77 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
     }
 
-    // Generate image with Nano Banana; fall back to SVG placeholder if it fails
-    let visualUrl: string;
     const aspectRatio =
       format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
     const sampleUrls = Array.isArray(selectedSampleImageUrls)
       ? selectedSampleImageUrls.slice(0, 3).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
       : [];
-    const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
-      aspectRatio,
-      referenceImageUrls: sampleUrls,
-    });
 
-    if (imageBuffer) {
-      visualUrl = await uploadPostImage(imageBuffer, post.id, user.id);
+    let visualUrl: string;
+    let carouselUrls: string[] = [];
+
+    if (isCarousel && carouselPages) {
+      for (let i = 0; i < carouselPages.length; i++) {
+        const page = carouselPages[i];
+        const fullImagePrompt = buildImagePrompt({
+          brandbook,
+          visualAdvice: page.visualAdvice?.trim() || `Carousel page ${page.pageIndex}. ${contentIdea || ""}`,
+          imageTextOnImage: page.imageTextOnImage?.trim() || undefined,
+          postStyle: postStyle || "text-heavy",
+          logoUrl: brandSpace?.logo_url ?? null,
+          brandType: brandSpace?.brand_type,
+          otherBrandType: brandDetails?.brand_details?.otherBrandType,
+          contentFramework: contentFramework as string | undefined,
+        });
+        const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
+          aspectRatio,
+          referenceImageUrls: sampleUrls,
+        });
+        const pageUrl =
+          imageBuffer
+            ? await uploadPostImage(imageBuffer, post.id, user.id, page.pageIndex)
+            : await uploadPostPlaceholder(
+                page.visualAdvice || `Page ${page.pageIndex}`,
+                `${post.id}-page-${page.pageIndex}`,
+                user.id
+              );
+        carouselUrls.push(pageUrl);
+      }
+      visualUrl = carouselUrls[0] ?? "";
+      await supabase
+        .from("generated_posts")
+        .update({ visual_url: visualUrl, carousel_urls: carouselUrls })
+        .eq("id", post.id);
     } else {
-      visualUrl = await uploadPostPlaceholder(
-        imagePrompt,
-        post.id,
-        user.id
-      );
+      const fullImagePrompt = buildImagePrompt({
+        brandbook,
+        visualAdvice: imagePrompt,
+        imageTextOnImage: imageTextOnImage || undefined,
+        postStyle: postStyle || undefined,
+        logoUrl: brandSpace?.logo_url ?? null,
+        brandType: brandSpace?.brand_type,
+        otherBrandType: brandDetails?.brand_details?.otherBrandType,
+        contentFramework: contentFramework as string | undefined,
+      });
+      const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
+        aspectRatio,
+        referenceImageUrls: sampleUrls,
+      });
+
+      if (imageBuffer) {
+        visualUrl = await uploadPostImage(imageBuffer, post.id, user.id);
+      } else {
+        visualUrl = await uploadPostPlaceholder(
+          imagePrompt,
+          post.id,
+          user.id
+        );
+      }
+      await supabase
+        .from("generated_posts")
+        .update({ visual_url: visualUrl })
+        .eq("id", post.id);
     }
-    await supabase
-      .from("generated_posts")
-      .update({ visual_url: visualUrl })
-      .eq("id", post.id);
 
     // Deduct credits (skip when unlimited for testing)
     if (!unlimitedCredits) {
@@ -258,7 +319,11 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ ...post, visual_url: visualUrl });
+    return NextResponse.json({
+      ...post,
+      visual_url: visualUrl,
+      carousel_urls: isCarousel ? carouselUrls : undefined,
+    });
   } catch (error) {
     console.error("[posts/generate] Error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";

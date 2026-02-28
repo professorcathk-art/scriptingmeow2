@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { generatePost } from "@/lib/ai/gemini";
+import { generatePost, type CarouselDraftOutput } from "@/lib/ai/gemini";
 
 export const maxDuration = 60;
 
@@ -31,6 +31,10 @@ export async function POST(request: Request) {
   const contentIdea = (body.contentIdea as string) || "";
   const postStyle = (body.postStyle as string) || "immersive-photo";
   const contentFramework = (body.contentFramework as string) || "educational-value";
+  const carouselPageCount =
+    postType === "carousel" && typeof body.carouselPageCount === "number"
+      ? Math.min(9, Math.max(1, body.carouselPageCount))
+      : undefined;
 
   if (!brandSpaceId || typeof brandSpaceId !== "string") {
     return NextResponse.json(
@@ -83,7 +87,7 @@ export async function POST(request: Request) {
     const brandType = brandSpace?.brand_type as string | undefined;
     const otherBrandType = (brandSpace as { brand_details?: { otherBrandType?: string } })?.brand_details?.otherBrandType;
 
-    const variations = await generatePost(
+    const result = await generatePost(
       {
         brandPersonality: brandbook.brand_personality || "",
         toneOfVoice: brandbook.tone_of_voice || "",
@@ -98,11 +102,19 @@ export async function POST(request: Request) {
       format,
       postStyle,
       true, // prefer Gemini Pro for text output
-      contentFramework
+      contentFramework,
+      carouselPageCount
     );
 
+    if ("pages" in result) {
+      const carousel = result as CarouselDraftOutput;
+      return NextResponse.json({
+        variations: [{ pages: carousel.pages, igCaption: carousel.igCaption }],
+      });
+    }
+
     return NextResponse.json({
-      variations: variations.map((v) => ({
+      variations: result.map((v) => ({
         imageTextOnImage: v.imageTextOnImage ?? "",
         visualAdvice: v.visualAdvice ?? "",
         igCaption: v.igCaption ?? "",

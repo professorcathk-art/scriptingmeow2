@@ -52,6 +52,9 @@ type BrandbookVisualStyle = {
   colors?: string[];
   imageStyle?: string;
   image_style?: string;
+  colorDescriptionDetailed?: string;
+  visualAura?: string;
+  lineStyle?: string;
   layoutTendencies?: string;
   layoutStyle?: string;
   typographySpec?: string;
@@ -80,6 +83,9 @@ export function buildImagePrompt(options: {
       ? vs.colors.slice(0, 5).join(", ")
       : "";
   const imageStyle = vs?.imageStyle || vs?.image_style || "professional";
+  const colorDescriptionDetailed = (vs as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed || "";
+  const visualAura = (vs as { visualAura?: string })?.visualAura || "";
+  const lineStyle = (vs as { lineStyle?: string })?.lineStyle || "";
   const layoutTendencies = vs?.layoutTendencies || "";
   const layoutStyle = vs?.layoutStyle || "";
   const typographySpec = vs?.typographySpec || "";
@@ -87,7 +93,9 @@ export function buildImagePrompt(options: {
 
   const brandContext = [
     `Brand visual style: ${imageStyle}`,
-    colors ? `Colors (use these): ${colors}` : "",
+    colorDescriptionDetailed ? `Color spec (follow strictly): ${colorDescriptionDetailed}` : colors ? `Colors (use these): ${colors}` : "",
+    visualAura ? `Visual aura: ${visualAura}` : "",
+    lineStyle ? `Line style: ${lineStyle}` : "",
     layoutTendencies ? `Layout tendencies: ${layoutTendencies}` : "",
     layoutStyle ? `Layout: ${layoutStyle}` : "",
     typographySpec ? `Typography: ${typographySpec}` : "",

@@ -100,6 +100,18 @@ export type DraftOutput = {
   igCaption: string;
 };
 
+export type CarouselPageDraft = {
+  pageIndex: number;
+  header: string;
+  imageTextOnImage: string;
+  visualAdvice: string;
+};
+
+export type CarouselDraftOutput = {
+  pages: CarouselPageDraft[];
+  igCaption: string;
+};
+
 /** Strip markdown formatting so it never appears on the image. */
 function stripMarkdownFromText(s: string): string {
   return String(s || "")
@@ -247,6 +259,9 @@ export async function generateBrandbook(
     secondaryColor2?: string;
     backgroundColor?: string;
     imageStyle: string;
+    colorDescriptionDetailed?: string;
+    visualAura?: string;
+    lineStyle?: string;
     layoutTendencies: string;
     layoutStyle?: string;
     vibe?: string[];
@@ -285,7 +300,7 @@ export async function generateBrandbook(
     ? `Other (user specified: "${brandData.otherBrandType.trim()}")`
     : brandTypeLabel;
 
-  const prompt = `You are an expert brand visual design consultant. Create a SPECIFIC, ACTIONABLE Brand Book for Instagram. Output each field in concrete, usable form. Use the brand's primary language when appropriate. Max ~300 chars per field unless structure requires more.
+  const prompt = `You are a pro IG post expert and brand visual design consultant. Create a DETAILED, INSTITUTIONAL-GRADE Brand Book for Instagram. Each field must be rich, specific, and actionable—not generic. Use the brand's primary language when appropriate. Fields may use markdown (**, *, bullet points) for structure and emphasis.
 
 ## Brand Information
 - Name: ${brandData.name}
@@ -299,48 +314,48 @@ ${
   brandData.referenceImages && brandData.referenceImages.length > 0
     ? `## Reference Images (${brandData.referenceImages.length} provided)
 
-**IMPORTANT:** Extract and analyze ONLY the actual post content. Ignore status bars, navigation, surrounding UI. Focus on: colors (exact Hex), typography, layout, imagery style. Reflect these findings in the brandbook.`
-    : "## No Reference Images\nCreate a cohesive, specific visual system—no generic phrases without concrete details."
+**IMPORTANT:** Extract and analyze ONLY the actual post content. Ignore status bars, navigation, surrounding UI. Focus on: exact Hex codes, typography, layout, imagery style, line quality, texture. Reflect these findings in detail.`
+    : "## No Reference Images\nCreate a cohesive, highly specific visual system. No generic phrases—every detail must be concrete and usable for image generation."
 }
 
-## Output Format (tailor output for this brand type: ${brandTypeContext})
+## Output Format (institutional-grade, tailor for ${brandTypeContext})
 
-**toneOfVoice** – Personified role + personality + voice. Examples:
-- Personal/creator: "A trusted friend who shares real insights. Warm, direct, no corporate speak."
-- E-commerce: "A helpful stylist. Confident, aspirational, product-focused without being pushy."
-- B2B/Agency: "A strategic partner. Professional, data-backed, reassuring. Speaks to decision-makers."
-- Local business: "A neighborhood expert. Approachable, community-focused, authentic."
+**toneOfVoice** – Personified role + personality + voice. 2–3 sentences. Markdown allowed.
 
-**imageStyle** – Technique + subject + image-to-text ratio. DO NOT specify aspect ratio (user chooses later). Examples:
-- Illustration: "Digital watercolor. Rounded characters, soft edges. Cover 40% image : 60% text; content 50:50."
-- Photography: "Lifestyle product shots. Natural light, clean backgrounds. Minimal text overlay."
-- Mixed: "Bold typography over candid photos. High contrast. Text dominates, image supports."
+**imageStyle** – Technique + subject + image-to-text ratio. Describe texture (e.g. watercolor on paper, matte photo, glossy). DO NOT specify aspect ratio. Markdown allowed.
 
-**typographySpec** – Headings, body, hierarchy. Examples:
-- Editorial: "Headings: bold sans (e.g. Helvetica Bold). Body: readable serif. Decorative: script for signatures."
-- Minimal: "Single font family. Headings = weight 700, body = 400. Generous line height."
+**colorDescriptionDetailed** – RICH color spec. Structure like:
+- 整體色調 (Overall tone): e.g. "水彩畫在紙張上的質感，低飽和度、高明度"
+- 主色調 (Primary): e.g. "文字深棕色 #3E332A (非純黑，視覺較柔和)", "背景紙張色 #F9F7F2 (米白色/水彩紙色)"
+- 輔助色 (Secondary): e.g. "療癒綠 #8FB995 (莫蘭迪綠，代表正確)", "警示紅 #E68A81 (珊瑚粉紅)"
+Include hex + purpose for each. Markdown allowed. 200–400 chars.
 
-**layoutStyleDetail** – Structure, spacing, placement. Examples:
-- Card layout: "Rounded corners, subtle shadow. Text block bottom-third. Consistent padding."
-- Magazine: "Clear hierarchy. Headline top, subhead, body. Image full-bleed or framed."
+**visualAura** – 視覺氣質. Layout mood, breathing room, spacing philosophy. e.g. "留白適中，呼吸感強。不強迫塞滿資訊，讓讀者有消化的空間." Markdown allowed.
 
-**colors** – Hex codes with purpose. Examples:
-- Warm: "Primary #E85D04, secondary #F4A261, bg #FFF8F0. Energetic, approachable."
-- Cool: "Primary #2C3E50, accent #3498DB, bg #ECF0F1. Professional, trustworthy."
+**lineStyle** – 線條風格. Edge quality, stroke feel. e.g. "手繪鉛筆/墨水線條。邊緣不銳利，帶有筆觸的粗細變化（Bleed effect），非向量幾何線條." Markdown allowed.
+
+**typographySpec** – Headings, body, hierarchy. Concrete font suggestions. Markdown allowed.
+
+**layoutStyleDetail** – Structure, spacing, placement. Markdown allowed.
+
+**colors** – Array of 3–5 hex codes (e.g. ["#3E332A", "#F9F7F2", "#8FB995", "#E68A81", "#AECBDA"]). Extract from colorDescriptionDetailed. Order: primary first, then secondary.
 
 ## Output
-Valid JSON only. No markdown.
+Valid JSON only. Escape newlines in strings as \\n. No raw newlines inside string values.
 
 {
   "brandPersonality": "string",
   "toneOfVoice": "string",
   "visualStyle": {
-    "colors": ["hex", "hex", ...],
-    "primaryColor": "hex",
-    "secondaryColor1": "hex",
-    "secondaryColor2": "hex",
+    "colors": ["#hex", "#hex", ...],
+    "primaryColor": "#hex",
+    "secondaryColor1": "#hex",
+    "secondaryColor2": "#hex",
     "backgroundColor": "string",
     "imageStyle": "string",
+    "colorDescriptionDetailed": "string",
+    "visualAura": "string",
+    "lineStyle": "string",
     "layoutTendencies": "string",
     "layoutStyle": "string",
     "vibe": ["string"],
@@ -401,12 +416,15 @@ Valid JSON only. No markdown.
           brandPersonality: brandbook.brandPersonality || "",
           toneOfVoice: brandbook.toneOfVoice || "",
           visualStyle: {
-            colors: Array.isArray(vs.colors) ? vs.colors : [],
+            colors: Array.isArray(vs.colors) ? vs.colors.slice(0, 5) : [],
             primaryColor: vs.primaryColor || (Array.isArray(vs.colors) ? vs.colors[0] : ""),
             secondaryColor1: vs.secondaryColor1 || (Array.isArray(vs.colors) ? vs.colors[1] : ""),
             secondaryColor2: vs.secondaryColor2 || (Array.isArray(vs.colors) ? vs.colors[2] : ""),
             backgroundColor: vs.backgroundColor || "light",
             imageStyle: (vs as { imageStyle?: string; image_style?: string }).imageStyle || (vs as { image_style?: string }).image_style || "",
+            colorDescriptionDetailed: (vs as { colorDescriptionDetailed?: string }).colorDescriptionDetailed || "",
+            visualAura: (vs as { visualAura?: string }).visualAura || "",
+            lineStyle: (vs as { lineStyle?: string }).lineStyle || "",
             layoutTendencies: vs.layoutTendencies || "",
             layoutStyle: vs.layoutStyle || "",
             vibe: Array.isArray(vs.vibe) ? vs.vibe : [],
@@ -475,6 +493,37 @@ const CONTENT_FRAMEWORK_GUIDE: Record<string, string> = {
   "storytelling": "Storytelling / Behind the Scenes: Build connection. Share journey, team, or processes. Authentic, narrative-driven.",
 };
 
+/** Parse carousel JSON from model output. */
+function parseCarouselJson(text: string, pageCount: number): CarouselDraftOutput | null {
+  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  let jsonStr = match ? match[0] : cleaned;
+  jsonStr = jsonStr.replace(/,(\s*[}\]])/g, "$1");
+  jsonStr = jsonStr.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, (_, inner) =>
+    `"${inner.replace(/\r?\n/g, " ")}"`
+  );
+  try {
+    const parsed = JSON.parse(jsonStr);
+    const pagesRaw = Array.isArray(parsed.pages) ? parsed.pages : [];
+    const pages: CarouselPageDraft[] = [];
+    for (let i = 0; i < pageCount; i++) {
+      const p = pagesRaw[i] ?? {};
+      pages.push({
+        pageIndex: i + 1,
+        header: String(p.header ?? p.title ?? `Page ${i + 1}`).trim(),
+        imageTextOnImage: stripMarkdownFromText(String(p.imageTextOnImage ?? p.imageText ?? "")),
+        visualAdvice: String(p.visualAdvice ?? p.nanoBananaPrompt ?? "").trim(),
+      });
+    }
+    return {
+      pages,
+      igCaption: String(parsed.igCaption ?? parsed.caption ?? "").trim().slice(0, 400),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function generatePost(
   brandbook: {
     brandPersonality: string;
@@ -490,9 +539,103 @@ export async function generatePost(
   format: string,
   postStyle?: string,
   preferPro?: boolean,
-  contentFramework?: string
-): Promise<DraftOutput[]> {
+  contentFramework?: string,
+  carouselPageCount?: number
+): Promise<DraftOutput[] | CarouselDraftOutput> {
   const idea = truncate(contentIdea, 400);
+  const isCarouselPost = postType === "carousel" && typeof carouselPageCount === "number" && carouselPageCount >= 1 && carouselPageCount <= 9;
+
+  if (isCarouselPost) {
+    const pageCount = carouselPageCount!;
+    const vs = brandbook.visualStyle as {
+      primaryColor?: string;
+      secondaryColor1?: string;
+      colors?: string[];
+      imageStyle?: string;
+      image_style?: string;
+      typographySpec?: string;
+      layoutStyleDetail?: string;
+    } | null;
+    const colors = vs?.primaryColor
+      ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
+      : Array.isArray(vs?.colors) ? vs.colors.slice(0, 3).join(", ") : "";
+    const style = vs?.imageStyle || vs?.image_style || "professional";
+    const personality = truncate(brandbook.brandPersonality, 200);
+    const tone = truncate(brandbook.toneOfVoice, 150);
+    const aspectNote = format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
+
+    const carouselPrompt = `You are an IG carousel expert. Create a ${pageCount}-page carousel post. Each page should have clear value and flow logically.
+
+## Brand & Context
+- Brand: ${personality}. Tone: ${tone}. Style: ${style}. Colors: ${colors || "professional palette"}.
+- Content goal: ${CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"]}
+
+## Brief
+${idea}
+Lang: ${language}. Format: ${format}. Aspect: ${aspectNote}.
+
+## Output Format
+Return JSON only:
+{
+  "pages": [
+    { "pageIndex": 1, "header": "Page title", "imageTextOnImage": "Text on image (plain, no markdown)", "visualAdvice": "Visual description for this page" },
+    ... repeat for each of ${pageCount} pages
+  ],
+  "igCaption": "Full IG caption (max 400 chars, max 3 hashtags at end)"
+}
+
+### Rules
+- Each page: header = short title (e.g. "Step 1", "Tip 1"). imageTextOnImage = text to render on image (plain text only, no # or **). visualAdvice = detailed scene, composition, colors for image generation.
+- Pages flow logically: intro → content → CTA or conclusion.
+- igCaption: engaging, on-brand, encourages save/share.`;
+
+    const modelOrder = preferPro
+      ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
+      : GEMINI_MODELS;
+    const safetyOrder = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
+    const parts: ContentPart[] = [{ text: carouselPrompt }];
+    for (const modelName of modelOrder) {
+      for (const safetySettings of safetyOrder) {
+        try {
+          let text: string | null;
+          if (isV1BetaModel(modelName)) {
+            const response = await generateContentV1Beta(modelName, parts, {
+              temperature: 0.8,
+              maxOutputTokens: 4096,
+              thinkingLevel: "low",
+              safetySettings: safetyToV1Beta(safetySettings),
+            });
+            text = safeGetText(response);
+          } else {
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+              safetySettings: [...safetySettings],
+            });
+            const result = await model.generateContent(carouselPrompt);
+            text = safeGetText(result.response);
+          }
+          if (text) {
+            const carousel = parseCarouselJson(text, pageCount);
+            if (carousel && carousel.pages.length >= 1) return carousel;
+          }
+        } catch (err) {
+          console.warn(`[generatePost] Carousel model ${modelName} failed:`, err);
+        }
+      }
+    }
+    const fallbackPages: CarouselPageDraft[] = [];
+    for (let i = 0; i < pageCount; i++) {
+      fallbackPages.push({
+        pageIndex: i + 1,
+        header: `Page ${i + 1}`,
+        imageTextOnImage: i === 0 ? idea.slice(0, 100) : "",
+        visualAdvice: `Professional Instagram carousel page ${i + 1}. ${idea}. Clean, modern style.`,
+      });
+    }
+    return { pages: fallbackPages, igCaption: `${idea.slice(0, 200)}...\n\n#instagram #content` };
+  }
+
   const vs = brandbook.visualStyle as {
     primaryColor?: string;
     secondaryColor1?: string;

@@ -64,11 +64,13 @@ export async function uploadPostPlaceholder(
 /**
  * Uploads a generated PNG image to Supabase Storage and returns the public URL.
  * Falls back to data URL if upload fails.
+ * @param pageIndex - Optional 1-based index for carousel pages (e.g. 1 → postId-page-1.png)
  */
 export async function uploadPostImage(
   imageBuffer: Buffer,
   postId: string,
-  userId: string
+  userId: string,
+  pageIndex?: number
 ): Promise<string> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.warn("SUPABASE_SERVICE_ROLE_KEY not set");
@@ -77,7 +79,10 @@ export async function uploadPostImage(
 
   try {
     const supabase = createAdminClient();
-    const path = `${userId}/${postId}.png`;
+    const path =
+      pageIndex != null
+        ? `${userId}/${postId}-page-${pageIndex}.png`
+        : `${userId}/${postId}.png`;
 
     const { data, error } = await supabase.storage
       .from(BUCKET)

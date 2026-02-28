@@ -46,7 +46,7 @@ export async function POST(
 
     const postStyle = (post as { post_style?: string }).post_style;
 
-    const variations = await generatePost(
+    const genResult = await generatePost(
       {
         brandPersonality: brandbook.brand_personality,
         toneOfVoice: brandbook.tone_of_voice,
@@ -59,7 +59,13 @@ export async function POST(
       post.format,
       postStyle
     );
-    const generatedPost = variations[0];
+    const generatedPost = Array.isArray(genResult) ? genResult[0] : null;
+    if (!generatedPost || "pages" in generatedPost) {
+      return NextResponse.json(
+        { error: "Regenerate does not support carousel posts" },
+        { status: 400 }
+      );
+    }
 
     const visualAdvice =
       generatedPost.visualAdvice?.trim() ||

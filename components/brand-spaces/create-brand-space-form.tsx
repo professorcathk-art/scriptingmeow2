@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandType } from "@/types/database";
+import { compressImageForUpload } from "@/lib/image-utils";
 import { PolishModal } from "./polish-modal";
 
 type PolishField = "targetAudiences" | "painPoints" | "desiredOutcomes" | "valueProposition";
@@ -344,21 +345,20 @@ export function CreateBrandSpaceForm() {
       const data = await response.json();
       const brandSpaceId = data.id;
 
-      // Upload images if any
+      // Upload images one at a time to stay under Vercel's 4.5MB request body limit
       if (uploadedImages.length > 0) {
         setUploading(true);
-        const formDataImages = new FormData();
-        uploadedImages.forEach((file) => {
-          formDataImages.append("files", file);
-        });
-
-        const uploadResponse = await fetch(`/api/brand-spaces/${brandSpaceId}/images`, {
-          method: "POST",
-          body: formDataImages,
-        });
-
-        if (!uploadResponse.ok) {
-          console.error("Failed to upload images, but brand space was created");
+        for (const file of uploadedImages) {
+          const toUpload = await compressImageForUpload(file);
+          const formDataImages = new FormData();
+          formDataImages.append("files", toUpload);
+          const uploadResponse = await fetch(`/api/brand-spaces/${brandSpaceId}/images`, {
+            method: "POST",
+            body: formDataImages,
+          });
+          if (!uploadResponse.ok) {
+            console.warn("Failed to upload image:", file.name);
+          }
         }
         setUploading(false);
       }

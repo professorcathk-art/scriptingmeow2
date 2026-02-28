@@ -78,26 +78,30 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
     }
   };
 
-  const handleSaveImage = async () => {
-    if (!post.visual_url || imageError) return;
+  const handleSaveImage = async (url?: string, index?: number) => {
+    const targetUrl = url ?? post.visual_url;
+    if (!targetUrl || imageError) return;
     try {
-      const res = await fetch(post.visual_url);
+      const res = await fetch(targetUrl);
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
-      link.download = `post-${post.id}.png`;
+      link.href = blobUrl;
+      link.download = `post-${post.id}${index != null ? `-page-${index + 1}` : ""}.png`;
       link.click();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(blobUrl);
     } catch {
       const link = document.createElement("a");
-      link.href = post.visual_url;
-      link.download = `post-${post.id}.png`;
+      link.href = targetUrl;
+      link.download = `post-${post.id}${index != null ? `-page-${index + 1}` : ""}.png`;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.click();
     }
   };
+
+  const carouselUrls = post.carousel_urls ?? [];
+  const hasCarousel = carouselUrls.length > 0;
 
   const handleRegenerate = async () => {
     setLoading(true);
@@ -134,40 +138,80 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="glass-elevated p-6 rounded-2xl">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white">Visual Preview</h2>
-            {post.visual_url && !imageError && (
-              <button
-                onClick={handleSaveImage}
-                className="text-sm text-violet-400 hover:text-violet-300 px-3 py-1.5 rounded-lg border border-violet-500/30 hover:bg-violet-500/10"
+            <h2 className="text-xl font-semibold text-white">
+              {hasCarousel ? "Carousel Preview" : "Visual Preview"}
+            </h2>
+          </div>
+          {hasCarousel ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {carouselUrls.map((url, index) => (
+                <div
+                  key={index}
+                  className="relative group bg-white/5 rounded-xl overflow-hidden"
+                  style={{
+                    aspectRatio:
+                      post.format === "portrait"
+                        ? "4/5"
+                        : post.format === "story" || post.format === "reel-cover"
+                          ? "9/16"
+                          : "1/1",
+                  }}
+                >
+                  <img
+                    src={url}
+                    alt={`Carousel page ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      onClick={() => handleSaveImage(url, index)}
+                      className="px-4 py-2 rounded-lg bg-violet-500 text-white text-sm font-medium hover:bg-violet-600"
+                    >
+                      Download Page {index + 1}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-end mb-2">
+                {post.visual_url && !imageError && (
+                  <button
+                    onClick={() => handleSaveImage()}
+                    className="text-sm text-violet-400 hover:text-violet-300 px-3 py-1.5 rounded-lg border border-violet-500/30 hover:bg-violet-500/10"
+                  >
+                    Save Image
+                  </button>
+                )}
+              </div>
+              <div
+                className="bg-white/5 rounded-xl flex items-center justify-center overflow-hidden"
+                style={{
+                  aspectRatio:
+                    post.format === "portrait"
+                      ? "4/5"
+                      : post.format === "story" || post.format === "reel-cover"
+                        ? "9/16"
+                        : "1/1",
+                }}
               >
-                Save Image
-              </button>
-            )}
-          </div>
-          <div
-            className="bg-white/5 rounded-xl flex items-center justify-center overflow-hidden"
-            style={{
-              aspectRatio:
-                post.format === "portrait"
-                  ? "4/5"
-                  : post.format === "story" || post.format === "reel-cover"
-                    ? "9/16"
-                    : "1/1",
-            }}
-          >
-            {post.visual_url && !imageError ? (
-              <img
-                src={post.visual_url}
-                alt="Post visual"
-                className="w-full h-full object-cover rounded-lg"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <span className="text-zinc-500 text-sm">
-                {imageError ? "Image failed to load" : "Visual will be generated"}
-              </span>
-            )}
-          </div>
+                {post.visual_url && !imageError ? (
+                  <img
+                    src={post.visual_url}
+                    alt="Post visual"
+                    className="w-full h-full object-cover rounded-lg"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <span className="text-zinc-500 text-sm">
+                    {imageError ? "Image failed to load" : "Visual will be generated"}
+                  </span>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="glass-elevated p-6 rounded-2xl">
