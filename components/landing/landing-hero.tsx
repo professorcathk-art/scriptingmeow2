@@ -3,88 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-
-export interface StyleGalleryItem {
-  id: string;
-  imageUrl: string;
-  category: string;
-  testimonial: string;
-  hiddenPrompt: string;
-}
-
-const STYLE_GALLERY: StyleGalleryItem[] = [
-  {
-    id: "1",
-    imageUrl: "https://picsum.photos/400/500?random=1",
-    category: "Minimalist E-commerce",
-    testimonial: "Saved me 5 hours a week!",
-    hiddenPrompt:
-      "Clean minimalist aesthetic, soft shadows, white space, product-focused, Scandinavian design, muted pastels",
-  },
-  {
-    id: "2",
-    imageUrl: "https://picsum.photos/400/600?random=2",
-    category: "Cozy Cafe",
-    testimonial: "My feed finally looks cohesive.",
-    hiddenPrompt:
-      "Warm tones, film grain, cozy atmosphere, latte art, wooden textures, golden hour lighting, lifestyle photography",
-  },
-  {
-    id: "3",
-    imageUrl: "https://picsum.photos/400/450?random=3",
-    category: "Bold Tech Startup",
-    testimonial: "Professional and eye-catching.",
-    hiddenPrompt:
-      "High contrast, neon accents, dark mode, geometric shapes, futuristic, gradient overlays, tech-forward",
-  },
-  {
-    id: "4",
-    imageUrl: "https://picsum.photos/400/550?random=4",
-    category: "Wellness & Self-Care",
-    testimonial: "The AI gets my vibe perfectly.",
-    hiddenPrompt:
-      "Soft gradients, calming colors, nature elements, zen aesthetic, organic shapes, gentle typography",
-  },
-  {
-    id: "5",
-    imageUrl: "https://picsum.photos/400/500?random=5",
-    category: "Fashion & Lifestyle",
-    testimonial: "My engagement doubled.",
-    hiddenPrompt:
-      "Editorial style, high fashion, dramatic lighting, bold typography, magazine layout, aspirational",
-  },
-  {
-    id: "6",
-    imageUrl: "https://picsum.photos/400/480?random=6",
-    category: "Creative Agency",
-    testimonial: "Clients love the consistency.",
-    hiddenPrompt:
-      "Playful, vibrant colors, creative typography, mixed media, artistic, unique compositions",
-  },
-];
+import { LANDING_STYLES } from "@/lib/landing-styles";
+import { TryStyleModal } from "./try-style-modal";
 
 interface LandingHeroProps {
   isAuthenticated?: boolean;
 }
 
-/**
- * When a user selects a style, we will pass hiddenPrompt and imageUrl
- * to the app's Brandbook state (e.g. via URL params or context)
- * so the create-brand flow can pre-populate the visual style.
- */
-function handleStyleSelect(item: StyleGalleryItem) {
-  console.log("Style selected:", {
-    id: item.id,
-    imageUrl: item.imageUrl,
-    category: item.category,
-    hiddenPrompt: item.hiddenPrompt,
-  });
-  // TODO: Navigate to signup/create-brand with ?stylePrompt=...&referenceImage=...
-  // or store in context for the next step
-}
-
 export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
   const [scratchInput, setScratchInput] = useState("");
+  const [selectedStyle, setSelectedStyle] = useState<typeof LANDING_STYLES[0] | null>(null);
 
   const handleStartFromScratch = () => {
     if (scratchInput.trim()) {
@@ -161,7 +89,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
           className="columns-2 sm:columns-3 gap-4 space-y-4"
           style={{ columnFill: "balance" }}
         >
-          {STYLE_GALLERY.map((item) => (
+          {LANDING_STYLES.map((item) => (
             <div
               key={item.id}
               className="break-inside-avoid mb-4 group"
@@ -179,7 +107,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <button
                       type="button"
-                      onClick={() => handleStyleSelect(item)}
+                      onClick={() => setSelectedStyle(item)}
                       className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold text-sm shadow-lg hover:shadow-violet-500/30 hover:scale-105 transition-all duration-200"
                     >
                       ✨ Use this Style
@@ -197,6 +125,14 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
           ))}
         </div>
       </section>
+
+      {selectedStyle && (
+        <TryStyleModal
+          item={selectedStyle}
+          onClose={() => setSelectedStyle(null)}
+          isAuthenticated={isAuthenticated}
+        />
+      )}
 
       {/* Fallback CTA */}
       <section className="max-w-2xl mx-auto w-full">

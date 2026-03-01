@@ -6,9 +6,10 @@ export const dynamic = "force-dynamic";
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: { error?: string; redirect?: string };
 }) {
   const error = searchParams.error;
+  const redirect = searchParams.redirect;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-4">
@@ -22,11 +23,14 @@ export default function LoginPage({
           </div>
         )}
 
-        <LoginForm />
+        <LoginForm redirect={redirect} />
 
         <p className="text-center text-sm text-zinc-500 mt-4">
           Don&apos;t have an account?{" "}
-          <Link href="/auth/signup" className="text-violet-400 hover:text-violet-300">
+          <Link
+            href={redirect ? `/auth/signup?redirect=${encodeURIComponent(redirect)}` : "/auth/signup"}
+            className="text-violet-400 hover:text-violet-300"
+          >
             Sign up
           </Link>
         </p>

@@ -12,7 +12,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const redirectTo = new URL("/dashboard", request.url);
+  const redirectParam = (formData.get("redirect") as string)?.trim();
+  const redirectTo = redirectParam
+    ? new URL(redirectParam.startsWith("/") ? redirectParam : `/${redirectParam}`, request.url)
+    : new URL("/dashboard", request.url);
   const response = NextResponse.redirect(redirectTo, { status: 303 });
 
   const supabase = createServerClient(
@@ -35,6 +38,7 @@ export async function POST(request: NextRequest) {
   if (error) {
     const errorUrl = new URL("/auth/login", request.url);
     errorUrl.searchParams.set("error", error.message);
+    if (redirectParam) errorUrl.searchParams.set("redirect", redirectParam);
     return NextResponse.redirect(errorUrl);
   }
 

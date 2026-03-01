@@ -1,6 +1,9 @@
-export function LoginForm() {
+export function LoginForm({ redirect }: { redirect?: string }) {
   return (
     <form action="/api/auth/login" method="post">
+      {redirect && (
+        <input type="hidden" name="redirect" value={redirect} />
+      )}
       <div className="space-y-4">
         <div>
           <label
