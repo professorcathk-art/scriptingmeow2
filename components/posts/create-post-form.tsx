@@ -8,10 +8,29 @@ import { PLAN_LIMITS } from "@/types/database";
 
 const CREATE_POST_DRAFT_KEY = "createPost_draft";
 
+interface LibraryPost {
+  id: string;
+  visual_url: string | null;
+  carousel_urls?: string[] | null;
+  content_idea?: string;
+}
+
 interface CreatePostFormProps {
   brandSpaces: BrandSpace[];
   userCredits: number;
   planTier: PlanTier;
+  editPost?: {
+    id: string;
+    brand_space_id: string;
+    post_type: string;
+    format: string;
+    language: string;
+    content_idea: string;
+    draft_data: unknown;
+    caption: unknown;
+    carousel_urls?: string[] | null;
+  } | null;
+  libraryPosts?: LibraryPost[];
 }
 
 const STEPS = [
@@ -41,6 +60,8 @@ export function CreatePostForm({
   brandSpaces,
   userCredits: initialCredits,
   planTier,
+  editPost,
+  libraryPosts = [],
 }: CreatePostFormProps) {
   const router = useRouter();
   const creditsCtx = useCredits();
@@ -119,6 +140,30 @@ export function CreatePostForm({
   }, [saveDraft]);
 
   useEffect(() => {
+    if (editPost) {
+      const draft = editPost.draft_data as { visualAdvice?: string; imageTextOnImage?: string; carouselPages?: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[] } | null;
+      const cap = editPost.caption as { igCaption?: string };
+      setFormData((prev) => ({
+        ...prev,
+        brandSpaceId: editPost.brand_space_id,
+        postType: (editPost.post_type as PostType) || "single-image",
+        format: (editPost.format as PostFormat) || "square",
+        contentIdea: editPost.content_idea || "",
+      }));
+      if (draft?.carouselPages?.length) {
+        setCarouselPages(draft.carouselPages);
+        setDraftVariations([{ pages: draft.carouselPages, igCaption: cap?.igCaption ?? "" }]);
+      } else if (draft?.visualAdvice !== undefined) {
+        const single = {
+          imageTextOnImage: draft.imageTextOnImage ?? "",
+          visualAdvice: draft.visualAdvice ?? "",
+          igCaption: cap?.igCaption ?? "",
+        };
+        setDraftVariations([single, single]);
+      }
+      setStep(4);
+      return;
+    }
     try {
       const saved = sessionStorage.getItem(CREATE_POST_DRAFT_KEY);
       if (saved) {
@@ -137,7 +182,7 @@ export function CreatePostForm({
     } catch {
       // ignore
     }
-  }, []);
+  }, [editPost]);
 
   const fetchReferenceImages = useCallback(() => {
     if (!formData.brandSpaceId) return;
@@ -1051,6 +1096,9 @@ export function CreatePostForm({
               <label className="block text-sm font-medium text-zinc-400 mb-2">
                 Sample Photos (optional, up to 5) — Style reference for image generation
               </label>
+              <p className="text-xs text-violet-400 font-medium mb-2">
+                {selectedSampleUrls.length}/5 selected
+              </p>
               <div className="flex flex-wrap gap-3 items-center">
                 {referenceImages.map((img) => {
                   const isSelected = selectedSampleUrls.includes(img.image_url);
@@ -1088,6 +1136,45 @@ export function CreatePostForm({
                     </button>
                   );
                 })}
+                {libraryPosts.map((lp) => {
+                  const url = lp.carousel_urls?.[0] ?? lp.visual_url;
+                  if (!url) return null;
+                  const isSelected = selectedSampleUrls.includes(url);
+                  const canSelect = isSelected || selectedSampleUrls.length < 5;
+                  return (
+                    <button
+                      key={lp.id}
+                      type="button"
+                      onClick={() => {
+                        if (!canSelect) return;
+                        setSelectedSampleUrls((prev) =>
+                          isSelected
+                            ? prev.filter((u) => u !== url)
+                            : [...prev, url].slice(0, 5)
+                        );
+                      }}
+                      className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
+                        isSelected
+                          ? "border-violet-500 ring-2 ring-violet-500/50"
+                          : canSelect
+                            ? "border-white/10 hover:border-violet-500/50"
+                            : "border-white/10 opacity-50 cursor-not-allowed"
+                      }`}
+                      title={lp.content_idea ?? "From library"}
+                    >
+                      <img
+                        src={url}
+                        alt="Library"
+                        className="w-full h-full object-cover"
+                      />
+                      {isSelected && (
+                        <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center text-white text-xs">
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
                 <label className="w-20 h-20 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center cursor-pointer hover:border-violet-500/50 hover:bg-white/5 transition-all shrink-0">
                   <input
                     type="file"
@@ -1105,7 +1192,7 @@ export function CreatePostForm({
                 </label>
               </div>
               <p className="text-xs text-zinc-500 mt-1">
-                {selectedSampleUrls.length}/5 selected. Click + to add more photos.
+                Choose from brand references, past posts, or upload new. Max 5.
               </p>
             </div>
           )}

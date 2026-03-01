@@ -23,6 +23,7 @@ export function CreateBrandSpaceForm() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [polishField, setPolishField] = useState<PolishField | null>(null);
   const [polishLoading, setPolishLoading] = useState(false);
@@ -384,9 +385,17 @@ export function CreateBrandSpaceForm() {
       const data = await response.json();
       const brandSpaceId = data.id;
 
-      // Upload images one at a time to stay under Vercel's 4.5MB request body limit
+      setUploading(true);
+      if (logoFile) {
+        const logoFd = new FormData();
+        logoFd.append("file", logoFile);
+        const logoRes = await fetch(`/api/brand-spaces/${brandSpaceId}/logo`, {
+          method: "POST",
+          body: logoFd,
+        });
+        if (!logoRes.ok) console.warn("Failed to upload logo");
+      }
       if (uploadedImages.length > 0) {
-        setUploading(true);
         for (const file of uploadedImages) {
           const toUpload = await compressImageForUpload(file);
           const formDataImages = new FormData();
@@ -399,8 +408,8 @@ export function CreateBrandSpaceForm() {
             console.warn("Failed to upload image:", file.name);
           }
         }
-        setUploading(false);
       }
+      setUploading(false);
 
       clearDraft();
       if (data.brandDetails) {
@@ -418,6 +427,33 @@ export function CreateBrandSpaceForm() {
 
   return (
     <form onSubmit={handleSubmitWithImages} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Upload Logo (Optional)</h2>
+        <p className="text-sm text-zinc-400 mb-3">
+          Your logo will appear on generated posts. PNG or JPG, square works best.
+        </p>
+        <div className="flex items-center gap-4">
+          <label className="cursor-pointer px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors text-sm">
+            {logoFile ? logoFile.name : "Choose logo"}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg"
+              className="hidden"
+              onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+            />
+          </label>
+          {logoFile && (
+            <button
+              type="button"
+              onClick={() => setLogoFile(null)}
+              className="text-xs text-zinc-500 hover:text-red-400"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
+
       <div>
         <h2 className="text-xl font-semibold mb-4">Upload Reference Images (Optional)</h2>
         <p className="text-sm text-zinc-400 mb-4">

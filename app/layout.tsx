@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   description:
     "Turn your brand identity into consistent, on-brand IG posts in a few clicks",
   metadataBase: new URL("https://designermeow.com"),
+  icons: {
+    icon: "/thumnail/Gemini_Generated_Image_3skk0k3skk0k3skk.png",
+    shortcut: "/thumnail/Gemini_Generated_Image_3skk0k3skk0k3skk.png",
+    apple: "/thumnail/Gemini_Generated_Image_3skk0k3skk0k3skk.png",
+  },
 };
 
 export default function RootLayout({

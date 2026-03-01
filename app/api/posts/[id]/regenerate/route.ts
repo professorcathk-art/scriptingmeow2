@@ -29,13 +29,15 @@ export async function POST(
     // Get post and verify ownership
     const { data: post } = await supabase
       .from("generated_posts")
-      .select("*, brand_spaces!inner(user_id)")
+      .select("*, brand_spaces!inner(user_id, logo_url, logo_placement)")
       .eq("id", params.id)
       .single();
 
-    if (!post || (post.brand_spaces as any).user_id !== user.id) {
+    if (!post || (post.brand_spaces as { user_id?: string }).user_id !== user.id) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
+
+    const brandSpace = post.brand_spaces as { logo_url?: string | null; logo_placement?: string | null };
 
     // Get brandbook
     const { data: brandbook } = await supabase
@@ -110,6 +112,8 @@ export async function POST(
       visualAdvice: visualAdviceResolved,
       imageTextOnImage: imageTextOnImage || undefined,
       postStyle: postStyle || undefined,
+      logoUrl: brandSpace?.logo_url ?? null,
+      logoPlacement: brandSpace?.logo_placement ?? null,
     });
 
     const aspectRatio =

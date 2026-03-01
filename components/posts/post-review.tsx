@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { GeneratedPost, DraftData } from "@/types/database";
 
 interface PostReviewProps {
@@ -112,36 +113,10 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
   const carouselUrls = post.carousel_urls ?? [];
   const hasCarousel = carouselUrls.length > 0;
 
-  const handleRegenerate = async () => {
-    setLoading(true);
-    try {
-      const body = draftData ? JSON.stringify({ draft_data: draftData }) : undefined;
-      const response = await fetch(`/api/posts/${post.id}/regenerate`, {
-        method: "POST",
-        headers: body ? { "Content-Type": "application/json" } : undefined,
-        body,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to regenerate post");
-      }
-
-      const data = await response.json();
-      setPost(data);
-      setCaption(data.caption);
-      setImageError(false);
-    } catch (error) {
-      console.error("Error regenerating post:", error);
-      alert("Failed to regenerate post. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Review Your Post</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Review Your Post</h1>
         <p className="text-zinc-400">
           Brand: {post.brand_spaces?.name || "Unknown"}
         </p>
@@ -240,13 +215,12 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
               >
                 {copied ? "Copied!" : "Copy"}
               </button>
-              <button
-                onClick={handleRegenerate}
-                disabled={loading}
-                className="text-sm text-violet-400 hover:text-violet-300 disabled:opacity-50 px-3 py-1.5 rounded-lg border border-violet-500/30 hover:bg-violet-500/10"
+              <Link
+                href={`/create-post?edit=${post.id}`}
+                className="text-sm text-violet-400 hover:text-violet-300 px-3 py-1.5 rounded-lg border border-violet-500/30 hover:bg-violet-500/10"
               >
-                Regenerate
-              </button>
+                Edit & Regenerate
+              </Link>
             </div>
           </div>
 

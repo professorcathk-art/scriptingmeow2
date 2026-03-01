@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getLandingStyleById } from "@/lib/landing-styles";
+import { useCredits } from "@/components/credits/credits-provider";
 
 export default function TryStylePage() {
+  const router = useRouter();
+  const creditsCtx = useCredits();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [post, setPost] = useState<{
@@ -68,8 +71,11 @@ export default function TryStylePage() {
         }
 
         setPost(data);
-        setCreditsRemaining(data.credits_remaining ?? null);
+        const newCredits = data.credits_remaining ?? null;
+        setCreditsRemaining(newCredits);
+        if (typeof newCredits === "number") creditsCtx?.setCredits(newCredits);
         setStatus("success");
+        router.refresh();
 
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("tryStyle_styleId");
@@ -83,7 +89,7 @@ export default function TryStylePage() {
     };
 
     run();
-  }, [hasCheckedStorage, styleId, contentIdea, style]);
+  }, [hasCheckedStorage, styleId, contentIdea, style, creditsCtx, router]);
 
   if (status === "loading") {
     return (

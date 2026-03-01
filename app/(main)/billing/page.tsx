@@ -4,6 +4,7 @@ import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { BillingCheckoutButton } from "@/components/billing/billing-checkout-button";
+import { SignOutButton } from "./sign-out-button";
 
 function CheckIcon() {
   return (
@@ -86,13 +87,16 @@ export default async function BillingPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-zinc-100 mb-2">
-          Billing & Account
-        </h1>
-        <p className="text-zinc-400">
-          Manage your subscription and credits
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 mb-2">
+            Billing & Account
+          </h1>
+          <p className="text-zinc-400 text-sm sm:text-base">
+            Manage your subscription and credits
+          </p>
+        </div>
+        <SignOutButton />
       </div>
 
       <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-6">

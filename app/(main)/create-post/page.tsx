@@ -2,7 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CreatePostForm } from "@/components/posts/create-post-form";
 
-export default async function CreatePostPage() {
+export default async function CreatePostPage({
+  searchParams,
+}: {
+  searchParams: { edit?: string };
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -23,6 +27,42 @@ export default async function CreatePostPage() {
     .select("*")
     .eq("id", user.id)
     .single();
+
+  let editPost: {
+    id: string;
+    brand_space_id: string;
+    post_type: string;
+    format: string;
+    language: string;
+    content_idea: string;
+    draft_data: unknown;
+    caption: unknown;
+    carousel_urls?: string[] | null;
+  } | null = null;
+  if (searchParams.edit) {
+    const { data: post } = await supabase
+      .from("generated_posts")
+      .select("id, brand_space_id, post_type, format, language, content_idea, draft_data, caption, carousel_urls")
+      .eq("id", searchParams.edit)
+      .single();
+    if (post) {
+      const { data: bs } = await supabase
+        .from("brand_spaces")
+        .select("id")
+        .eq("id", post.brand_space_id)
+        .eq("user_id", user.id)
+        .single();
+      if (bs) editPost = post;
+    }
+  }
+
+  const { data: libraryPosts } = await supabase
+    .from("generated_posts")
+    .select("id, visual_url, carousel_urls, content_idea")
+    .in("status", ["saved", "generated"])
+    .in("brand_space_id", brandSpaces?.map((b) => b.id) ?? [])
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   if (!brandSpaces || brandSpaces.length === 0) {
     return (
@@ -50,6 +90,8 @@ export default async function CreatePostPage() {
         brandSpaces={brandSpaces}
         userCredits={userProfile?.credits_remaining || 0}
         planTier={userProfile?.plan_tier || "free"}
+        editPost={editPost}
+        libraryPosts={libraryPosts ?? []}
       />
     </div>
   );
