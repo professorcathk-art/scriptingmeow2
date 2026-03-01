@@ -1,22 +1,19 @@
 "use client";
 
-import { PLAN_LIMITS, type PlanTier } from "@/types/database";
+import { PLAN_LIMITS } from "@/types/database";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { useCredits } from "./credits-provider";
 
 interface CreditRingProps {
-  planTier: PlanTier;
-  creditsRemaining: number;
-  creditsResetDate: string;
   className?: string;
 }
 
-export function CreditRing({
-  planTier,
-  creditsRemaining,
-  creditsResetDate,
-  className,
-}: CreditRingProps) {
+export function CreditRing({ className }: CreditRingProps = {}) {
+  const ctx = useCredits();
+  const planTier = ctx?.planTier ?? "free";
+  const creditsRemaining = ctx?.creditsRemaining ?? 0;
+  const creditsResetDate = ctx?.creditsResetDate ?? new Date().toISOString();
   const limit = PLAN_LIMITS[planTier].monthly_credits;
   const percentage = Math.min((creditsRemaining / limit) * 100, 100);
   const circumference = 2 * Math.PI * 36;

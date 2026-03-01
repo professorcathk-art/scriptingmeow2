@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { GeneratedPost } from "@/types/database";
+import type { GeneratedPost, DraftData } from "@/types/database";
 
 interface PostReviewProps {
   post: GeneratedPost & { brand_spaces?: { name: string }; format?: string };
@@ -36,22 +36,31 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
   const [caption, setCaption] = useState(initialPost.caption);
   const [imageError, setImageError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [draftData, setDraftData] = useState<DraftData | null>(() => {
+    const d = (initialPost as { draft_data?: DraftData }).draft_data;
+    if (d && "visualAdvice" in d && "imageTextOnImage" in d) return d;
+    return null;
+  });
 
   useEffect(() => {
     setPost(initialPost);
     setCaption(initialPost.caption);
+    const d = (initialPost as { draft_data?: DraftData }).draft_data;
+    if (d && "visualAdvice" in d && "imageTextOnImage" in d) setDraftData(d);
   }, [initialPost]);
 
   const handleSave = async () => {
     setLoading(true);
     try {
+      const payload: { caption: CaptionShape; status: string; draft_data?: DraftData } = {
+        caption,
+        status: "saved",
+      };
+      if (draftData) payload.draft_data = draftData;
       const response = await fetch(`/api/posts/${post.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          caption,
-          status: "saved",
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -106,8 +115,11 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
   const handleRegenerate = async () => {
     setLoading(true);
     try {
+      const body = draftData ? JSON.stringify({ draft_data: draftData }) : undefined;
       const response = await fetch(`/api/posts/${post.id}/regenerate`, {
         method: "POST",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body,
       });
 
       if (!response.ok) {
@@ -250,6 +262,51 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
           />
         </div>
       </div>
+
+      {!hasCarousel && draftData && "visualAdvice" in draftData && (
+        <div className="glass-elevated p-6 rounded-2xl space-y-4">
+          <h2 className="text-xl font-semibold text-white">Draft for Regeneration</h2>
+          <p className="text-sm text-zinc-400">
+            Edit these fields to change the image when you Regenerate.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Visual Advice (for image generation)
+            </label>
+            <textarea
+              value={draftData.visualAdvice ?? ""}
+              onChange={(e) =>
+                setDraftData((prev) =>
+                  prev && "visualAdvice" in prev
+                    ? { ...prev, visualAdvice: e.target.value }
+                    : prev
+                )
+              }
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              rows={3}
+              placeholder="Scene description for image generation..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Text on Image (plain text only)
+            </label>
+            <textarea
+              value={draftData.imageTextOnImage ?? ""}
+              onChange={(e) =>
+                setDraftData((prev) =>
+                  prev && "imageTextOnImage" in prev
+                    ? { ...prev, imageTextOnImage: e.target.value }
+                    : prev
+                )
+              }
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              rows={2}
+              placeholder="Text to render on the image..."
+            />
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-4">
         <button

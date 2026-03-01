@@ -27,7 +27,7 @@ export function DashboardSidebar() {
       <div className="p-4 flex items-center justify-between">
         {!collapsed && (
           <Link href="/dashboard" className="text-lg font-bold text-white">
-            ScriptingMeow
+            designermeow
           </Link>
         )}
         <button

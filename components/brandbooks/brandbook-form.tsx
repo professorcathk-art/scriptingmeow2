@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { Brandbook, BrandReferenceImage } from "@/types/database";
 
@@ -20,11 +20,21 @@ export function BrandbookForm({
   const [generating, setGenerating] = useState(false);
   const [brandbook, setBrandbook] = useState(initialBrandbook);
   const [referenceImages, setReferenceImages] = useState(initialRefImages);
+  const [hasEdited, setHasEdited] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const initIdRef = useRef(initialBrandbook?.id);
 
   useEffect(() => {
     setReferenceImages(initialRefImages);
   }, [initialRefImages]);
+
+  useEffect(() => {
+    if (initialBrandbook?.id !== initIdRef.current) {
+      initIdRef.current = initialBrandbook?.id;
+      setBrandbook(initialBrandbook);
+      setHasEdited(false);
+    }
+  }, [initialBrandbook]);
 
   const fetchReferenceImages = async () => {
     try {
@@ -215,10 +225,11 @@ export function BrandbookForm({
           <div>
             <h3 className="font-semibold text-zinc-100 mb-2">Brand Personality</h3>
             <textarea
-              value={brandbook.brand_personality}
-              onChange={(e) =>
-                setBrandbook({ ...brandbook, brand_personality: e.target.value })
-              }
+              value={brandbook.brand_personality ?? ""}
+              onChange={(e) => {
+                setHasEdited(true);
+                setBrandbook((prev) => (prev ? { ...prev, brand_personality: e.target.value } : prev));
+              }}
               className={inputClass}
               rows={3}
             />
@@ -227,10 +238,11 @@ export function BrandbookForm({
           <div>
             <h3 className="font-semibold text-zinc-100 mb-2">Tone of Voice</h3>
             <textarea
-              value={brandbook.tone_of_voice}
-              onChange={(e) =>
-                setBrandbook({ ...brandbook, tone_of_voice: e.target.value })
-              }
+              value={brandbook.tone_of_voice ?? ""}
+              onChange={(e) => {
+                setHasEdited(true);
+                setBrandbook((prev) => (prev ? { ...prev, tone_of_voice: e.target.value } : prev));
+              }}
               className={inputClass}
               rows={3}
             />
@@ -294,16 +306,21 @@ export function BrandbookForm({
               <div>
                 <label className={labelClass}>Color Description (Detailed)</label>
                 <textarea
-                  value={(brandbook.visual_style as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed || ""}
-                  onChange={(e) =>
-                    setBrandbook({
-                      ...brandbook,
-                      visual_style: {
-                        ...brandbook.visual_style,
-                        colorDescriptionDetailed: e.target.value,
-                      },
-                    })
-                  }
+                  value={(brandbook.visual_style as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed ?? ""}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setBrandbook((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            visual_style: {
+                              ...prev.visual_style,
+                              colorDescriptionDetailed: e.target.value,
+                            },
+                          }
+                        : prev
+                    );
+                  }}
                   className={inputClass}
                   rows={4}
                   placeholder="Overall tone, primary colors with hex + purpose, secondary colors with hex + purpose. Markdown allowed."
@@ -312,16 +329,18 @@ export function BrandbookForm({
               <div>
                 <label className={labelClass}>視覺氣質 (Visual Aura)</label>
                 <textarea
-                  value={(brandbook.visual_style as { visualAura?: string })?.visualAura || ""}
-                  onChange={(e) =>
-                    setBrandbook({
-                      ...brandbook,
-                      visual_style: {
-                        ...brandbook.visual_style,
-                        visualAura: e.target.value,
-                      },
-                    })
-                  }
+                  value={(brandbook.visual_style as { visualAura?: string })?.visualAura ?? ""}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setBrandbook((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            visual_style: { ...prev.visual_style, visualAura: e.target.value },
+                          }
+                        : prev
+                    );
+                  }}
                   className={inputClass}
                   rows={2}
                   placeholder="Layout mood, breathing room, spacing philosophy. Markdown allowed."
@@ -330,16 +349,18 @@ export function BrandbookForm({
               <div>
                 <label className={labelClass}>線條風格 (Line Style)</label>
                 <textarea
-                  value={(brandbook.visual_style as { lineStyle?: string })?.lineStyle || ""}
-                  onChange={(e) =>
-                    setBrandbook({
-                      ...brandbook,
-                      visual_style: {
-                        ...brandbook.visual_style,
-                        lineStyle: e.target.value,
-                      },
-                    })
-                  }
+                  value={(brandbook.visual_style as { lineStyle?: string })?.lineStyle ?? ""}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setBrandbook((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            visual_style: { ...prev.visual_style, lineStyle: e.target.value },
+                          }
+                        : prev
+                    );
+                  }}
                   className={inputClass}
                   rows={2}
                   placeholder="Edge quality, stroke feel. e.g. hand-drawn pencil/ink, bleed effect. Markdown allowed."
@@ -348,16 +369,18 @@ export function BrandbookForm({
               <div>
                 <label className={labelClass}>Image Style</label>
                 <textarea
-                  value={brandbook.visual_style?.image_style || (brandbook.visual_style as { imageStyle?: string })?.imageStyle || ""}
-                  onChange={(e) =>
-                    setBrandbook({
-                      ...brandbook,
-                      visual_style: {
-                        ...brandbook.visual_style,
-                        image_style: e.target.value,
-                      },
-                    })
-                  }
+                  value={brandbook.visual_style?.image_style ?? (brandbook.visual_style as { imageStyle?: string })?.imageStyle ?? ""}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setBrandbook((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            visual_style: { ...prev.visual_style, image_style: e.target.value },
+                          }
+                        : prev
+                    );
+                  }}
                   className={inputClass}
                   rows={4}
                 />
@@ -365,16 +388,18 @@ export function BrandbookForm({
               <div>
                 <label className={labelClass}>字型規範 (Typography)</label>
                 <textarea
-                  value={(brandbook.visual_style as { typographySpec?: string })?.typographySpec || ""}
-                  onChange={(e) =>
-                    setBrandbook({
-                      ...brandbook,
-                      visual_style: {
-                        ...brandbook.visual_style,
-                        typographySpec: e.target.value,
-                      },
-                    })
-                  }
+                  value={(brandbook.visual_style as { typographySpec?: string })?.typographySpec ?? ""}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setBrandbook((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            visual_style: { ...prev.visual_style, typographySpec: e.target.value },
+                          }
+                        : prev
+                    );
+                  }}
                   className={inputClass}
                   rows={3}
                   placeholder="Headings - font, size, color. Body - font, size. Emphasis style."
@@ -383,16 +408,18 @@ export function BrandbookForm({
               <div>
                 <label className={labelClass}>排版風格 (Layout Style)</label>
                 <textarea
-                  value={(brandbook.visual_style as { layoutStyleDetail?: string })?.layoutStyleDetail || ""}
-                  onChange={(e) =>
-                    setBrandbook({
-                      ...brandbook,
-                      visual_style: {
-                        ...brandbook.visual_style,
-                        layoutStyleDetail: e.target.value,
-                      },
-                    })
-                  }
+                  value={(brandbook.visual_style as { layoutStyleDetail?: string })?.layoutStyleDetail ?? ""}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setBrandbook((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            visual_style: { ...prev.visual_style, layoutStyleDetail: e.target.value },
+                          }
+                        : prev
+                    );
+                  }}
                   className={inputClass}
                   rows={3}
                   placeholder="Card/minimal/info-dense. Borders, spacing, text placement."
@@ -414,17 +441,20 @@ export function BrandbookForm({
                       ? brandbook.dos_and_donts.dos.join("\n")
                       : ""
                   }
-                  onChange={(e) =>
-                    setBrandbook({
-                      ...brandbook,
-                      dos_and_donts: {
-                        ...brandbook.dos_and_donts,
-                        dos: e.target.value
-                          .split("\n")
-                          .filter((l) => l.trim()),
-                      },
-                    })
-                  }
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setBrandbook((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            dos_and_donts: {
+                              ...prev.dos_and_donts,
+                              dos: e.target.value.split("\n").filter((l) => l.trim()),
+                            },
+                          }
+                        : prev
+                    );
+                  }}
                   className={inputClass}
                   rows={5}
                 />
@@ -437,17 +467,20 @@ export function BrandbookForm({
                       ? brandbook.dos_and_donts.donts.join("\n")
                       : ""
                   }
-                  onChange={(e) =>
-                    setBrandbook({
-                      ...brandbook,
-                      dos_and_donts: {
-                        ...brandbook.dos_and_donts,
-                        donts: e.target.value
-                          .split("\n")
-                          .filter((l) => l.trim()),
-                      },
-                    })
-                  }
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setBrandbook((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            dos_and_donts: {
+                              ...prev.dos_and_donts,
+                              donts: e.target.value.split("\n").filter((l) => l.trim()),
+                            },
+                          }
+                        : prev
+                    );
+                  }}
                   className={inputClass}
                   rows={5}
                 />

@@ -87,6 +87,10 @@ export interface BrandReferenceImage {
   uploaded_at: string;
 }
 
+export type DraftData =
+  | { visualAdvice: string; imageTextOnImage: string }
+  | { carouselPages: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }> };
+
 export interface GeneratedPost {
   id: string;
   brand_space_id: string;
@@ -96,6 +100,7 @@ export interface GeneratedPost {
   content_idea: string;
   visual_url?: string;
   carousel_urls?: string[];
+  draft_data?: DraftData | null;
   caption:
     | { igCaption: string }
     | { hook: string; body: string; cta: string; hashtags: string[] };

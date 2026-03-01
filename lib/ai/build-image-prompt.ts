@@ -58,6 +58,7 @@ type BrandbookVisualStyle = {
   colors?: string[];
   imageStyle?: string;
   image_style?: string;
+  carouselInnerStyle?: string;
   imageGenerationPrompt?: string;
   colorDescriptionDetailed?: string;
   visualAura?: string;
@@ -78,6 +79,7 @@ export function buildImagePrompt(options: {
   visualAdvice: string;
   imageTextOnImage?: string;
   postStyle?: string;
+  pageIndex?: number;
   logoUrl?: string | null;
   logoPlacement?: string | null;
   brandType?: string;
@@ -85,6 +87,10 @@ export function buildImagePrompt(options: {
   contentFramework?: string;
 }): string {
   const vs = options.brandbook?.visual_style as BrandbookVisualStyle;
+  const pageIndex = options.pageIndex ?? 1;
+  const isInnerPage = pageIndex > 1;
+  const carouselInnerStyle = (vs as { carouselInnerStyle?: string })?.carouselInnerStyle?.trim();
+
   const imageGenPrompt = vs?.imageGenerationPrompt?.trim();
   const colors = vs?.primaryColor
     ? [vs.primaryColor, vs.secondaryColor1, vs.secondaryColor2].filter(Boolean).join(", ")
@@ -101,10 +107,12 @@ export function buildImagePrompt(options: {
   const layoutStyleDetail = vs?.layoutStyleDetail || "";
 
   const brandContextParts: string[] = [];
-  if (imageGenPrompt) {
-    brandContextParts.push(`Brand image generation prompt (use as primary style): ${imageGenPrompt}`);
+  if (isInnerPage && carouselInnerStyle) {
+    brandContextParts.push(`CORE VISUAL IDENTITY (INNER PAGE): You are generating an inner carousel slide. The text is the hero. STRICTLY follow the inner page style: ${carouselInnerStyle}. Do NOT generate a complex, full-screen scene. Generate a clean, minimal background or use very subtle, small graphics to ensure maximum text readability. Scene directive: ${options.visualAdvice.trim() || "Clean, minimal background."}`);
+  } else if (imageGenPrompt) {
+    brandContextParts.push(`CORE VISUAL IDENTITY (COVER PAGE): Brand image generation prompt (use as primary style): ${imageGenPrompt}`);
   } else {
-    brandContextParts.push(`Brand visual style: ${imageStyle}`);
+    brandContextParts.push(`CORE VISUAL IDENTITY (COVER PAGE): Use brand visual style: ${imageStyle}`);
     if (colorDescriptionDetailed) brandContextParts.push(`Color palette & lighting: ${colorDescriptionDetailed}`);
     if (visualAura) brandContextParts.push(`Visual aura & whitespace rules: ${visualAura}`);
     if (lineStyle) brandContextParts.push(`Line/stroke characteristics: ${lineStyle}`);
@@ -148,7 +156,7 @@ export function buildImagePrompt(options: {
     parts.push(brandContext);
   }
 
-  if (options.visualAdvice?.trim()) {
+  if (options.visualAdvice?.trim() && !(isInnerPage && carouselInnerStyle)) {
     parts.push(`SCENE & SUBJECT ACTION (CRITICAL): ${options.visualAdvice.trim()}\n*Instruction: Merge this specific scene description seamlessly into the Core Visual Identity defined above. Do not alter the brand's art style to fit the scene; force the scene to match the brand's aesthetic medium and colors exactly.*`);
   }
 
@@ -164,14 +172,8 @@ export function buildImagePrompt(options: {
   const rawText = (options.imageTextOnImage ?? "").trim();
   const textOnImage = stripMarkdown(rawText);
   if (textOnImage) {
-    const lines = textOnImage.split(/\n+/).map((l) => l.trim()).filter(Boolean);
-    const textInstruction =
-      lines.length >= 3
-        ? `Line 1 (Headline): "${lines[0]}"\nLine 2 (Subheadline): "${lines[1]}"\nLine 3+ (Body): "${lines.slice(2).join(" ")}"`
-        : lines.length === 2
-          ? `Headline: "${lines[0]}"\nSubheadline: "${lines[1]}"`
-          : `"${textOnImage}"`;
-    basePrompt += `\n\nEXACT TEXT TO RENDER (CRITICAL): Render the following text perfectly, with zero typos. Do NOT render markdown tags like #, ##, ###, or **. Observe strict typographic hierarchy:\n${textInstruction}`;
+    const escaped = textOnImage.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    basePrompt += `\n\nEXACT TEXT TO RENDER (CRITICAL): Render the following text perfectly, with zero typos. Do NOT render markdown tags like #, ##, ###, or **. Preserve line breaks as given. Use typographic hierarchy appropriate to the content:\n"${escaped}"`;
   }
 
   return basePrompt + FINAL_DESIGN_COMMANDS;

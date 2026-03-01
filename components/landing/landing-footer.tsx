@@ -26,7 +26,7 @@ export function LandingFooter() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
           <div className="col-span-2 md:col-span-1">
             <span className="text-xl font-bold text-zinc-100 mb-4 block">
-              ScriptingMeow
+              designermeow
             </span>
             <p className="text-zinc-400 text-sm max-w-xs">
               Turn your brand identity into consistent, on-brand Instagram posts in a few clicks.
@@ -90,7 +90,7 @@ export function LandingFooter() {
 
         <div className="mt-12 pt-8 border-t border-white/5">
           <p className="text-sm text-zinc-500 text-center">
-            © {new Date().getFullYear()} ScriptingMeow. All rights reserved.
+            © {new Date().getFullYear()} designermeow. All rights reserved.
           </p>
         </div>
       </div>

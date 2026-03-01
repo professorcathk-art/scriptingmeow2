@@ -4,9 +4,10 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ScriptingMeow - AI Instagram Post Generator",
+  title: "designermeow - AI Instagram Post Generator",
   description:
     "Turn your brand identity into consistent, on-brand IG posts in a few clicks",
+  metadataBase: new URL("https://designermeow.com"),
 };
 
 export default function RootLayout({

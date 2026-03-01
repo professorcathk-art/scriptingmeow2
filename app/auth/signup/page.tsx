@@ -34,7 +34,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-4">
       <div className="max-w-md w-full glass-elevated p-8 rounded-2xl border border-white/10">
         <h1 className="text-2xl font-bold text-center text-white mb-2">
-          ScriptingMeow
+          designermeow
         </h1>
         <h2 className="text-lg font-medium text-center text-zinc-400 mb-6">
           Create Account

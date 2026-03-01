@@ -2,64 +2,106 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
-type Phase = "input" | "loading" | "reveal";
-
-interface DemoResult {
-  caption: { igCaption?: string; hook?: string; body?: string; cta?: string; hashtags?: string[] };
-  visualUrl?: string;
-  visualDescription: string;
-  brandDescription: string;
+export interface StyleGalleryItem {
+  id: string;
+  imageUrl: string;
+  category: string;
+  testimonial: string;
+  hiddenPrompt: string;
 }
+
+const STYLE_GALLERY: StyleGalleryItem[] = [
+  {
+    id: "1",
+    imageUrl: "https://picsum.photos/400/500?random=1",
+    category: "Minimalist E-commerce",
+    testimonial: "Saved me 5 hours a week!",
+    hiddenPrompt:
+      "Clean minimalist aesthetic, soft shadows, white space, product-focused, Scandinavian design, muted pastels",
+  },
+  {
+    id: "2",
+    imageUrl: "https://picsum.photos/400/600?random=2",
+    category: "Cozy Cafe",
+    testimonial: "My feed finally looks cohesive.",
+    hiddenPrompt:
+      "Warm tones, film grain, cozy atmosphere, latte art, wooden textures, golden hour lighting, lifestyle photography",
+  },
+  {
+    id: "3",
+    imageUrl: "https://picsum.photos/400/450?random=3",
+    category: "Bold Tech Startup",
+    testimonial: "Professional and eye-catching.",
+    hiddenPrompt:
+      "High contrast, neon accents, dark mode, geometric shapes, futuristic, gradient overlays, tech-forward",
+  },
+  {
+    id: "4",
+    imageUrl: "https://picsum.photos/400/550?random=4",
+    category: "Wellness & Self-Care",
+    testimonial: "The AI gets my vibe perfectly.",
+    hiddenPrompt:
+      "Soft gradients, calming colors, nature elements, zen aesthetic, organic shapes, gentle typography",
+  },
+  {
+    id: "5",
+    imageUrl: "https://picsum.photos/400/500?random=5",
+    category: "Fashion & Lifestyle",
+    testimonial: "My engagement doubled.",
+    hiddenPrompt:
+      "Editorial style, high fashion, dramatic lighting, bold typography, magazine layout, aspirational",
+  },
+  {
+    id: "6",
+    imageUrl: "https://picsum.photos/400/480?random=6",
+    category: "Creative Agency",
+    testimonial: "Clients love the consistency.",
+    hiddenPrompt:
+      "Playful, vibrant colors, creative typography, mixed media, artistic, unique compositions",
+  },
+];
 
 interface LandingHeroProps {
   isAuthenticated?: boolean;
 }
 
+/**
+ * When a user selects a style, we will pass hiddenPrompt and imageUrl
+ * to the app's Brandbook state (e.g. via URL params or context)
+ * so the create-brand flow can pre-populate the visual style.
+ */
+function handleStyleSelect(item: StyleGalleryItem) {
+  console.log("Style selected:", {
+    id: item.id,
+    imageUrl: item.imageUrl,
+    category: item.category,
+    hiddenPrompt: item.hiddenPrompt,
+  });
+  // TODO: Navigate to signup/create-brand with ?stylePrompt=...&referenceImage=...
+  // or store in context for the next step
+}
+
 export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
-  const [phase, setPhase] = useState<Phase>("input");
-  const [brandInput, setBrandInput] = useState("");
-  const [result, setResult] = useState<DemoResult | null>(null);
-  const [showSignUpModal, setShowSignUpModal] = useState(false);
-  const [error, setError] = useState("");
+  const [scratchInput, setScratchInput] = useState("");
 
-  const handleGenerate = async () => {
-    if (!brandInput.trim() || brandInput.trim().length < 10) {
-      setError("Please describe your brand in at least a few words");
-      return;
+  const handleStartFromScratch = () => {
+    if (scratchInput.trim()) {
+      // Could navigate to signup with brand description
+      window.location.href = `/auth/signup?brand=${encodeURIComponent(scratchInput.trim())}`;
+    } else {
+      window.location.href = "/auth/signup";
     }
-    setError("");
-    setPhase("loading");
-    try {
-      const res = await fetch("/api/demo/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brandDescription: brandInput.trim() }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to generate");
-      }
-      const data = await res.json();
-      setResult(data);
-      setPhase("reveal");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-      setPhase("input");
-    }
-  };
-
-  const handleBlurredAction = () => {
-    setShowSignUpModal(true);
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
+    <div className="min-h-screen flex flex-col px-4 pt-20 pb-24">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-20 glass border-b border-white/5">
+      <header className="fixed top-0 left-0 right-0 z-20 glass border-b border-white/5">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <span className="text-xl font-bold tracking-tight text-white">
-            ScriptingMeow
+            designermeow
           </span>
           <div className="flex items-center gap-4">
             {isAuthenticated ? (
@@ -89,206 +131,98 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
         </div>
       </header>
 
-      {phase === "input" && (
-        <div className="w-full max-w-2xl mx-auto text-center space-y-8 animate-fade-in">
-          <div>
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 tracking-tight">
-              Turn your brand into
-              <br />
-              <span className="gradient-ai-text">Instagram posts</span>
-            </h1>
-            <p className="text-lg text-zinc-400 max-w-xl mx-auto">
-              Describe your brand in one sentence. See the magic in seconds.
-            </p>
-          </div>
+      {/* Hero Section */}
+      <section className="text-center max-w-3xl mx-auto mb-16">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-tight">
+          Turn your brand into viral{" "}
+          <span
+            className="bg-clip-text text-transparent"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f472b6 100%)",
+            }}
+          >
+            Instagram posts
+          </span>
+          .
+        </h1>
+        <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+          Don&apos;t know where to start? Steal a winning aesthetic from our
+          gallery below, tell us your brand name, and let AI do the rest.
+        </p>
+      </section>
 
-          <div className="space-y-4">
-            <div className="relative group">
-              <input
-                type="text"
-                value={brandInput}
-                onChange={(e) => setBrandInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-                placeholder="e.g., A luxury vegan skincare line for millennials who value sustainability..."
-                className="w-full px-6 py-5 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all text-lg"
-              />
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-500/10 via-cyan-500/10 to-pink-500/10 opacity-0 group-focus-within:opacity-100 blur-xl transition-opacity -z-10" />
-            </div>
-
-            {error && (
-              <p className="text-sm text-red-400">{error}</p>
-            )}
-
-            <button
-              onClick={handleGenerate}
-              className="w-full py-4 px-6 rounded-2xl font-semibold text-lg gradient-ai text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-glow"
+      {/* Steal a Style Gallery */}
+      <section className="max-w-6xl mx-auto w-full mb-20">
+        <h2 className="text-xl font-semibold text-zinc-300 mb-6 text-center sm:text-left">
+          Steal a Style
+        </h2>
+        <div
+          className="columns-2 sm:columns-3 gap-4 space-y-4"
+          style={{ columnFill: "balance" }}
+        >
+          {STYLE_GALLERY.map((item) => (
+            <div
+              key={item.id}
+              className="break-inside-avoid mb-4 group"
             >
-              Generate a Post ✨
+              <div className="glass-elevated rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 transition-all duration-300">
+                <div className="relative aspect-[4/5] overflow-hidden">
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.category}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => handleStyleSelect(item)}
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold text-sm shadow-lg hover:shadow-violet-500/30 hover:scale-105 transition-all duration-200"
+                    >
+                      ✨ Use this Style
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <span className="inline-block px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-medium mb-2">
+                    {item.category}
+                  </span>
+                  <p className="text-zinc-500 text-sm">&quot;{item.testimonial}&quot;</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Fallback CTA */}
+      <section className="max-w-2xl mx-auto w-full">
+        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+          <p className="text-zinc-300 font-medium mb-4 text-center">
+            Already know exactly what you want?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              value={scratchInput}
+              onChange={(e) => setScratchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleStartFromScratch()}
+              placeholder="Describe your brand..."
+              className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
+            />
+            <button
+              type="button"
+              onClick={handleStartFromScratch}
+              className="px-6 py-3 rounded-xl gradient-ai text-white font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              Start from Scratch
             </button>
           </div>
-
-          <p className="text-sm text-zinc-500">
-            No sign-up required. Try it free.
-          </p>
         </div>
-      )}
-
-      {phase === "loading" && (
-        <div className="w-full max-w-4xl mx-auto space-y-8 animate-fade-in">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold text-white mb-2">
-              Creating your post...
-            </h2>
-            <p className="text-zinc-400">AI is crafting something special</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="glass rounded-2xl p-6 space-y-4 animate-pulse">
-              <div className="aspect-square bg-white/5 rounded-xl" />
-              <div className="h-4 bg-white/5 rounded w-3/4" />
-              <div className="h-4 bg-white/5 rounded w-1/2" />
-            </div>
-            <div className="glass rounded-2xl p-6 space-y-4 animate-pulse">
-              <div className="h-6 bg-white/5 rounded w-1/3" />
-              <div className="h-20 bg-white/5 rounded" />
-              <div className="h-20 bg-white/5 rounded" />
-              <div className="h-12 bg-white/5 rounded w-1/2" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {phase === "reveal" && result && (
-        <div className="w-full max-w-5xl mx-auto space-y-8 animate-fade-in">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold text-white mb-2">
-              Your post is ready
-            </h2>
-            <p className="text-zinc-400">
-              Brand: {result.brandDescription}
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Visual preview */}
-            <div className="glass-elevated rounded-2xl p-6">
-              <h3 className="text-sm font-medium text-zinc-400 mb-4 uppercase tracking-wider">
-                Visual Preview
-              </h3>
-              <div className="aspect-square rounded-xl overflow-hidden bg-white/5 shadow-float">
-                {result.visualUrl ? (
-                  <img
-                    src={result.visualUrl}
-                    alt="Generated post"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-500">
-                    <span className="text-sm">Preview</span>
-                  </div>
-                )}
-              </div>
-              <div className="mt-4 flex gap-3">
-                <button
-                  onClick={handleBlurredAction}
-                  className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/80 font-medium hover:bg-white/10 hover:text-white transition-all blur-sm hover:blur-none cursor-pointer relative"
-                >
-                  Download
-                </button>
-                <button
-                  onClick={handleBlurredAction}
-                  className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white/80 font-medium hover:bg-white/10 hover:text-white transition-all blur-sm hover:blur-none cursor-pointer"
-                >
-                  Generate Carousel
-                </button>
-              </div>
-              <p className="text-xs text-zinc-500 text-center mt-2">
-                Sign up to download and save
-              </p>
-            </div>
-
-            {/* Caption / Mini brandbook */}
-            <div className="glass-elevated rounded-2xl p-6 space-y-6">
-              <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">
-                Caption
-              </h3>
-              <div className="space-y-3">
-                {result.caption.igCaption ? (
-                  <p className="text-white whitespace-pre-wrap text-sm">{result.caption.igCaption}</p>
-                ) : (
-                  <>
-                    <div>
-                      <p className="text-xs text-zinc-500 mb-1">Hook</p>
-                      <p className="text-white">{result.caption.hook}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-500 mb-1">Body</p>
-                      <p className="text-zinc-300 text-sm">{result.caption.body}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-500 mb-1">CTA</p>
-                      <p className="text-white text-sm">{result.caption.cta}</p>
-                    </div>
-                    {Array.isArray(result.caption.hashtags) && result.caption.hashtags.length > 0 && (
-                      <div>
-                        <p className="text-xs text-zinc-500 mb-1">Hashtags</p>
-                        <p className="text-cyan-400 text-sm">
-                          {result.caption.hashtags.join(" ")}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <button
-                onClick={() => {
-                  setPhase("input");
-                  setResult(null);
-                  setBrandInput("");
-                }}
-                className="w-full py-3 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors"
-              >
-                Try another brand
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sign-up modal */}
-      {showSignUpModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={() => setShowSignUpModal(false)}
-        >
-          <div
-            className="glass-elevated rounded-2xl p-8 max-w-md w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-2xl font-bold text-white mb-2">
-              Love this?
-            </h3>
-            <p className="text-zinc-400 mb-6">
-              Save your Brand Space and download your post by creating a free account.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowSignUpModal(false)}
-                className="flex-1 py-3 rounded-xl border border-white/10 text-zinc-400 hover:text-white transition-colors"
-              >
-                Maybe later
-              </button>
-              <Link
-                href="/auth/signup"
-                className="flex-1 py-3 rounded-xl gradient-ai text-white font-medium text-center hover:opacity-90 transition-opacity"
-              >
-                Create free account
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   );
 }

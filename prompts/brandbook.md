@@ -40,6 +40,8 @@ Do not write generic advice. Each field must be hyper-specific, highly conceptua
 
 **imageStyle** – CRITICAL field for image generation. Specify the exact artistic medium (e.g., Digital Watercolor, High-end Editorial Photography, Flat Vector). Detail the lighting, texture (e.g., water stains on paper, glossy studio lighting), and specific character/subject design rules (e.g., "Tuxedo cat wearing round glasses and a backpack"). Specify exact image-to-text visual ratios (e.g., Cover: 40% Image / 60% Text). DO NOT specify aspect ratio. Markdown allowed.
 
+**carouselInnerStyle** – Define the visual rules specifically for inner carousel slides (Pages 2 to N). They must differ from the main `imageStyle`. Specify: higher text-to-image ratio (e.g., 80% text / 20% image), smaller supporting illustrations or subtle background textures instead of full-bleed images, and increased whitespace for readability. Markdown allowed.
+
 **colorDescriptionDetailed** – Create a highly conceptual, mood-driven color palette. Structure using Markdown:
 - **Overall Vibe:** Describe the texture and emotional impact (e.g., "Watercolor-on-paper texture, low saturation, high brightness, non-fatiguing").
 - **Primary Colors:** Give them thematic names, hex codes, and psychological purpose (e.g., "Text Dark Brown #3E332A - softer than black for approachability", "Paper Cream #F9F7F2").
@@ -61,4 +63,4 @@ Do not write generic advice. Each field must be hyper-specific, highly conceptua
 **imageGenerationPrompt** – A highly descriptive, synthesized prompt engineered directly for an AI image generator (like Midjourney). Must synthesize the exact art style, character details, emotional vibe, lighting, and textures into 3-4 sentences. Example: "A Japanese healing-style digital watercolor illustration of a cute, anthropomorphic black-and-white tuxedo cat. The cat wears round glasses and a black backpack, looking gentle and empathetic. Clean, smooth lines, soft muted pastel colors, minimal shading, resembling a premium children's book cover. Cozy, reassuring atmosphere on textured cream paper." This is the most important field for visual output.
 
 ## Output
-Valid JSON only. Escape newlines in strings as \\n. No raw newlines inside string values.
+Valid JSON only. Escape newlines in strings as \\n. No raw newlines inside string values. Include `"carouselInnerStyle": ""` in visualStyle (empty string if not applicable).

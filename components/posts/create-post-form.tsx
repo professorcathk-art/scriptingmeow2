@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useCredits } from "@/components/credits/credits-provider";
 import { useRouter } from "next/navigation";
 import type { BrandSpace, PostType, PostFormat, PlanTier } from "@/types/database";
 import { PLAN_LIMITS } from "@/types/database";
@@ -38,10 +39,12 @@ function SquaresIcon({ className }: { className?: string }) {
 
 export function CreatePostForm({
   brandSpaces,
-  userCredits,
+  userCredits: initialCredits,
   planTier,
 }: CreatePostFormProps) {
   const router = useRouter();
+  const creditsCtx = useCredits();
+  const userCredits = creditsCtx?.creditsRemaining ?? initialCredits;
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [loading, setLoading] = useState(false);
   type SingleDraft = { imageTextOnImage: string; visualAdvice: string; igCaption: string };
@@ -330,11 +333,14 @@ export function CreatePostForm({
         throw new Error(errMsg);
       }
 
-      let data: { id: string };
+      let data: { id: string; credits_remaining?: number };
       try {
         data = await response.json();
       } catch {
         throw new Error("Invalid response from server. Please try again.");
+      }
+      if (typeof data.credits_remaining === "number") {
+        creditsCtx?.setCredits(data.credits_remaining);
       }
       clearPostDraft();
       router.refresh();

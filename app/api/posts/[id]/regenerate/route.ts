@@ -10,6 +10,13 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    let body: { draft_data?: { visualAdvice?: string; imageTextOnImage?: string } } = {};
+    try {
+      body = await request.json();
+    } catch {
+      // No body
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -45,30 +52,45 @@ export async function POST(
     }
 
     const postStyle = (post as { post_style?: string }).post_style;
+    const storedDraft = post.draft_data as { visualAdvice?: string; imageTextOnImage?: string } | null | undefined;
+    const draftData = body.draft_data ?? storedDraft;
 
-    const genResult = await generatePost(
-      {
-        brandPersonality: brandbook.brand_personality,
-        toneOfVoice: brandbook.tone_of_voice,
-        visualStyle: brandbook.visual_style,
-        dosAndDonts: brandbook.dos_and_donts,
-      },
-      post.content_idea,
-      post.language,
-      post.post_type,
-      post.format,
-      postStyle
-    );
-    const generatedPost = Array.isArray(genResult) ? genResult[0] : null;
-    if (!generatedPost || "pages" in generatedPost) {
-      return NextResponse.json(
-        { error: "Regenerate does not support carousel posts" },
-        { status: 400 }
+    let visualAdvice: string;
+    let imageTextOnImage: string;
+    let igCaption: string;
+
+    if (draftData && "visualAdvice" in draftData && "imageTextOnImage" in draftData) {
+      visualAdvice = (draftData.visualAdvice ?? "").trim();
+      imageTextOnImage = draftData.imageTextOnImage ?? "";
+      igCaption = (post.caption as { igCaption?: string })?.igCaption ?? "";
+    } else {
+      const genResult = await generatePost(
+        {
+          brandPersonality: brandbook.brand_personality,
+          toneOfVoice: brandbook.tone_of_voice,
+          visualStyle: brandbook.visual_style,
+          dosAndDonts: brandbook.dos_and_donts,
+        },
+        post.content_idea,
+        post.language,
+        post.post_type,
+        post.format,
+        postStyle
       );
+      const generatedPost = Array.isArray(genResult) ? genResult[0] : null;
+      if (!generatedPost || "pages" in generatedPost) {
+        return NextResponse.json(
+          { error: "Regenerate does not support carousel posts" },
+          { status: 400 }
+        );
+      }
+      visualAdvice = generatedPost.visualAdvice?.trim() || "";
+      imageTextOnImage = generatedPost.imageTextOnImage ?? "";
+      igCaption = (generatedPost.igCaption ?? "").slice(0, 400);
     }
 
-    const visualAdvice =
-      generatedPost.visualAdvice?.trim() ||
+    const visualAdviceResolved =
+      visualAdvice ||
       (() => {
         const vs = brandbook.visual_style as {
           primaryColor?: string;
@@ -85,8 +107,8 @@ export async function POST(
 
     const fullImagePrompt = buildImagePrompt({
       brandbook,
-      visualAdvice,
-      imageTextOnImage: generatedPost.imageTextOnImage ?? undefined,
+      visualAdvice: visualAdviceResolved,
+      imageTextOnImage: imageTextOnImage || undefined,
       postStyle: postStyle || undefined,
     });
 
@@ -99,21 +121,25 @@ export async function POST(
       visualUrl = await uploadPostImage(imageBuffer, params.id, user.id);
     } else {
       visualUrl = await uploadPostPlaceholder(
-        generatedPost.visualAdvice || "Post image",
+        visualAdviceResolved || "Post image",
         params.id,
         user.id
       );
     }
 
-    const caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, 400) };
+    const caption = { igCaption };
 
+    const updatePayload: Record<string, unknown> = {
+      caption,
+      visual_url: visualUrl,
+      updated_at: new Date().toISOString(),
+    };
+    if (draftData && "visualAdvice" in draftData && "imageTextOnImage" in draftData) {
+      updatePayload.draft_data = draftData;
+    }
     const { data: updatedPost, error } = await supabase
       .from("generated_posts")
-      .update({
-        caption,
-        visual_url: visualUrl,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", params.id)
       .select()
       .single();

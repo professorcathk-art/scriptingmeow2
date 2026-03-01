@@ -206,6 +206,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const draftData = isCarousel && carouselPages
+      ? { carouselPages }
+      : { visualAdvice: imagePrompt, imageTextOnImage };
+
     const { data: post, error: postError } = await supabase
       .from("generated_posts")
       .insert({
@@ -219,6 +223,7 @@ export async function POST(request: Request) {
         caption,
         status: "generated",
         credits_used: creditsNeeded,
+        draft_data: draftData,
       })
       .select()
       .single();
@@ -240,11 +245,17 @@ export async function POST(request: Request) {
     if (isCarousel && carouselPages) {
       for (let i = 0; i < carouselPages.length; i++) {
         const page = carouselPages[i];
+        const header = (page.header ?? "").trim();
+        const imageText = (page.imageTextOnImage ?? "").trim();
+        const combinedText = header
+          ? (imageText ? `${header}\n${imageText}` : header)
+          : imageText || undefined;
         const fullImagePrompt = buildImagePrompt({
           brandbook,
           visualAdvice: page.visualAdvice?.trim() || `Carousel page ${page.pageIndex}. ${contentIdea || ""}`,
-          imageTextOnImage: page.imageTextOnImage?.trim() || undefined,
+          imageTextOnImage: combinedText,
           postStyle: postStyle || "text-heavy",
+          pageIndex: page.pageIndex,
           logoUrl: brandSpace?.logo_url ?? null,
           logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
           brandType: brandSpace?.brand_type,

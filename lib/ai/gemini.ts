@@ -266,6 +266,7 @@ export async function generateBrandbook(
     secondaryColor2?: string;
     backgroundColor?: string;
     imageStyle: string;
+    carouselInnerStyle?: string;
     colorDescriptionDetailed?: string;
     visualAura?: string;
     lineStyle?: string;
@@ -388,6 +389,7 @@ export async function generateBrandbook(
             secondaryColor2: vs.secondaryColor2 || (Array.isArray(vs.colors) ? vs.colors[2] : ""),
             backgroundColor: vs.backgroundColor || "light",
             imageStyle: (vs as { imageStyle?: string; image_style?: string }).imageStyle || (vs as { image_style?: string }).image_style || "",
+            carouselInnerStyle: (vs as { carouselInnerStyle?: string }).carouselInnerStyle || "",
             colorDescriptionDetailed: (vs as { colorDescriptionDetailed?: string }).colorDescriptionDetailed || "",
             visualAura: (vs as { visualAura?: string }).visualAura || "",
             lineStyle: (vs as { lineStyle?: string }).lineStyle || "",

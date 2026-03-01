@@ -20,7 +20,7 @@ export function MainNav() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           <Link href="/" className="text-xl font-bold text-blue-600">
-            ScriptingMeow
+            designermeow
           </Link>
           <div className="flex gap-6">
             {navItems.map((item) => (

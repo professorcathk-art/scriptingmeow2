@@ -44,6 +44,7 @@ const BRANDBOOK_JSON_SCHEMA = `
     "secondaryColor2": "#hex",
     "backgroundColor": "string",
     "imageStyle": "string",
+    "carouselInnerStyle": "string",
     "colorDescriptionDetailed": "string",
     "visualAura": "string",
     "lineStyle": "string",

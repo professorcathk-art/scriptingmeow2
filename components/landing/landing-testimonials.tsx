@@ -5,7 +5,7 @@ const TESTIMONIALS = [
     name: "Sarah Chen",
     handle: "@sarahcreates",
     avatar: "SC",
-    content: "ScriptingMeow cut my content creation time by 80%. The AI actually gets my brand voice.",
+    content: "designermeow cut my content creation time by 80%. The AI actually gets my brand voice.",
     rating: 5,
   },
   {
