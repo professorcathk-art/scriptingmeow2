@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     confirmedIgCaption,
     confirmedCaption,
     selectedSampleImageUrls,
+    referenceImageUrls,
   } = body as {
     brandSpaceId?: string;
     postType?: string;
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
     confirmedIgCaption?: string;
     confirmedCaption?: { hook: string; body: string; cta: string; hashtags: string[] };
     selectedSampleImageUrls?: string[];
+    referenceImageUrls?: string[];
   };
 
   if (!brandSpaceId) {
@@ -235,9 +237,14 @@ export async function POST(request: Request) {
 
     const aspectRatio =
       format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
-    const sampleUrls = Array.isArray(selectedSampleImageUrls)
-      ? selectedSampleImageUrls.slice(0, 5).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
-      : [];
+    const sampleUrls = [
+      ...(Array.isArray(referenceImageUrls)
+        ? referenceImageUrls.slice(0, 3).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
+        : []),
+      ...(Array.isArray(selectedSampleImageUrls)
+        ? selectedSampleImageUrls.slice(0, 5).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
+        : []),
+    ].slice(0, 5);
 
     let visualUrl: string;
     let carouselUrls: string[] = [];

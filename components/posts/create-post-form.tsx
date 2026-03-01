@@ -66,6 +66,9 @@ export function CreatePostForm({
   const [referenceImages, setReferenceImages] = useState<{ id: string; image_url: string }[]>([]);
   const [selectedSampleUrls, setSelectedSampleUrls] = useState<string[]>([]);
   const [sampleUploading, setSampleUploading] = useState(false);
+  const [referenceImageUrls, setReferenceImageUrls] = useState<string[]>([]);
+  const [referenceText, setReferenceText] = useState("");
+  const [referenceUploading, setReferenceUploading] = useState(false);
   const [carouselPages, setCarouselPages] = useState<
     { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]
   >([]);
@@ -81,12 +84,14 @@ export function CreatePostForm({
           selectedDraftIndex,
           carouselPages,
           selectedSampleUrls,
+          referenceImageUrls,
+          referenceText,
         })
       );
     } catch {
       // ignore
     }
-  }, [formData, step, draftVariations, selectedDraftIndex, carouselPages, selectedSampleUrls]);
+  }, [formData, step, draftVariations, selectedDraftIndex, carouselPages, selectedSampleUrls, referenceImageUrls, referenceText]);
 
   const saveDraftAndSetStep = useCallback(
     (nextStep: 1 | 2 | 3 | 4) => {
@@ -125,6 +130,8 @@ export function CreatePostForm({
           if (typeof data.selectedDraftIndex === "number") setSelectedDraftIndex(data.selectedDraftIndex as 0 | 1);
           if (Array.isArray(data.carouselPages)) setCarouselPages(data.carouselPages);
           if (Array.isArray(data.selectedSampleUrls)) setSelectedSampleUrls(data.selectedSampleUrls);
+          if (Array.isArray(data.referenceImageUrls)) setReferenceImageUrls(data.referenceImageUrls);
+          if (typeof data.referenceText === "string") setReferenceText(data.referenceText);
         }
       }
     } catch {
@@ -168,6 +175,42 @@ export function CreatePostForm({
     }
   };
 
+  const handleUploadReferences = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const valid = Array.from(files).filter(
+      (f) =>
+        f.size <= 10 * 1024 * 1024 &&
+        /\.(png|jpe?g|pdf|docx?)$/i.test(f.name)
+    );
+    if (valid.length === 0) {
+      alert("Upload images (PNG/JPG), PDF, or DOC/DOCX. Max 10MB per file.");
+      return;
+    }
+    setReferenceUploading(true);
+    try {
+      const fd = new FormData();
+      valid.forEach((f) => fd.append("files", f));
+      const res = await fetch("/api/upload/references", { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      setReferenceImageUrls((prev) => [...prev, ...(data.imageUrls ?? [])]);
+      if (data.textContent?.trim()) {
+        setReferenceText((prev) => (prev ? `${prev}\n\n${data.textContent}` : data.textContent));
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setReferenceUploading(false);
+    }
+  };
+
+  const removeReferenceImage = (url: string) => {
+    setReferenceImageUrls((prev) => prev.filter((u) => u !== url));
+  };
+
   const LANGUAGE_OPTIONS = [
     "English",
     "Traditional Chinese",
@@ -204,6 +247,7 @@ export function CreatePostForm({
       format: formData.format,
       language: effectiveLanguage,
       contentIdea: formData.contentIdea,
+      referenceText: referenceText.trim() || undefined,
       contentFramework: formData.contentFramework,
       postStyle: formData.postStyle,
       carouselPageCount: formData.postType === "carousel" ? formData.carouselPageCount : undefined,
@@ -316,6 +360,7 @@ export function CreatePostForm({
                 : (draftVariations?.[selectedDraftIndex] as { pages?: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[] })?.pages
               : undefined,
           selectedSampleImageUrls: selectedSampleUrls,
+          referenceImageUrls,
         }),
       });
 
@@ -661,6 +706,56 @@ export function CreatePostForm({
           <p className="text-xs text-zinc-500 mt-1">
             {formData.contentIdea.length}/500
           </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-400 mb-2">
+            Reference materials (optional)
+          </label>
+          <p className="text-xs text-zinc-500 mb-2">
+            Upload images for visual reference (passed to image gen) or PDF/DOC for text ideas (used by AI for draft). Max 10MB per file.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <label className="cursor-pointer px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors text-sm">
+              {referenceUploading ? "Uploading…" : "Choose files"}
+              <input
+                type="file"
+                accept=".png,.jpg,.jpeg,.pdf,.doc,.docx"
+                multiple
+                className="hidden"
+                disabled={referenceUploading}
+                onChange={(e) => {
+                  handleUploadReferences(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {referenceImageUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2 w-full">
+                {referenceImageUrls.map((url) => (
+                  <div key={url} className="relative group">
+                    <img
+                      src={url}
+                      alt="Reference"
+                      className="w-16 h-16 object-cover rounded-lg border border-white/10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeReferenceImage(url)}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500/80 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {referenceText && (
+              <p className="text-xs text-zinc-500 mt-2 w-full">
+                Extracted text from {referenceText.split("\n\n---\n\n").length} doc(s) included for draft.
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">

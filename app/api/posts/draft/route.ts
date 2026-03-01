@@ -29,6 +29,7 @@ export async function POST(request: Request) {
   const format = (body.format as string) || "square";
   const language = (body.language as string) || "English";
   const contentIdea = (body.contentIdea as string) || "";
+  const referenceText = (body.referenceText as string) || "";
   const postStyle = (body.postStyle as string) || "immersive-photo";
   const contentFramework = (body.contentFramework as string) || "educational-value";
   const carouselPageCount =
@@ -70,8 +71,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
     }
 
+    const enrichedIdea = referenceText.trim()
+      ? `${contentIdea}\n\n--- Reference materials (extract key ideas for the post) ---\n${referenceText.trim().slice(0, 15000)}`
+      : contentIdea;
+
     const result = await generatePostLight(
-      contentIdea,
+      enrichedIdea,
       language,
       postType,
       format,
