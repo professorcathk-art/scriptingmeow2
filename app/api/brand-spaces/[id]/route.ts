@@ -69,12 +69,13 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { name, brandType, brandTypeOther, targetAudiences, painPoints, desiredOutcomes, valueProposition, logoUrl } = body;
+    const { name, brandType, brandTypeOther, targetAudiences, painPoints, desiredOutcomes, valueProposition, logoUrl, logoPlacement } = body;
 
     const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (name !== undefined) updatePayload.name = name;
     if (brandType !== undefined) updatePayload.brand_type = brandType;
     if (logoUrl !== undefined) updatePayload.logo_url = logoUrl;
+    if (logoPlacement !== undefined) updatePayload.logo_placement = logoPlacement;
 
     const brandDetails: Record<string, string> = {};
     if (targetAudiences !== undefined) brandDetails.targetAudiences = targetAudiences;

@@ -62,6 +62,7 @@ export function CreatePostForm({
   });
   const [referenceImages, setReferenceImages] = useState<{ id: string; image_url: string }[]>([]);
   const [selectedSampleUrls, setSelectedSampleUrls] = useState<string[]>([]);
+  const [sampleUploading, setSampleUploading] = useState(false);
   const [carouselPages, setCarouselPages] = useState<
     { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]
   >([]);
@@ -128,15 +129,41 @@ export function CreatePostForm({
     }
   }, []);
 
+  const fetchReferenceImages = useCallback(() => {
+    if (!formData.brandSpaceId) return;
+    fetch(`/api/brand-spaces/${formData.brandSpaceId}/images`)
+      .then((r) => r.json())
+      .then((data) => setReferenceImages(data.images ?? []))
+      .catch(() => setReferenceImages([]));
+  }, [formData.brandSpaceId]);
+
   useEffect(() => {
     if (step === 4 && formData.brandSpaceId) {
-      fetch(`/api/brand-spaces/${formData.brandSpaceId}/images`)
-        .then((r) => r.json())
-        .then((data) => setReferenceImages(data.images ?? []))
-        .catch(() => setReferenceImages([]));
+      fetchReferenceImages();
       setSelectedSampleUrls([]);
     }
-  }, [step, formData.brandSpaceId]);
+  }, [step, formData.brandSpaceId, fetchReferenceImages]);
+
+  const handleUploadSamplePhotos = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !formData.brandSpaceId) return;
+    setSampleUploading(true);
+    try {
+      const fd = new FormData();
+      Array.from(files)
+        .slice(0, 10)
+        .forEach((file) => fd.append("files", file));
+      const res = await fetch(`/api/brand-spaces/${formData.brandSpaceId}/images`, {
+        method: "POST",
+        body: fd,
+      });
+      if (res.ok) fetchReferenceImages();
+      else alert("Upload failed. Ensure Storage bucket exists.");
+    } catch {
+      alert("Upload failed. Ensure Storage bucket exists.");
+    } finally {
+      setSampleUploading(false);
+    }
+  };
 
   const LANGUAGE_OPTIONS = [
     "English",
@@ -446,10 +473,10 @@ export function CreatePostForm({
           </label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { value: "square", label: "Square", ratio: "1:1" },
-              { value: "portrait", label: "Portrait", ratio: "4:5" },
-              { value: "story", label: "Story", ratio: "9:16" },
-              { value: "reel-cover", label: "Reel Cover", ratio: "9:16" },
+              { value: "square", label: "Square", ratio: "1:1", hint: "Most common for feed" },
+              { value: "portrait", label: "Portrait", ratio: "4:5", hint: "Recommended for feed" },
+              { value: "story", label: "Story", ratio: "9:16", hint: "Stories / Reels" },
+              { value: "reel-cover", label: "Reel Cover", ratio: "9:16", hint: "Stories / Reels" },
             ].map((format) => (
               <button
                 key={format.value}
@@ -460,7 +487,7 @@ export function CreatePostForm({
                     format: format.value as PostFormat,
                   })
                 }
-                className={`p-4 rounded-xl border-2 transition-all ${
+                className={`p-4 rounded-xl border-2 transition-all text-left ${
                   formData.format === format.value
                     ? "border-violet-500 bg-violet-500/10 text-zinc-100"
                     : "border-white/10 bg-zinc-800/30 text-zinc-400 hover:border-white/20"
@@ -468,6 +495,7 @@ export function CreatePostForm({
               >
                 <div className="font-medium text-sm">{format.label}</div>
                 <div className="text-xs text-zinc-500">{format.ratio}</div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">{format.hint}</div>
               </button>
             ))}
           </div>
@@ -917,15 +945,15 @@ export function CreatePostForm({
           </div>
           )}
 
-          {referenceImages.length > 0 && (
+          {formData.brandSpaceId && (
             <div>
               <label className="block text-sm font-medium text-zinc-400 mb-2">
-                Sample Photos (optional, up to 3) — Use as style reference for image generation
+                Sample Photos (optional, up to 5) — Style reference for image generation
               </label>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3 items-center">
                 {referenceImages.map((img) => {
                   const isSelected = selectedSampleUrls.includes(img.image_url);
-                  const canSelect = isSelected || selectedSampleUrls.length < 3;
+                  const canSelect = isSelected || selectedSampleUrls.length < 5;
                   return (
                     <button
                       key={img.id}
@@ -935,10 +963,10 @@ export function CreatePostForm({
                         setSelectedSampleUrls((prev) =>
                           isSelected
                             ? prev.filter((u) => u !== img.image_url)
-                            : [...prev, img.image_url].slice(0, 3)
+                            : [...prev, img.image_url].slice(0, 5)
                         );
                       }}
-                      className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                      className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
                         isSelected
                           ? "border-violet-500 ring-2 ring-violet-500/50"
                           : canSelect
@@ -959,9 +987,24 @@ export function CreatePostForm({
                     </button>
                   );
                 })}
+                <label className="w-20 h-20 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center cursor-pointer hover:border-violet-500/50 hover:bg-white/5 transition-all shrink-0">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleUploadSamplePhotos(e.target.files)}
+                    disabled={sampleUploading}
+                  />
+                  {sampleUploading ? (
+                    <span className="text-zinc-500 text-xs">...</span>
+                  ) : (
+                    <span className="text-2xl text-zinc-500">+</span>
+                  )}
+                </label>
               </div>
               <p className="text-xs text-zinc-500 mt-1">
-                {selectedSampleUrls.length}/3 selected
+                {selectedSampleUrls.length}/5 selected. Click + to add more photos.
               </p>
             </div>
           )}

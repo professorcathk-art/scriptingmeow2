@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BrandType } from "@/types/database";
+import { BrandType, LogoPlacement } from "@/types/database";
+
+const LOGO_PLACEMENT_OPTIONS: { value: LogoPlacement; label: string }[] = [
+  { value: "none", label: "No logo" },
+  { value: "top-left", label: "Top left" },
+  { value: "top-center", label: "Top center" },
+  { value: "top-right", label: "Top right" },
+  { value: "bottom-left", label: "Bottom left" },
+  { value: "bottom-center", label: "Bottom center" },
+  { value: "bottom-right", label: "Bottom right" },
+];
 
 interface EditBrandSpaceFormProps {
   brandSpaceId: string;
@@ -10,6 +20,7 @@ interface EditBrandSpaceFormProps {
     name: string;
     brand_type: BrandType;
     logo_url?: string | null;
+    logo_placement?: LogoPlacement | null;
     brand_details?: {
       targetAudiences?: string;
       painPoints?: string;
@@ -33,6 +44,7 @@ export function EditBrandSpaceForm({
       : initialData.brand_type) as BrandType,
     brandTypeOther: initialData.brand_details?.otherBrandType ?? "",
     logoUrl: initialData.logo_url ?? "",
+    logoPlacement: (initialData.logo_placement ?? "top-right") as LogoPlacement,
     targetAudiences: initialData.brand_details?.targetAudiences ?? "",
     painPoints: initialData.brand_details?.painPoints ?? "",
     desiredOutcomes: initialData.brand_details?.desiredOutcomes ?? "",
@@ -52,6 +64,7 @@ export function EditBrandSpaceForm({
           brandType: formData.brandType,
           brandTypeOther: formData.brandType === "other" ? formData.brandTypeOther : undefined,
           logoUrl: formData.logoUrl || null,
+          logoPlacement: formData.logoUrl ? formData.logoPlacement : null,
           targetAudiences: formData.targetAudiences,
           painPoints: formData.painPoints,
           desiredOutcomes: formData.desiredOutcomes,
@@ -146,7 +159,29 @@ export function EditBrandSpaceForm({
               </button>
             </div>
           </div>
-        ) : (
+        ) : null}
+        {formData.logoUrl && (
+          <div className="mt-4">
+            <label htmlFor="logoPlacement" className="block text-sm font-medium text-zinc-400 mb-2">
+              Logo placement in generated images
+            </label>
+            <select
+              id="logoPlacement"
+              value={formData.logoPlacement}
+              onChange={(e) =>
+                setFormData({ ...formData, logoPlacement: e.target.value as LogoPlacement })
+              }
+              className={inputClass}
+            >
+              {LOGO_PLACEMENT_OPTIONS.filter((o) => o.value !== "none").map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {!formData.logoUrl && (
           <label className="block border-2 border-dashed border-white/10 rounded-xl p-6 text-center cursor-pointer hover:border-violet-500/30 transition-colors">
             <span className="text-zinc-400 text-sm">
               {logoUploading ? "Uploading..." : "Click to upload logo"}

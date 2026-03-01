@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BrandType } from "@/types/database";
 import { compressImageForUpload } from "@/lib/image-utils";
 import { PolishModal } from "./polish-modal";
+import { TipIcon } from "./tip-icon";
 
 const BRAND_SPACE_DRAFT_KEY = "createBrandSpace_draft";
 
@@ -232,8 +233,9 @@ export function CreateBrandSpaceForm() {
         </div>
 
         <div>
-          <label htmlFor="targetAudiences" className="block text-sm font-medium text-zinc-400 mb-2">
+          <label htmlFor="targetAudiences" className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
             Target Audiences *
+            <TipIcon fieldKey="targetAudiences" />
           </label>
           <textarea
             id="targetAudiences"
@@ -255,8 +257,9 @@ export function CreateBrandSpaceForm() {
         </div>
 
         <div>
-          <label htmlFor="painPoints" className="block text-sm font-medium text-zinc-400 mb-2">
+          <label htmlFor="painPoints" className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
             Audience Pain Points *
+            <TipIcon fieldKey="painPoints" />
           </label>
           <textarea
             id="painPoints"
@@ -278,8 +281,9 @@ export function CreateBrandSpaceForm() {
         </div>
 
         <div>
-          <label htmlFor="desiredOutcomes" className="block text-sm font-medium text-zinc-400 mb-2">
+          <label htmlFor="desiredOutcomes" className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
             Desired Outcomes *
+            <TipIcon fieldKey="desiredOutcomes" />
           </label>
           <textarea
             id="desiredOutcomes"
@@ -301,8 +305,9 @@ export function CreateBrandSpaceForm() {
         </div>
 
         <div>
-          <label htmlFor="valueProposition" className="block text-sm font-medium text-zinc-400 mb-2">
+          <label htmlFor="valueProposition" className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
             Value Proposition *
+            <TipIcon fieldKey="valueProposition" />
           </label>
           <textarea
             id="valueProposition"

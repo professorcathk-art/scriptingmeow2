@@ -79,6 +79,7 @@ export function buildImagePrompt(options: {
   imageTextOnImage?: string;
   postStyle?: string;
   logoUrl?: string | null;
+  logoPlacement?: string | null;
   brandType?: string;
   otherBrandType?: string;
   contentFramework?: string;
@@ -111,8 +112,19 @@ export function buildImagePrompt(options: {
     if (typographySpec) brandContextParts.push(`Typography aesthetic: ${typographySpec}`);
     if (!colorDescriptionDetailed && colors) brandContextParts.push(`Colors (use these): ${colors}`);
   }
-  if (options.logoUrl) {
-    brandContextParts.push("Include logo integration seamlessly into the composition.");
+  const logoPlacement = options.logoPlacement;
+  const showLogo = options.logoUrl && logoPlacement !== "none";
+  if (showLogo) {
+    const placementMap: Record<string, string> = {
+      "top-left": "top-left corner",
+      "top-center": "top center",
+      "top-right": "top-right corner",
+      "bottom-left": "bottom-left corner",
+      "bottom-center": "bottom center",
+      "bottom-right": "bottom-right corner",
+    };
+    const placement = placementMap[logoPlacement ?? ""] ?? "top-right corner";
+    brandContextParts.push(`Include logo integration seamlessly in the ${placement} of the composition.`);
   }
   const brandContext = brandContextParts.length > 0
     ? `CORE VISUAL IDENTITY (MANDATORY):\n${brandContextParts.join("\n")}`

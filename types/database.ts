@@ -20,6 +20,15 @@ export type PostFormat =
 
 export type PostStatus = "draft" | "generated" | "saved";
 
+export type LogoPlacement =
+  | "none"
+  | "top-left"
+  | "top-center"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right";
+
 export interface BrandSpace {
   id: string;
   user_id: string;
@@ -27,6 +36,7 @@ export interface BrandSpace {
   brand_type: BrandType;
   avatar_url?: string;
   logo_url?: string | null;
+  logo_placement?: LogoPlacement | null;
   style_summary?: string;
   created_at: string;
   updated_at: string;

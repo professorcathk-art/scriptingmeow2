@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getBrandTypeLabel } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import { DeleteBrandButton } from "@/components/brand-spaces/delete-brand-button";
+import { LogoUploadCard } from "@/components/brand-spaces/logo-upload-card";
+import type { LogoPlacement } from "@/types/database";
 
 export default async function BrandSpaceDetailPage({
   params,
@@ -50,6 +52,12 @@ export default async function BrandSpaceDetailPage({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+        <LogoUploadCard
+          brandSpaceId={params.id}
+          logoUrl={(brandSpace as { logo_url?: string | null }).logo_url ?? null}
+          logoPlacement={(brandSpace as { logo_placement?: LogoPlacement | null }).logo_placement ?? null}
+        />
+
         <Link
           href={`/brand-spaces/${params.id}/brandbook`}
           className="block p-6 glass rounded-2xl border border-white/5 hover:border-violet-500/30 transition-all group"

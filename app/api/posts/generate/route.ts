@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     // Verify brand space ownership and get logo, brand type
     const { data: brandSpace } = await supabase
       .from("brand_spaces")
-      .select("id, logo_url, brand_type, brand_details")
+      .select("id, logo_url, logo_placement, brand_type, brand_details")
       .eq("id", brandSpaceId)
       .eq("user_id", user.id)
       .single();
@@ -231,7 +231,7 @@ export async function POST(request: Request) {
     const aspectRatio =
       format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
     const sampleUrls = Array.isArray(selectedSampleImageUrls)
-      ? selectedSampleImageUrls.slice(0, 3).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
+      ? selectedSampleImageUrls.slice(0, 5).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
       : [];
 
     let visualUrl: string;
@@ -246,6 +246,7 @@ export async function POST(request: Request) {
           imageTextOnImage: page.imageTextOnImage?.trim() || undefined,
           postStyle: postStyle || "text-heavy",
           logoUrl: brandSpace?.logo_url ?? null,
+          logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
           brandType: brandSpace?.brand_type,
           otherBrandType: brandDetails?.brand_details?.otherBrandType,
           contentFramework: contentFramework as string | undefined,
@@ -276,6 +277,7 @@ export async function POST(request: Request) {
         imageTextOnImage: imageTextOnImage || undefined,
         postStyle: postStyle || undefined,
         logoUrl: brandSpace?.logo_url ?? null,
+        logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
         brandType: brandSpace?.brand_type,
         otherBrandType: brandDetails?.brand_details?.otherBrandType,
         contentFramework: contentFramework as string | undefined,
