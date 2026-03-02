@@ -5,18 +5,17 @@ import Link from "next/link";
 type FooterLink = { label: string; href: string };
 
 const PRODUCT: FooterLink[] = [
-  { label: "Features", href: "#" },
-  { label: "Pricing", href: "/auth/signup" },
+  { label: "Features", href: "/features" },
+  { label: "Pricing", href: "/pricing" },
 ];
 
 const RESOURCES: FooterLink[] = [
-  { label: "Blog", href: "#" },
-  { label: "Guides", href: "#" },
+  { label: "Guides", href: "/guides" },
 ];
 
 const LEGAL: FooterLink[] = [
-  { label: "Terms of Service", href: "#" },
-  { label: "Privacy Policy", href: "#" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "Privacy Policy", href: "/privacy" },
 ];
 
 export function LandingFooter() {

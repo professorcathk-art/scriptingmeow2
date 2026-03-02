@@ -94,7 +94,11 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
               key={item.id}
               className="break-inside-avoid mb-4 group"
             >
-              <div className="glass-elevated rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 transition-all duration-300">
+              <button
+                type="button"
+                onClick={() => setSelectedStyle(item)}
+                className="w-full text-left glass-elevated rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              >
                 <div className="relative aspect-[4/5] overflow-hidden">
                   <Image
                     src={item.imageUrl}
@@ -102,16 +106,13 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
                     fill
                     sizes="(max-width: 640px) 50vw, 33vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    priority={parseInt(item.id, 10) <= 4}
                   />
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStyle(item)}
-                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold text-sm shadow-lg hover:shadow-violet-500/30 hover:scale-105 transition-all duration-200"
-                    >
+                  {/* Desktop: hover overlay. Mobile: always show tap hint */}
+                  <div className="absolute inset-0 bg-black/40 sm:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <span className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold text-sm shadow-lg sm:group-hover:scale-105 transition-all duration-200">
                       ✨ Use this Style
-                    </button>
+                    </span>
                   </div>
                 </div>
                 <div className="p-4">
@@ -120,7 +121,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
                   </span>
                   <p className="text-zinc-500 text-sm">&quot;{item.testimonial}&quot;</p>
                 </div>
-              </div>
+              </button>
             </div>
           ))}
         </div>
