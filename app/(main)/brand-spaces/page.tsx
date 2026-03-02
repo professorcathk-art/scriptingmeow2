@@ -67,7 +67,13 @@ export default async function BrandSpacesPage() {
               className="block p-6 glass rounded-2xl border border-white/5 hover:border-violet-500/30 transition-all"
             >
               <div className="flex items-start gap-4">
-                {brandSpace.avatar_url ? (
+                {brandSpace.logo_url ? (
+                  <img
+                    src={brandSpace.logo_url}
+                    alt={brandSpace.name}
+                    className="w-16 h-16 rounded-xl object-contain bg-white/5 p-1 border border-white/10"
+                  />
+                ) : brandSpace.avatar_url ? (
                   <img
                     src={brandSpace.avatar_url}
                     alt={brandSpace.name}

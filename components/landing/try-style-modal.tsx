@@ -22,14 +22,13 @@ export function TryStyleModal({
     params.set("styleId", item.id);
     if (contentIdea.trim()) params.set("contentIdea", contentIdea.trim());
     const query = params.toString();
-    const tryStyleUrl = `/try-style${query ? `?${query}` : ""}`;
+    const createPostUrl = `/create-post${query ? `?${query}` : ""}`;
     if (isAuthenticated) {
-      window.location.href = tryStyleUrl;
+      window.location.href = createPostUrl;
     } else {
       sessionStorage.setItem("tryStyle_styleId", item.id);
       sessionStorage.setItem("tryStyle_contentIdea", contentIdea.trim());
-      sessionStorage.setItem("tryStyle_visualAdvice", item.visualAdvice);
-      window.location.href = `/auth/signup?redirect=${encodeURIComponent(tryStyleUrl)}`;
+      window.location.href = `/auth/signup?redirect=${encodeURIComponent(createPostUrl)}`;
     }
   };
 
@@ -73,10 +72,10 @@ export function TryStyleModal({
         </div>
         {!isAuthenticated && (
           <p className="text-xs text-zinc-500 text-center mt-3">
-            Free account. 1 credit to try. No credit card required.{" "}
+            Free account. No credit card required.{" "}
             <Link
               href={`/auth/login?redirect=${encodeURIComponent(
-                `/try-style?styleId=${item.id}${contentIdea.trim() ? `&contentIdea=${encodeURIComponent(contentIdea.trim())}` : ""}`
+                `/create-post?styleId=${item.id}${contentIdea.trim() ? `&contentIdea=${encodeURIComponent(contentIdea.trim())}` : ""}`
               )}`}
               className="text-violet-400 hover:text-violet-300"
             >

@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { EditBrandSpaceForm } from "@/components/brand-spaces/edit-brand-space-form";
 import Link from "next/link";
-import type { LogoPlacement } from "@/types/database";
 
 export default async function EditBrandSpacePage({
   params,
@@ -55,8 +54,6 @@ export default async function EditBrandSpacePage({
         initialData={{
           name: brandSpace.name,
           brand_type: brandSpace.brand_type,
-          logo_url: (brandSpace as { logo_url?: string }).logo_url,
-          logo_placement: (brandSpace as { logo_placement?: LogoPlacement | null }).logo_placement,
           brand_details: brandSpaceWithDetails.brand_details,
         }}
       />

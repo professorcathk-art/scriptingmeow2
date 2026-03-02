@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getBrandTypeLabel } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import { DeleteBrandButton } from "@/components/brand-spaces/delete-brand-button";
-import { LogoUploadCard } from "@/components/brand-spaces/logo-upload-card";
-import type { LogoPlacement } from "@/types/database";
 
 export default async function BrandSpaceDetailPage({
   params,
@@ -52,12 +50,6 @@ export default async function BrandSpaceDetailPage({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-        <LogoUploadCard
-          brandSpaceId={params.id}
-          logoUrl={(brandSpace as { logo_url?: string | null }).logo_url ?? null}
-          logoPlacement={(brandSpace as { logo_placement?: LogoPlacement | null }).logo_placement ?? null}
-        />
-
         <Link
           href={`/brand-spaces/${params.id}/brandbook`}
           className="block p-6 glass rounded-2xl border border-white/5 hover:border-violet-500/30 transition-all group"
@@ -67,7 +59,7 @@ export default async function BrandSpaceDetailPage({
           </h2>
           <p className="text-zinc-400 text-sm mb-4">
             {brandbook
-              ? "View and edit your AI-generated brand guidelines"
+              ? "View and edit your AI-generated brand guidelines, logo, and placement"
               : "Generate your brandbook with AI"}
           </p>
           <span className="text-sm text-violet-400 group-hover:text-violet-300">
@@ -76,8 +68,23 @@ export default async function BrandSpaceDetailPage({
         </Link>
 
         <Link
+          href={`/brand-spaces/${params.id}/edit`}
+          className="block p-6 glass rounded-2xl border border-white/5 hover:border-violet-500/30 transition-all group"
+        >
+          <h2 className="text-xl font-semibold text-white mb-2 group-hover:text-violet-400 transition-colors">
+            Edit brand info
+          </h2>
+          <p className="text-zinc-400 text-sm mb-4">
+            Update brand name, type, and basic details
+          </p>
+          <span className="text-sm text-violet-400 group-hover:text-violet-300">
+            Edit brand info →
+          </span>
+        </Link>
+
+        <Link
           href="/create-post"
-          className="block p-4 sm:p-6 glass rounded-xl sm:rounded-2xl border border-white/5 hover:border-cyan-500/30 transition-all group"
+          className="block p-4 sm:p-6 glass rounded-xl sm:rounded-2xl border border-white/5 hover:border-cyan-500/30 transition-all group sm:col-span-2"
         >
           <h2 className="text-xl font-semibold text-white mb-2 group-hover:text-cyan-400 transition-colors">
             Create Post
@@ -92,12 +99,6 @@ export default async function BrandSpaceDetailPage({
       </div>
 
       <div className="flex gap-4 flex-wrap">
-        <Link
-          href={`/brand-spaces/${params.id}/edit`}
-          className="px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
-        >
-          Edit brand info
-        </Link>
         <Link
           href="/brand-spaces"
           className="px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"

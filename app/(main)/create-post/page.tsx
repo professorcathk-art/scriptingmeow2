@@ -5,7 +5,7 @@ import { CreatePostForm } from "@/components/posts/create-post-form";
 export default async function CreatePostPage({
   searchParams,
 }: {
-  searchParams: { edit?: string };
+  searchParams: { edit?: string; styleId?: string; contentIdea?: string };
 }) {
   const supabase = await createClient();
   const {
@@ -64,7 +64,12 @@ export default async function CreatePostPage({
     .order("created_at", { ascending: false })
     .limit(20);
 
-  if (!brandSpaces || brandSpaces.length === 0) {
+  const prefillFromTryStyle =
+    searchParams.styleId && searchParams.contentIdea
+      ? { styleId: searchParams.styleId, contentIdea: searchParams.contentIdea }
+      : undefined;
+
+  if ((!brandSpaces || brandSpaces.length === 0) && !prefillFromTryStyle) {
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
         <h1 className="text-3xl font-bold text-zinc-100 mb-4">
@@ -87,11 +92,12 @@ export default async function CreatePostPage({
     <div className="max-w-4xl mx-auto w-full">
       <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 mb-4 sm:mb-6">Create Instagram Post</h1>
       <CreatePostForm
-        brandSpaces={brandSpaces}
+        brandSpaces={brandSpaces ?? []}
         userCredits={userProfile?.credits_remaining || 0}
         planTier={userProfile?.plan_tier || "free"}
         editPost={editPost}
         libraryPosts={libraryPosts ?? []}
+        prefillFromTryStyle={prefillFromTryStyle}
       />
     </div>
   );

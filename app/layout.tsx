@@ -4,10 +4,27 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "designermeow - AI Instagram Post Generator",
+  title: "designermeow - AI Instagram Post Generator | Turn Your Brand Into Viral Posts",
   description:
-    "Turn your brand identity into consistent, on-brand IG posts in a few clicks",
+    "Create consistent, on-brand Instagram posts in minutes. AI-powered design for creators and brands. Steal winning aesthetics, define your brand once, and generate viral content.",
+  keywords: ["Instagram post generator", "AI Instagram", "brand content", "social media design", "Instagram design tool"],
   metadataBase: new URL("https://designermeow.com"),
+  openGraph: {
+    title: "designermeow - AI Instagram Post Generator",
+    description: "Turn your brand identity into consistent, on-brand IG posts in a few clicks",
+    url: "https://designermeow.com",
+    siteName: "designermeow",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "designermeow - AI Instagram Post Generator",
+    description: "Turn your brand identity into consistent, on-brand IG posts in a few clicks",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: "/thumnail/Gemini_Generated_Image_3skk0k3skk0k3skk.png",
     shortcut: "/thumnail/Gemini_Generated_Image_3skk0k3skk0k3skk.png",

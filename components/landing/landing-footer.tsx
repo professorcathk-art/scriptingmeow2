@@ -11,6 +11,7 @@ const PRODUCT: FooterLink[] = [
 
 const RESOURCES: FooterLink[] = [
   { label: "Guides", href: "/guides" },
+  { label: "Support", href: "mailto:chris.lau@professor-cat.com" },
 ];
 
 const LEGAL: FooterLink[] = [
@@ -60,6 +61,7 @@ export function LandingFooter() {
                   <Link
                     href={href}
                     className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+                    {...(href.startsWith("mailto:") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                   >
                     {label}
                   </Link>

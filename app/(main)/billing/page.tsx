@@ -96,7 +96,15 @@ export default async function BillingPage() {
             Manage your subscription and credits
           </p>
         </div>
-        <SignOutButton />
+        <div className="flex items-center gap-3">
+          <a
+            href="mailto:chris.lau@professor-cat.com"
+            className="px-4 py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/5 transition-colors text-sm"
+          >
+            Support
+          </a>
+          <SignOutButton />
+        </div>
       </div>
 
       <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-6">

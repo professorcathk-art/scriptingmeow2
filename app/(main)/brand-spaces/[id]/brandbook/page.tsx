@@ -51,6 +51,8 @@ export default async function BrandbookPage({
         brandSpaceId={params.id}
         initialBrandbook={brandbook}
         referenceImages={referenceImages || []}
+        logoUrl={(brandSpace as { logo_url?: string | null }).logo_url ?? null}
+        logoPlacement={(brandSpace as { logo_placement?: import("@/types/database").LogoPlacement | null }).logo_placement ?? null}
       />
     </div>
   );

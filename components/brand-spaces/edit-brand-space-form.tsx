@@ -2,25 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BrandType, LogoPlacement } from "@/types/database";
-
-const LOGO_PLACEMENT_OPTIONS: { value: LogoPlacement; label: string }[] = [
-  { value: "none", label: "No logo" },
-  { value: "top-left", label: "Top left" },
-  { value: "top-center", label: "Top center" },
-  { value: "top-right", label: "Top right" },
-  { value: "bottom-left", label: "Bottom left" },
-  { value: "bottom-center", label: "Bottom center" },
-  { value: "bottom-right", label: "Bottom right" },
-];
+import { BrandType } from "@/types/database";
 
 interface EditBrandSpaceFormProps {
   brandSpaceId: string;
   initialData: {
     name: string;
     brand_type: BrandType;
-    logo_url?: string | null;
-    logo_placement?: LogoPlacement | null;
     brand_details?: {
       targetAudiences?: string;
       painPoints?: string;
@@ -43,14 +31,11 @@ export function EditBrandSpaceForm({
       ? ((initialData.brand_type as string) === "shop" ? "ecommerce-retail" : "service-agency")
       : initialData.brand_type) as BrandType,
     brandTypeOther: initialData.brand_details?.otherBrandType ?? "",
-    logoUrl: initialData.logo_url ?? "",
-    logoPlacement: (initialData.logo_placement ?? "top-right") as LogoPlacement,
     targetAudiences: initialData.brand_details?.targetAudiences ?? "",
     painPoints: initialData.brand_details?.painPoints ?? "",
     desiredOutcomes: initialData.brand_details?.desiredOutcomes ?? "",
     valueProposition: initialData.brand_details?.valueProposition ?? "",
   });
-  const [logoUploading, setLogoUploading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,8 +48,6 @@ export function EditBrandSpaceForm({
           name: formData.name,
           brandType: formData.brandType,
           brandTypeOther: formData.brandType === "other" ? formData.brandTypeOther : undefined,
-          logoUrl: formData.logoUrl || null,
-          logoPlacement: formData.logoUrl ? formData.logoPlacement : null,
           targetAudiences: formData.targetAudiences,
           painPoints: formData.painPoints,
           desiredOutcomes: formData.desiredOutcomes,
@@ -108,114 +91,12 @@ export function EditBrandSpaceForm({
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-400 mb-2">
-          Brand Logo (used in generated posts)
-        </label>
-        {formData.logoUrl ? (
-          <div className="flex items-center gap-4">
-            <img
-              src={formData.logoUrl}
-              alt="Brand logo"
-              className="w-16 h-16 object-contain rounded-lg border border-white/10"
-            />
-            <div className="flex gap-2">
-              <label className="px-4 py-2 rounded-xl bg-white/10 cursor-pointer hover:bg-white/15 text-white text-sm transition-colors">
-                {logoUploading ? "Uploading..." : "Change Logo"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={logoUploading}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    setLogoUploading(true);
-                    try {
-                      const fd = new FormData();
-                      fd.append("file", file);
-                      const res = await fetch(`/api/brand-spaces/${brandSpaceId}/logo`, {
-                        method: "POST",
-                        body: fd,
-                      });
-                      if (!res.ok) throw new Error("Upload failed");
-                      const { logoUrl: url } = await res.json();
-                      setFormData((prev) => ({ ...prev, logoUrl: url }));
-                    } catch (err) {
-                      alert("Failed to upload logo");
-                    } finally {
-                      setLogoUploading(false);
-                      e.target.value = "";
-                    }
-                  }}
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => setFormData((prev) => ({ ...prev, logoUrl: "" }))}
-                className="px-4 py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-red-400 text-sm"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        ) : null}
-        {formData.logoUrl && (
-          <div className="mt-4">
-            <label htmlFor="logoPlacement" className="block text-sm font-medium text-zinc-400 mb-2">
-              Logo placement in generated images
-            </label>
-            <select
-              id="logoPlacement"
-              value={formData.logoPlacement}
-              onChange={(e) =>
-                setFormData({ ...formData, logoPlacement: e.target.value as LogoPlacement })
-              }
-              className={inputClass}
-            >
-              {LOGO_PLACEMENT_OPTIONS.filter((o) => o.value !== "none").map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        {!formData.logoUrl && (
-          <label className="block border-2 border-dashed border-white/10 rounded-xl p-6 text-center cursor-pointer hover:border-violet-500/30 transition-colors">
-            <span className="text-zinc-400 text-sm">
-              {logoUploading ? "Uploading..." : "Click to upload logo"}
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={logoUploading}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setLogoUploading(true);
-                try {
-                  const fd = new FormData();
-                  fd.append("file", file);
-                  const res = await fetch(`/api/brand-spaces/${brandSpaceId}/logo`, {
-                    method: "POST",
-                    body: fd,
-                  });
-                  if (!res.ok) throw new Error("Upload failed");
-                  const { logoUrl: url } = await res.json();
-                  setFormData((prev) => ({ ...prev, logoUrl: url }));
-                } catch (err) {
-                  alert("Failed to upload logo");
-                } finally {
-                  setLogoUploading(false);
-                  e.target.value = "";
-                }
-              }}
-            />
-          </label>
-        )}
-      </div>
+      <p className="text-sm text-zinc-500">
+        To upload your logo and set its placement in generated posts, go to{" "}
+        <a href={`/brand-spaces/${brandSpaceId}/brandbook`} className="text-violet-400 hover:text-violet-300">
+          Edit brandbook
+        </a>.
+      </p>
 
       <div>
         <label htmlFor="brandType" className="block text-sm font-medium text-zinc-400 mb-2">

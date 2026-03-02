@@ -31,6 +31,7 @@ interface CreatePostFormProps {
     carousel_urls?: string[] | null;
   } | null;
   libraryPosts?: LibraryPost[];
+  prefillFromTryStyle?: { styleId: string; contentIdea: string };
 }
 
 const STEPS = [
@@ -62,12 +63,14 @@ export function CreatePostForm({
   planTier,
   editPost,
   libraryPosts = [],
+  prefillFromTryStyle,
 }: CreatePostFormProps) {
   const router = useRouter();
   const creditsCtx = useCredits();
   const userCredits = creditsCtx?.creditsRemaining ?? initialCredits;
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [loading, setLoading] = useState(false);
+  const [tryStyleSetupLoading, setTryStyleSetupLoading] = useState(!!prefillFromTryStyle);
   type SingleDraft = { imageTextOnImage: string; visualAdvice: string; igCaption: string };
   type CarouselDraftItem = { pages: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]; igCaption: string };
   const [draftVariations, setDraftVariations] = useState<(SingleDraft | CarouselDraftItem)[] | null>(null);
@@ -131,6 +134,8 @@ export function CreatePostForm({
   }, []);
 
   const isInitialMount = useRef(true);
+  const tryStyleSetupDone = useRef(false);
+
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -140,6 +145,45 @@ export function CreatePostForm({
   }, [saveDraft]);
 
   useEffect(() => {
+    if (!prefillFromTryStyle || tryStyleSetupDone.current) return;
+    tryStyleSetupDone.current = true;
+    clearPostDraft();
+    (async () => {
+      try {
+        const res = await fetch("/api/try-style-setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            styleId: prefillFromTryStyle.styleId,
+            contentIdea: prefillFromTryStyle.contentIdea,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Setup failed");
+        }
+        const { brandSpaceId } = await res.json();
+        setFormData((prev) => ({
+          ...prev,
+          brandSpaceId,
+          contentIdea: prefillFromTryStyle.contentIdea,
+          format: "portrait" as PostFormat,
+          postType: "single-image" as PostType,
+        }));
+        setStep(2);
+        router.replace("/create-post", { scroll: false });
+        router.refresh();
+      } catch (e) {
+        console.error("[CreatePostForm] try-style-setup failed:", e);
+        alert(e instanceof Error ? e.message : "Failed to setup. Please try again.");
+      } finally {
+        setTryStyleSetupLoading(false);
+      }
+    })();
+  }, [prefillFromTryStyle, clearPostDraft, router]);
+
+  useEffect(() => {
+    if (prefillFromTryStyle) return;
     if (editPost) {
       const draft = editPost.draft_data as { visualAdvice?: string; imageTextOnImage?: string; carouselPages?: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[] } | null;
       const cap = editPost.caption as { igCaption?: string };
@@ -182,7 +226,7 @@ export function CreatePostForm({
     } catch {
       // ignore
     }
-  }, [editPost]);
+  }, [editPost, prefillFromTryStyle]);
 
   const fetchReferenceImages = useCallback(() => {
     if (!formData.brandSpaceId) return;
@@ -447,6 +491,16 @@ export function CreatePostForm({
 
   const cardClass =
     "bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6 space-y-4 sm:space-y-6 backdrop-blur-sm";
+
+  if (tryStyleSetupLoading) {
+    return (
+      <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-12 text-center">
+        <div className="inline-block w-10 h-10 border-2 border-violet-500/50 border-t-violet-500 rounded-full animate-spin mb-4" />
+        <h2 className="text-lg font-semibold text-white mb-2">Setting up your style...</h2>
+        <p className="text-zinc-400 text-sm">Creating your brand and customizing the visual style. This may take a moment.</p>
+      </div>
+    );
+  }
 
   const Stepper = () => (
     <div className="flex items-center justify-between mb-4 sm:mb-8 overflow-x-auto">
