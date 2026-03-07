@@ -29,6 +29,13 @@ type PostIdea = {
   created_at: string;
 };
 
+type MyDesignItem = {
+  id: string;
+  image_url: string;
+  created_at: string;
+  metadata?: Record<string, unknown>;
+};
+
 function formatDate(date: string | Date): string {
   return new Date(date).toLocaleDateString("en-US", {
     year: "numeric",
@@ -42,6 +49,7 @@ interface LibraryTabsProps {
   posts: Post[];
   references: Reference[];
   postIdeas: PostIdea[];
+  myDesignItems?: MyDesignItem[];
   brandSpaces: { id: string; name: string }[];
   planTier?: string;
 }
@@ -59,6 +67,7 @@ export function LibraryTabs({
   posts,
   references,
   postIdeas,
+  myDesignItems = [],
   brandSpaces,
   planTier = "free",
 }: LibraryTabsProps) {
@@ -86,6 +95,7 @@ export function LibraryTabs({
 
   const tabs = [
     { id: "posts", label: "My Posts" },
+    { id: "my-design", label: "My design" },
     { id: "references", label: "References" },
     { id: "ideas", label: "Idea Bank" },
     ...(planTier !== "free" ? [{ id: "rss", label: "RSS Autofeed" }] : []),
@@ -155,6 +165,43 @@ export function LibraryTabs({
               <p className="text-zinc-400 mt-4 mb-2">Your generated posts will appear here</p>
               <Link href="/create-post" className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90">
                 Create Your First Post
+              </Link>
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === "my-design" && (
+        <>
+          {myDesignItems.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              {myDesignItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="block bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
+                >
+                  <div className="aspect-square bg-zinc-800/50 relative overflow-hidden">
+                    <Image
+                      src={item.image_url}
+                      alt="Design"
+                      fill
+                      className="object-cover"
+                      unoptimized={item.image_url.startsWith("data:")}
+                    />
+                  </div>
+                  <div className="p-2 sm:p-4">
+                    <p className="text-xs text-zinc-500">Design Playground</p>
+                    <span className="text-[10px] text-zinc-500">{formatDate(item.created_at)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-24 rounded-2xl border-2 border-dashed border-white/10">
+              <FolderIcon />
+              <p className="text-zinc-400 mt-4 mb-2">Designs from Design Playground appear here</p>
+              <Link href="/design-playground" className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90">
+                Go to Design Playground
               </Link>
             </div>
           )}

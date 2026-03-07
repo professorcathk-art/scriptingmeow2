@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { uploadDesignPlaygroundImage } from "@/lib/storage";
+import {
+  dimensionsToAspectRatio,
+  parseDimensionInput,
+} from "@/lib/dimensions";
 
 export const maxDuration = 120;
 
@@ -12,7 +16,23 @@ const DIMENSION_MAP: Record<string, string> = {
   "9:16": "9:16",
   "16:9": "16:9",
   "3:4": "3:4",
+  "21:9": "21:9",
+  "4:3": "4:3",
+  "3:2": "3:2",
+  "2:3": "2:3",
+  "5:4": "5:4",
 };
+
+function resolveAspectRatio(
+  dimension: string,
+  customWidth?: number,
+  customHeight?: number
+): string {
+  if (dimension === "custom" && customWidth != null && customHeight != null) {
+    return dimensionsToAspectRatio(customWidth, customHeight);
+  }
+  return DIMENSION_MAP[dimension] ?? "1:1";
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -34,6 +54,9 @@ export async function POST(request: Request) {
   const imageUrl = body.imageUrl as string | undefined;
   const comment = (body.comment as string)?.trim();
   const dimension = (body.dimension as string) || "1:1";
+  const customDimensionInput = body.customDimension as string | undefined;
+  const customUnit = (body.customUnit as "px" | "mm") || "px";
+  const threadId = body.threadId as string | undefined;
 
   if (!imageUrl || !comment) {
     return NextResponse.json(
@@ -42,7 +65,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const aspectRatio = DIMENSION_MAP[dimension] ?? "1:1";
+  let customWidth: number | undefined;
+  let customHeight: number | undefined;
+  if (dimension === "custom" && customDimensionInput) {
+    const parsed = parseDimensionInput(customDimensionInput, customUnit);
+    if (parsed) {
+      customWidth = parsed.width;
+      customHeight = parsed.height;
+    }
+  }
+
+  const aspectRatio = resolveAspectRatio(
+    dimension,
+    customWidth,
+    customHeight
+  );
 
   const { data: userProfile } = await supabase
     .from("users")
@@ -90,6 +127,55 @@ Generate an improved version that incorporates the feedback while maintaining vi
         user_id: user.id,
         amount: -1,
         description: "Design playground refinement",
+      });
+    }
+
+    if (threadId) {
+      const { count } = await supabase
+        .from("design_playground_items")
+        .select("id", { count: "exact", head: true })
+        .eq("thread_id", threadId);
+      const stepIndex = (count ?? 0);
+
+      await supabase.from("design_playground_items").insert({
+        thread_id: threadId,
+        image_url: newImageUrl,
+        step_index: stepIndex,
+        comment,
+      });
+
+      await supabase
+        .from("design_playground_threads")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", threadId)
+        .eq("user_id", user.id);
+    }
+
+    const { data: folder } = await supabase
+      .from("library_folders")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("name", "My design")
+      .single();
+
+    let folderId = folder?.id;
+    if (!folderId) {
+      const { data: created } = await supabase
+        .from("library_folders")
+        .insert({ user_id: user.id, name: "My design" })
+        .select("id")
+        .single();
+      folderId = created?.id;
+    }
+
+    if (folderId) {
+      await supabase.from("library_items").insert({
+        folder_id: folderId,
+        user_id: user.id,
+        image_url: newImageUrl,
+        source_type: "design_playground",
+        source_id: threadId ?? id,
+        metadata: { comment: comment.slice(0, 500) },
       });
     }
 

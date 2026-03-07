@@ -76,6 +76,21 @@ export default async function LibraryPage({
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const { data: myDesignFolder } = await supabase
+    .from("library_folders")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("name", "My design")
+    .single();
+
+  const { data: myDesignItems } = myDesignFolder
+    ? await supabase
+        .from("library_items")
+        .select("id, image_url, created_at, metadata")
+        .eq("folder_id", myDesignFolder.id)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+
   const allTags = new Set<string>();
   posts?.forEach((post: { tags?: string[] }) => {
     if (Array.isArray(post.tags)) post.tags.forEach((t: string) => allTags.add(t));
@@ -100,10 +115,12 @@ export default async function LibraryPage({
   type LibPost = { id: string; visual_url?: string; content_idea?: string; created_at: string; tags?: string[]; brand_spaces?: { name?: string } };
   type LibRef = { id: string; image_url: string; created_at: string; source: string };
   type LibIdea = { id: string; content: string; created_at: string };
+  type LibDesign = { id: string; image_url: string; created_at: string; metadata?: Record<string, unknown> };
   type LibBrand = { id: string; name: string };
   const serializablePosts = JSON.parse(JSON.stringify(posts ?? [])) as LibPost[];
   const serializableReferences = JSON.parse(JSON.stringify(references)) as LibRef[];
   const serializablePostIdeas = JSON.parse(JSON.stringify(postIdeas ?? [])) as LibIdea[];
+  const serializableMyDesign = JSON.parse(JSON.stringify(myDesignItems ?? [])) as LibDesign[];
   const serializableBrandSpaces = JSON.parse(JSON.stringify(brandSpaces ?? [])) as LibBrand[];
 
   return (
@@ -145,6 +162,7 @@ export default async function LibraryPage({
         posts={serializablePosts}
         references={serializableReferences}
         postIdeas={serializablePostIdeas}
+        myDesignItems={serializableMyDesign}
         brandSpaces={serializableBrandSpaces}
         planTier={userProfile?.plan_tier ?? "free"}
       />

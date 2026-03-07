@@ -2,40 +2,69 @@
 
 import { useState } from "react";
 import { useCredits } from "@/components/credits/credits-provider";
+import { DIMENSION_PRESETS, MAX_DIMENSION_PX, parseDimensionInput } from "@/lib/dimensions";
+
+interface DesignItem {
+  id: string;
+  image_url: string;
+  step_index: number;
+  prompt?: string;
+  comment?: string;
+  created_at: string;
+}
 
 interface DesignPlaygroundFormProps {
   brandSpaces: { id: string; name: string }[];
   userCredits: number;
+  threadId?: string;
+  initialPrompt?: string;
+  initialDimension?: string;
+  initialItems?: DesignItem[];
+  onThreadId?: (id: string) => void;
+  compact?: boolean;
 }
-
-const DIMENSIONS = [
-  { value: "1:1", label: "Square (1:1)" },
-  { value: "4:5", label: "Portrait (4:5)" },
-  { value: "9:16", label: "Story (9:16)" },
-  { value: "16:9", label: "Landscape (16:9)" },
-  { value: "3:4", label: "Poster (3:4)" },
-];
 
 type ChatItem = { type: "user"; text: string } | { type: "image"; url: string };
 
 export function DesignPlaygroundForm({
   brandSpaces,
   userCredits: initialCredits,
+  threadId: initialThreadId,
+  initialPrompt = "",
+  initialDimension = "1:1",
+  initialItems = [],
+  onThreadId,
+  compact = false,
 }: DesignPlaygroundFormProps) {
   const creditsCtx = useCredits();
   const userCredits = creditsCtx?.creditsRemaining ?? initialCredits;
 
-  const [prompt, setPrompt] = useState("");
-  const [dimension, setDimension] = useState("1:1");
+  const buildChatHistoryFromItems = (items: DesignItem[]): ChatItem[] => {
+    const out: ChatItem[] = [];
+    for (const item of items) {
+      if (item.comment) out.push({ type: "user", text: item.comment });
+      out.push({ type: "image", url: item.image_url });
+    }
+    return out;
+  };
+
+  const lastImage = initialItems.length > 0 ? initialItems[initialItems.length - 1]?.image_url : null;
+
+  const [prompt, setPrompt] = useState(initialPrompt);
+  const [dimension, setDimension] = useState(initialDimension);
+  const [customDimension, setCustomDimension] = useState("");
+  const [customUnit, setCustomUnit] = useState<"px" | "mm">("px");
   const [brandSpaceId, setBrandSpaceId] = useState("");
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
   const [referenceUploading, setReferenceUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [refining, setRefining] = useState(false);
-  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
-  const [chatHistory, setChatHistory] = useState<ChatItem[]>([]);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(lastImage);
+  const [chatHistory, setChatHistory] = useState<ChatItem[]>(() => buildChatHistoryFromItems(initialItems));
   const [refineComment, setRefineComment] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState<string | undefined>(initialThreadId);
+  const [savingImage, setSavingImage] = useState(false);
 
   const handleUploadReferences = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -62,10 +91,24 @@ export function DesignPlaygroundForm({
     setReferenceUrls((prev) => prev.filter((u) => u !== url));
   };
 
+  const buildDimensionPayload = () => {
+    const dim = dimension === "custom" && customDimension.trim()
+      ? { customDimension: customDimension.trim(), customUnit }
+      : {};
+    return { dimension, ...dim };
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       setError("Enter a prompt");
       return;
+    }
+    if (dimension === "custom" && customDimension.trim()) {
+      const parsed = parseDimensionInput(customDimension.trim(), customUnit);
+      if (!parsed) {
+        setError(`Enter valid dimensions (e.g. 1080x1920 or 100mm). Max ${MAX_DIMENSION_PX}px per side.`);
+        return;
+      }
     }
     if (userCredits < 1) {
       setError("Not enough credits");
@@ -79,15 +122,20 @@ export function DesignPlaygroundForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: prompt.trim(),
-          dimension,
           brandSpaceId: brandSpaceId || undefined,
           referenceImageUrls: referenceUrls,
+          threadId: threadId || undefined,
+          ...buildDimensionPayload(),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Generation failed");
       setCurrentImageUrl(data.imageUrl);
       setChatHistory([{ type: "image", url: data.imageUrl }]);
+      if (data.threadId) {
+        setThreadId(data.threadId);
+        onThreadId?.(data.threadId);
+      }
       if (typeof data.credits_remaining === "number") {
         creditsCtx?.setCredits(data.credits_remaining);
       }
@@ -113,7 +161,8 @@ export function DesignPlaygroundForm({
         body: JSON.stringify({
           imageUrl: currentImageUrl,
           comment: refineComment.trim(),
-          dimension,
+          threadId: threadId || undefined,
+          ...buildDimensionPayload(),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -132,6 +181,45 @@ export function DesignPlaygroundForm({
       setError(e instanceof Error ? e.message : "Refinement failed");
     } finally {
       setRefining(false);
+    }
+  };
+
+  const handleSaveImage = async () => {
+    if (!currentImageUrl) return;
+    setSavingImage(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/library/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageUrl: currentImageUrl,
+          sourceType: "design_playground",
+          sourceId: threadId,
+          metadata: { prompt: prompt.slice(0, 500) },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setSavingImage(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save to library failed");
+    } finally {
+      setSavingImage(false);
+    }
+  };
+
+  const handleDownloadImage = () => {
+    if (!currentImageUrl) return;
+    try {
+      const link = document.createElement("a");
+      link.href = currentImageUrl;
+      link.download = `design-${threadId || "export"}.png`;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.click();
+    } catch {
+      window.open(currentImageUrl, "_blank");
     }
   };
 
@@ -182,6 +270,9 @@ export function DesignPlaygroundForm({
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Reference images (optional, max 3)
             </label>
+            <p className="text-xs text-zinc-500 mb-2">
+              Style references, logos, or real assets to include. Can be anything.
+            </p>
             <div className="flex flex-wrap gap-2">
               <label className="cursor-pointer px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors text-sm">
                 {referenceUploading ? "Uploading…" : "Upload"}
@@ -225,12 +316,36 @@ export function DesignPlaygroundForm({
               onChange={(e) => setDimension(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
             >
-              {DIMENSIONS.map((d) => (
+              {DIMENSION_PRESETS.map((d) => (
                 <option key={d.value} value={d.value}>
                   {d.label}
                 </option>
               ))}
             </select>
+            {dimension === "custom" && (
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  value={customDimension}
+                  onChange={(e) => setCustomDimension(e.target.value)}
+                  placeholder="e.g. 1080x1920 or 100mm"
+                  className="flex-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 text-sm"
+                />
+                <select
+                  value={customUnit}
+                  onChange={(e) => setCustomUnit(e.target.value as "px" | "mm")}
+                  className="px-3 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+                >
+                  <option value="px">px</option>
+                  <option value="mm">mm</option>
+                </select>
+              </div>
+            )}
+            {dimension === "custom" && (
+              <p className="text-xs text-zinc-500 mt-1">
+                Max {MAX_DIMENSION_PX}px per side. Use format: 1080x1920 or 100mm
+              </p>
+            )}
           </div>
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -264,23 +379,41 @@ export function DesignPlaygroundForm({
                 />
               </div>
 
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveImage}
+                  disabled={savingImage}
+                  className="px-4 py-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 disabled:opacity-50"
+                >
+                  {savingImage ? "Saving…" : "Save to Library"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadImage}
+                  className="px-4 py-2 rounded-xl border border-white/10 text-zinc-300 hover:bg-white/5"
+                >
+                  Download
+                </button>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">
                   Refine with feedback (1 credit per refinement)
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
+                <div className="flex flex-col gap-2">
+                  <textarea
                     value={refineComment}
                     onChange={(e) => setRefineComment(e.target.value)}
-                    placeholder="e.g. Make the text larger, add more contrast"
-                    className="flex-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                    placeholder="e.g. Make the text larger, add more contrast, change the background color..."
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-y min-h-[100px]"
                   />
                   <button
                     type="button"
                     onClick={handleRefine}
                     disabled={refining || !refineComment.trim() || userCredits < 1}
-                    className="px-4 py-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 disabled:opacity-50"
+                    className="self-start px-4 py-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 disabled:opacity-50"
                   >
                     {refining ? "Refining…" : "Refine"}
                   </button>
@@ -309,7 +442,7 @@ export function DesignPlaygroundForm({
             </div>
           ) : (
             <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-zinc-500">
-              Generated design will appear here
+              Generated design will appear here. Images auto-save to Library → My design.
             </div>
           )}
         </div>

@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { uploadDesignPlaygroundImage } from "@/lib/storage";
+import {
+  dimensionsToAspectRatio,
+  parseDimensionInput,
+} from "@/lib/dimensions";
 
 export const maxDuration = 120;
 
@@ -12,7 +16,24 @@ const DIMENSION_MAP: Record<string, string> = {
   "9:16": "9:16",
   "16:9": "16:9",
   "3:4": "3:4",
+  "21:9": "21:9",
+  "4:3": "4:3",
+  "3:2": "3:2",
+  "2:3": "2:3",
+  "5:4": "5:4",
 };
+
+function resolveAspectRatio(
+  dimension: string,
+  customWidth?: number,
+  customHeight?: number,
+  customUnit?: "px" | "mm"
+): string {
+  if (dimension === "custom" && customWidth != null && customHeight != null) {
+    return dimensionsToAspectRatio(customWidth, customHeight);
+  }
+  return DIMENSION_MAP[dimension] ?? "1:1";
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -33,14 +54,32 @@ export async function POST(request: Request) {
 
   const prompt = (body.prompt as string)?.trim();
   const dimension = (body.dimension as string) || "1:1";
+  const customDimensionInput = body.customDimension as string | undefined;
+  const customUnit = (body.customUnit as "px" | "mm") || "px";
   const brandSpaceId = body.brandSpaceId as string | undefined;
   const referenceImageUrls = (body.referenceImageUrls as string[]) ?? [];
+  const threadId = body.threadId as string | undefined;
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
   }
 
-  const aspectRatio = DIMENSION_MAP[dimension] ?? "1:1";
+  let customWidth: number | undefined;
+  let customHeight: number | undefined;
+  if (dimension === "custom" && customDimensionInput) {
+    const parsed = parseDimensionInput(customDimensionInput, customUnit);
+    if (parsed) {
+      customWidth = parsed.width;
+      customHeight = parsed.height;
+    }
+  }
+
+  const aspectRatio = resolveAspectRatio(
+    dimension,
+    customWidth,
+    customHeight,
+    customUnit
+  );
 
   const { data: userProfile } = await supabase
     .from("users")
@@ -107,9 +146,75 @@ export async function POST(request: Request) {
       });
     }
 
+    let resolvedThreadId = threadId;
+    if (!resolvedThreadId) {
+      const { data: newThread } = await supabase
+        .from("design_playground_threads")
+        .insert({
+          user_id: user.id,
+          title: prompt.slice(0, 50) + (prompt.length > 50 ? "…" : ""),
+          prompt,
+          dimension,
+          brand_space_id: brandSpaceId || null,
+        })
+        .select("id")
+        .single();
+      resolvedThreadId = newThread?.id ?? undefined;
+    } else {
+      await supabase
+        .from("design_playground_threads")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", resolvedThreadId)
+        .eq("user_id", user.id);
+    }
+
+    if (resolvedThreadId) {
+      const { count } = await supabase
+        .from("design_playground_items")
+        .select("id", { count: "exact", head: true })
+        .eq("thread_id", resolvedThreadId);
+      const stepIndex = (count ?? 0);
+
+      await supabase.from("design_playground_items").insert({
+        thread_id: resolvedThreadId,
+        image_url: imageUrl,
+        step_index: stepIndex,
+        prompt,
+      });
+    }
+
+    const { data: folder } = await supabase
+      .from("library_folders")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("name", "My design")
+      .single();
+
+    let folderId = folder?.id;
+    if (!folderId) {
+      const { data: created } = await supabase
+        .from("library_folders")
+        .insert({ user_id: user.id, name: "My design" })
+        .select("id")
+        .single();
+      folderId = created?.id;
+    }
+
+    if (folderId) {
+      await supabase.from("library_items").insert({
+        folder_id: folderId,
+        user_id: user.id,
+        image_url: imageUrl,
+        source_type: "design_playground",
+        source_id: resolvedThreadId ?? id,
+        metadata: { prompt: prompt.slice(0, 500), dimension },
+      });
+    }
+
     return NextResponse.json({
       imageUrl,
       id,
+      threadId: resolvedThreadId,
       credits_remaining: unlimitedCredits
         ? userProfile?.credits_remaining
         : (userProfile?.credits_remaining ?? 0) - 1,

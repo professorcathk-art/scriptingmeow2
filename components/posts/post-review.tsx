@@ -1,13 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { GeneratedPost, DraftData } from "@/types/database";
 import { SaveTemplateModal } from "./save-template-modal";
+import { useCredits } from "@/components/credits/credits-provider";
+
+interface RefinementVersion {
+  id: string;
+  version_index: number;
+  previous_visual_url?: string;
+  previous_carousel_urls?: string[];
+  visual_url?: string;
+  carousel_urls?: string[];
+  refined_page_index?: number;
+  comment?: string;
+  created_at: string;
+}
 
 interface PostReviewProps {
   post: GeneratedPost & { brand_spaces?: { name: string }; format?: string };
+  userCredits?: number;
 }
 
 type CaptionShape =
@@ -31,18 +45,38 @@ function paragraphToCaption(text: string): CaptionShape {
   return { igCaption: text.trim() };
 }
 
-export function PostReview({ post: initialPost }: PostReviewProps) {
+export function PostReview({ post: initialPost, userCredits: initialCredits = 0 }: PostReviewProps) {
   const router = useRouter();
+  const creditsCtx = useCredits();
+  const userCredits = creditsCtx?.creditsRemaining ?? initialCredits;
+
   const [loading, setLoading] = useState(false);
   const [post, setPost] = useState(initialPost);
   const [caption, setCaption] = useState(initialPost.caption);
   const [imageError, setImageError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [refinementHistory, setRefinementHistory] = useState<RefinementVersion[]>([]);
+  const [refineComment, setRefineComment] = useState("");
+  const [refinedPageIndex, setRefinedPageIndex] = useState(0);
+  const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
   const [draftData, setDraftData] = useState<DraftData | null>(() => {
     const d = (initialPost as { draft_data?: DraftData }).draft_data;
     if (d && "visualAdvice" in d && "imageTextOnImage" in d) return d;
     return null;
   });
+
+  const fetchRefinementHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/posts/${initialPost.id}/refinement-history`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data.history)) {
+        setRefinementHistory(data.history);
+      }
+    } catch {
+      setRefinementHistory([]);
+    }
+  }, [initialPost.id]);
 
   useEffect(() => {
     setPost(initialPost);
@@ -50,6 +84,10 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
     const d = (initialPost as { draft_data?: DraftData }).draft_data;
     if (d && "visualAdvice" in d && "imageTextOnImage" in d) setDraftData(d);
   }, [initialPost]);
+
+  useEffect(() => {
+    fetchRefinementHistory();
+  }, [fetchRefinementHistory]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -86,6 +124,42 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       alert("Failed to copy");
+    }
+  };
+
+  const handleRefine = async () => {
+    if (!refineComment.trim()) return;
+    if (userCredits < 1) {
+      setRefineError("Not enough credits");
+      return;
+    }
+    setRefining(true);
+    setRefineError(null);
+    try {
+      const res = await fetch(`/api/posts/${post.id}/refine`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          comment: refineComment.trim(),
+          refinedPageIndex: (post.carousel_urls ?? []).length > 0 ? refinedPageIndex : undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Refinement failed");
+      setPost((prev) => ({
+        ...prev,
+        visual_url: data.visual_url ?? prev.visual_url,
+        carousel_urls: data.carousel_urls ?? prev.carousel_urls,
+      }));
+      setRefineComment("");
+      fetchRefinementHistory();
+      if (typeof data.credits_remaining === "number") {
+        creditsCtx?.setCredits(data.credits_remaining);
+      }
+    } catch (e) {
+      setRefineError(e instanceof Error ? e.message : "Refinement failed");
+    } finally {
+      setRefining(false);
     }
   };
 
@@ -237,6 +311,164 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
           />
         </div>
       </div>
+
+      <div className="glass-elevated p-6 rounded-2xl space-y-4">
+        <h2 className="text-xl font-semibold text-white">Refine with AI (1 credit)</h2>
+        <p className="text-sm text-zinc-400">
+          Comment on the visual to refine it. For carousels, select which page to refine.
+        </p>
+        {hasCarousel && (
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">Page to refine</label>
+            <select
+              value={refinedPageIndex}
+              onChange={(e) => setRefinedPageIndex(Number(e.target.value))}
+              className="w-full max-w-xs px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-zinc-100"
+            >
+              {carouselUrls.map((_, i) => (
+                <option key={i} value={i}>
+                  Page {i + 1}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div>
+          <label className="block text-sm font-medium text-zinc-400 mb-2">Your feedback</label>
+          <textarea
+            value={refineComment}
+            onChange={(e) => setRefineComment(e.target.value)}
+            placeholder="e.g. Make the text larger, add more contrast, change the background..."
+            rows={4}
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-y min-h-[100px]"
+          />
+          <button
+            type="button"
+            onClick={handleRefine}
+            disabled={refining || !refineComment.trim() || userCredits < 1}
+            className="mt-2 px-4 py-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 disabled:opacity-50"
+          >
+            {refining ? "Refining…" : "Refine (1 credit)"}
+          </button>
+          {refineError && <p className="mt-2 text-red-400 text-sm">{refineError}</p>}
+        </div>
+      </div>
+
+      {(post.visual_url || carouselUrls.length > 0) && (
+        <div className="glass-elevated p-6 rounded-2xl space-y-4">
+          <h2 className="text-xl font-semibold text-white">Version history</h2>
+          <p className="text-sm text-zinc-400">All versions of this post</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {refinementHistory.length === 0 && (
+              <div
+                className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in border-2 border-violet-500/50"
+                style={{ aspectRatio: customAspect }}
+                onClick={() =>
+                  hasCarousel && carouselUrls[0]
+                    ? setFullScreenImage({ url: carouselUrls[0], alt: "Current" })
+                    : post.visual_url && setFullScreenImage({ url: post.visual_url, alt: "Current" })
+                }
+              >
+                {hasCarousel ? (
+                  <img src={carouselUrls[0]} alt="Current" className="w-full h-full object-cover" />
+                ) : (
+                  post.visual_url && (
+                    <img src={post.visual_url} alt="Current" className="w-full h-full object-cover" />
+                  )
+                )}
+                <div className="absolute bottom-0 left-0 right-0 bg-violet-500/80 px-2 py-1 text-xs text-white font-medium">
+                  Current
+                </div>
+              </div>
+            )}
+            {refinementHistory.length > 0 && (
+              <>
+                {!hasCarousel && refinementHistory[0]?.previous_visual_url && (
+                  <div
+                    className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in"
+                    style={{ aspectRatio: customAspect }}
+                    onClick={() =>
+                      setFullScreenImage({
+                        url: refinementHistory[0].previous_visual_url!,
+                        alt: "Original",
+                      })
+                    }
+                  >
+                    <img
+                      src={refinementHistory[0].previous_visual_url}
+                      alt="Original"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-xs text-white">
+                      Original
+                    </div>
+                  </div>
+                )}
+                {hasCarousel && refinementHistory[0]?.previous_carousel_urls && refinementHistory[0].previous_carousel_urls.length > 0 && (
+                  <div
+                    className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in"
+                    style={{ aspectRatio: customAspect }}
+                    onClick={() =>
+                      setFullScreenImage({
+                        url: refinementHistory[0].previous_carousel_urls![refinementHistory[0].refined_page_index ?? 0] ?? refinementHistory[0].previous_carousel_urls![0],
+                        alt: "Original",
+                      })
+                    }
+                  >
+                    <img
+                      src={refinementHistory[0].previous_carousel_urls[refinementHistory[0].refined_page_index ?? 0] ?? refinementHistory[0].previous_carousel_urls[0]}
+                      alt="Original"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-xs text-white">
+                      Original
+                    </div>
+                  </div>
+                )}
+                {refinementHistory.map((v, i) => {
+                  const url = hasCarousel
+                    ? v.carousel_urls?.[v.refined_page_index ?? 0] ?? v.carousel_urls?.[0]
+                    : v.visual_url;
+                  if (!url) return null;
+                  return (
+                    <div
+                      key={v.id}
+                      className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in"
+                      style={{ aspectRatio: customAspect }}
+                      onClick={() => setFullScreenImage({ url, alt: `Version ${i + 1}` })}
+                    >
+                      <img src={url} alt={`Version ${i + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-xs text-white truncate">
+                        v{i + 1}: {v.comment?.slice(0, 30) ?? "Refined"}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div
+                  className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in border-2 border-violet-500/50"
+                  style={{ aspectRatio: customAspect }}
+                  onClick={() =>
+                    hasCarousel && carouselUrls[0]
+                      ? setFullScreenImage({ url: carouselUrls[0], alt: "Current" })
+                      : post.visual_url && setFullScreenImage({ url: post.visual_url, alt: "Current" })
+                  }
+                >
+                  {hasCarousel ? (
+                    <img src={carouselUrls[0]} alt="Current" className="w-full h-full object-cover" />
+                  ) : (
+                    post.visual_url && (
+                      <img src={post.visual_url} alt="Current" className="w-full h-full object-cover" />
+                    )
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-violet-500/80 px-2 py-1 text-xs text-white font-medium">
+                    Current
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {!hasCarousel && draftData && "visualAdvice" in draftData && (
         <div className="glass-elevated p-6 rounded-2xl space-y-4">

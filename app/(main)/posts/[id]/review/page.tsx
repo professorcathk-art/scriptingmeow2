@@ -38,5 +38,16 @@ export default async function PostReviewPage({
     redirect("/create-post");
   }
 
-  return <PostReview post={post} />;
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("credits_remaining")
+    .eq("id", user.id)
+    .single();
+
+  return (
+    <PostReview
+      post={post}
+      userCredits={userProfile?.credits_remaining ?? 0}
+    />
+  );
 }

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { DesignPlaygroundForm } from "@/components/design-playground/design-playground-form";
+import { DesignPlaygroundThreads } from "@/components/design-playground/design-playground-threads";
 
 export default async function DesignPlaygroundPage() {
   const supabase = await createClient();
@@ -25,14 +25,14 @@ export default async function DesignPlaygroundPage() {
     .single();
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 mb-2">
         Design Playground
       </h1>
       <p className="text-zinc-400 text-sm mb-6">
-        Create posters, graphics, or any design with a free prompt. Optional: add brand style, reference images. Refine with feedback. 1 credit per generation.
+        Create posters, graphics, or any design. Start a new design or continue from a thread. Reference images can be style refs, logos, or real assets. All outputs auto-save to Library → My design.
       </p>
-      <DesignPlaygroundForm
+      <DesignPlaygroundThreads
         brandSpaces={brandSpaces ?? []}
         userCredits={userProfile?.credits_remaining ?? 0}
       />
