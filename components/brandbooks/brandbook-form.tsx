@@ -58,6 +58,8 @@ export function BrandbookForm({
     }
   }, [initialBrandbook]);
 
+  const [removingImageId, setRemovingImageId] = useState<string | null>(null);
+
   const fetchReferenceImages = async () => {
     try {
       const res = await fetch(`/api/brand-spaces/${brandSpaceId}/images`);
@@ -67,6 +69,22 @@ export function BrandbookForm({
       }
     } catch {
       // ignore
+    }
+  };
+
+  const handleRemoveImage = async (imageId: string) => {
+    setRemovingImageId(imageId);
+    try {
+      const res = await fetch(`/api/brand-spaces/${brandSpaceId}/images/${imageId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove image");
+      await fetchReferenceImages();
+      router.refresh();
+    } catch {
+      alert("Failed to remove image");
+    } finally {
+      setRemovingImageId(null);
     }
   };
 
@@ -298,14 +316,24 @@ export function BrandbookForm({
             Upload 3–10 of your past IG posts or style references. AI will analyze them for colors, typography, and art style (e.g. watercolor).
           </p>
           {referenceImages.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-wrap gap-3 mb-3">
               {referenceImages.map((img) => (
-                <img
-                  key={img.id}
-                  src={img.image_url}
-                  alt="Reference"
-                  className="w-16 h-16 object-cover rounded-lg border border-white/10"
-                />
+                <div key={img.id} className="relative">
+                  <img
+                    src={img.image_url}
+                    alt="Sample post"
+                    className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border border-white/10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(img.id)}
+                    disabled={removingImageId === img.id}
+                    className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-red-500/90 text-white text-sm font-bold hover:bg-red-500 disabled:opacity-50 flex items-center justify-center shadow-lg"
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -360,9 +388,31 @@ export function BrandbookForm({
     <div className="space-y-4 sm:space-y-6">
       <div className="bg-zinc-900/50 p-4 rounded-xl border border-white/10">
         <h3 className="font-semibold text-zinc-100 mb-2">Sample Posts (for regeneration)</h3>
-        <p className="text-sm text-zinc-400 mb-2">
-          Add more reference images to improve style analysis when regenerating.
+        <p className="text-sm text-zinc-400 mb-3">
+          Preview, remove, or add more reference images to improve style analysis when regenerating.
         </p>
+        {referenceImages.length > 0 && (
+          <div className="flex flex-wrap gap-3 mb-3">
+            {referenceImages.map((img) => (
+              <div key={img.id} className="relative">
+                <img
+                  src={img.image_url}
+                  alt="Sample post"
+                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl border border-white/10"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveImage(img.id)}
+                  disabled={removingImageId === img.id}
+                  className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-red-500/90 text-white text-sm font-bold hover:bg-red-500 disabled:opacity-50 flex items-center justify-center shadow-lg"
+                  title="Remove"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div
           className="border-2 border-dashed border-white/10 rounded-lg p-4 text-center hover:border-violet-500/30 transition-colors cursor-pointer"
           onDragOver={(e) => { e.preventDefault(); }}
@@ -377,7 +427,7 @@ export function BrandbookForm({
             onChange={(e) => handleUploadImages(e.target.files)}
           />
           <label htmlFor="brandbook-upload-edit" className="cursor-pointer text-sm text-zinc-400">
-            {uploading ? "Uploading..." : "Upload images"} · {referenceImages.length} total
+            {uploading ? "Uploading..." : "Add more images"} · {referenceImages.length} total
           </label>
         </div>
       </div>

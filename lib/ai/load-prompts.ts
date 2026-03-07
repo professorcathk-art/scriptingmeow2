@@ -218,14 +218,14 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
 
 Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DESIGNER LAYOUT for image gen (2–4 sentences: background, text arrangement with blocks and spacing, cohesive color palette), aspect {{aspectNote}}. igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
 
-const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Be DETAILED—imageTextOnImage (up to 250 chars/slide) and visualAdvice (2–4 sentences per page) must be substantive.
+const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Be DETAILED—imageTextOnImage (up to 200 chars/slide) and visualAdvice (2–4 sentences per page) must be substantive.
 
 ## Brief
 {{idea}}
 Language: {{language}}. Format: {{format}}. Aspect: {{aspectNote}}.
 Content goal: {{contentFrameworkDesc}}
 Visual layout: {{layoutGuide}}
-{{#isTextHeavy}}TEXT-HEAVY MODE: Headlines and imageTextOnImage must be SUBSTANTIVE—2–5 lines per slide, up to 250 chars. Main headline (主標題) + subheadline + body. Do NOT be brief or minimal. Educational/value content: teach, inform, actionable advice.{{/isTextHeavy}}
+{{#isTextHeavy}}TEXT-HEAVY MODE: Headlines and imageTextOnImage must be SUBSTANTIVE—2–5 lines per slide, up to 200 chars. Main headline (主標題) + subheadline + body. Do NOT be brief or minimal. Educational/value content: teach, inform, actionable advice.{{/isTextHeavy}}
 
 ## Enrichment (CRITICAL)
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
@@ -242,7 +242,7 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
   "igCaption": "COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags."
 }
 
-postAim = overall aim for image gen. imageTextOnImage = 2–5 lines, up to 250 chars per slide. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DESIGNER LAYOUT per page (2–4 sentences): background + text arrangement (blocks, 40–60% negative space, clear hierarchy) + cohesive color palette (2–3 colors, avoid clashing). igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
+postAim = overall aim for image gen. imageTextOnImage = 2–5 lines, up to 200 chars per slide. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DESIGNER LAYOUT per page (2–4 sentences): background + text arrangement (blocks, 40–60% negative space, clear hierarchy) + cohesive color palette (2–3 colors, avoid clashing). igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;

@@ -9,6 +9,8 @@ import { PLAN_LIMITS } from "@/types/database";
 const CREATE_POST_DRAFT_KEY = "createPost_draft";
 const MAX_CAPTION_CHARS = 1000;
 const MAX_HASHTAGS = 3;
+/** Text on image limit (20% reduction from 250). */
+const MAX_IMAGE_TEXT_CHARS = 200;
 
 /** Enforce max chars and max 3 hashtags on caption input. */
 function enforceCaptionLimits(text: string): string {
@@ -1302,9 +1304,10 @@ export function CreatePostForm({
                       onChange={(e) =>
                         setCarouselPageField(page.pageIndex, "imageTextOnImage", e.target.value)
                       }
+                      maxLength={MAX_IMAGE_TEXT_CHARS}
                       className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
                       rows={4}
-                      placeholder="主標題：Headline\n副標題：Subheadline\n內文：Body text (2–5 lines, up to 250 chars)"
+                      placeholder="主標題：Headline\n副標題：Subheadline\n內文：Body text (2–5 lines, up to 200 chars)"
                     />
                   </div>
                   <div>
@@ -1341,9 +1344,10 @@ export function CreatePostForm({
               onChange={(e) =>
                 setDraftField("imageTextOnImage", e.target.value)
               }
+              maxLength={MAX_IMAGE_TEXT_CHARS}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
               rows={5}
-              placeholder={formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "Headline\nSubheadline\nBody text... (2–4 lines for text-heavy)"}
+              placeholder={formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "Headline\nSubheadline\nBody text... (2–4 lines, up to 200 chars)"}
             />
           </div>
           )}

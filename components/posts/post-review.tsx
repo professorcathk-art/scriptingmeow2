@@ -533,9 +533,10 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
                     : prev
                 )
               }
+              maxLength={200}
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
               rows={2}
-              placeholder="Text to render on the image..."
+              placeholder="Text to render on the image (up to 200 chars)..."
             />
           </div>
         </div>

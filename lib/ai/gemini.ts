@@ -442,7 +442,7 @@ function truncate(s: string, max: number): string {
 const LAYOUT_TEXT_GUIDE: Record<string, string> = {
   "immersive-photo": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
   editorial: "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown (#, ##, ###, **). Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography. Be substantive—2–4 lines of real content.",
-  "text-heavy": "Text-Heavy / Carousel: Bold typography center stage. imageTextOnImage: 2–5 lines (main headline 主標題 + subheadline + body). Each line adds value. Up to 250 chars per slide for text-heavy—be substantive, not minimal. Plain text only, no markdown.",
+  "text-heavy": "Text-Heavy / Carousel: Bold typography center stage. imageTextOnImage: 2–5 lines (main headline 主標題 + subheadline + body). Each line adds value. Up to 200 chars per slide for text-heavy—be substantive, not minimal. Plain text only, no markdown.",
   "tweet-card": "Tweet / Quote Card: Stylized quote or social post. imageTextOnImage: the key quote (can be 2–3 lines), plain text only, no markdown. Attractive background.",
   "split-screen": "Split Screen / Collage: Dynamic mix. imageTextOnImage: Line 1 = main headline, Line 2+ = body. Be substantive. Side-by-side or collage layout with text areas.",
 };

@@ -118,7 +118,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
       {/* Steal a Style Gallery */}
       <section className="max-w-6xl mx-auto w-full mb-20">
         <h2 className="text-xl font-semibold text-zinc-300 mb-6 text-center sm:text-left">
-          Steal a Style
+          Steal a Style from below AI generated posts
         </h2>
         <div
           className="columns-2 sm:columns-3 gap-4 space-y-4"

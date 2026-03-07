@@ -47,8 +47,24 @@ export function BulkCreateForm({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ created: string[]; failed: number } | null>(null);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  const [removingTemplateId, setRemovingTemplateId] = useState<string | null>(null);
 
   const selectedTemplate = templates.find((t) => t.id === templateId);
+
+  const handleRemoveTemplate = async (id: string) => {
+    if (!id) return;
+    setRemovingTemplateId(id);
+    try {
+      const res = await fetch(`/api/templates/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove template");
+      if (templateId === id) setTemplateId("");
+      router.refresh();
+    } catch {
+      alert("Failed to remove template");
+    } finally {
+      setRemovingTemplateId(null);
+    }
+  };
   const brandSpaceId = selectedTemplate?.brand_space_id ?? "";
   const isCarousel = selectedTemplate?.post_type === "carousel";
   const carouselPages = selectedTemplate?.carousel_page_count ?? selectedTemplate?.carousel_pages?.length ?? 3;
@@ -116,13 +132,25 @@ export function BulkCreateForm({
         <div className="flex-1">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-zinc-400">1. Template (includes brand)</label>
-            <button
-              type="button"
-              onClick={() => setShowCreateTemplate(true)}
-              className="px-4 py-2.5 rounded-xl border-2 border-violet-500/50 text-violet-300 hover:bg-violet-500/20 hover:border-violet-500/70 transition-colors text-sm font-medium"
-            >
-              + Create template
-            </button>
+            <div className="flex gap-2">
+              {templateId && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTemplate(templateId)}
+                  disabled={removingTemplateId === templateId}
+                  className="px-3 py-2 rounded-xl border border-red-500/40 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 disabled:opacity-50 transition-colors text-sm"
+                >
+                  {removingTemplateId === templateId ? "Removing..." : "Remove template"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowCreateTemplate(true)}
+                className="px-4 py-2.5 rounded-xl border-2 border-violet-500/50 text-violet-300 hover:bg-violet-500/20 hover:border-violet-500/70 transition-colors text-sm font-medium"
+              >
+                + Create template
+              </button>
+            </div>
           </div>
           <select
             value={templateId}
