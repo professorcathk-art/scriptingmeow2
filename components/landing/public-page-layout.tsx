@@ -12,11 +12,11 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_80%_0%,rgba(6,182,212,0.08),transparent)] pointer-events-none" />
       <div className="relative z-10">
         <header className="border-b border-white/5">
-          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
             <Link href="/" className="text-xl font-bold tracking-tight text-white hover:text-zinc-200 transition-colors">
               designermeow
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               <Link href="/discover" className="text-sm text-zinc-400 hover:text-white transition-colors">
                 Discover
               </Link>

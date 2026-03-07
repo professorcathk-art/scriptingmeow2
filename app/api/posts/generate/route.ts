@@ -5,6 +5,7 @@ import { generatePost } from "@/lib/ai/gemini";
 import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
+import { augmentIdeaWithSourceImage } from "@/lib/rss-image-extract";
 
 export const maxDuration = 300;
 
@@ -220,12 +221,14 @@ export async function POST(request: Request) {
       ? { carouselPages, postAim: postAim?.trim() || undefined }
       : { visualAdvice: imagePrompt, imageTextOnImage, postAim: postAim?.trim() || undefined };
 
+    const contentIdeaToStore = await augmentIdeaWithSourceImage(contentIdea || "");
+
     const insertPayload: Record<string, unknown> = {
       brand_space_id: brandSpaceId,
       post_type: postType,
       format,
       language,
-      content_idea: contentIdea || "",
+      content_idea: contentIdeaToStore,
       visual_url: null,
       carousel_urls: isCarousel ? [] : undefined,
       caption,

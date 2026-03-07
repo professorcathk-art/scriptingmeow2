@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generatePostLight, type CarouselDraftOutput } from "@/lib/ai/gemini";
+import { augmentIdeaWithSourceImage } from "@/lib/rss-image-extract";
 
 export const maxDuration = 60;
 
@@ -71,9 +72,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
     }
 
-    const enrichedIdea = referenceText.trim()
+    let enrichedIdea = referenceText.trim()
       ? `${contentIdea.trim().slice(0, 1000)}\n\n--- Reference (extract key ideas) ---\n${referenceText.trim().slice(0, 3000)}`
       : contentIdea.trim().slice(0, 1000);
+
+    enrichedIdea = await augmentIdeaWithSourceImage(enrichedIdea);
 
     const result = await generatePostLight(
       enrichedIdea,

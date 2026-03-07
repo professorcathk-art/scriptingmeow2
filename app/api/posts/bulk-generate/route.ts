@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { generatePostLight } from "@/lib/ai/gemini";
+import { augmentIdeaWithSourceImage, stripSourceImageUrlFromContent } from "@/lib/rss-image-extract";
 import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
@@ -25,10 +26,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { templateId, ideaIds = [], rssIdeaIds = [] } = body as {
+  const { templateId, ideaIds = [], rssIdeaIds = [], useRealImagesFromWeb = true } = body as {
     templateId?: string;
     ideaIds?: string[];
     rssIdeaIds?: string[];
+    useRealImagesFromWeb?: boolean;
   };
 
   if (!templateId || !Array.isArray(ideaIds) || !Array.isArray(rssIdeaIds)) {
@@ -140,8 +142,14 @@ export async function POST(request: Request) {
 
   for (const idea of ideas) {
     try {
+      let contentForDraft = idea.content;
+      if (useRealImagesFromWeb) {
+        contentForDraft = await augmentIdeaWithSourceImage(idea.content);
+      } else {
+        contentForDraft = stripSourceImageUrlFromContent(idea.content);
+      }
       const draftResult = await generatePostLight(
-        idea.content,
+        contentForDraft,
         "English",
         postType,
         format,
@@ -178,7 +186,7 @@ export async function POST(request: Request) {
         post_type: postType,
         format,
         language: "English",
-        content_idea: idea.content,
+        content_idea: contentForDraft,
         visual_url: null,
         carousel_urls: isCarousel ? [] : undefined,
         caption,

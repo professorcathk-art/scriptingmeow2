@@ -137,7 +137,7 @@ Return valid JSON only:
 
 ### Field rules:
 1. imageTextOnImage: {{textGuide}}
-2. visualAdvice: HIGHLY DETAILED (4–7 sentences, 80–150 words). Scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text placement, color usage from brand, mood. Aspect {{aspectNote}}. Do NOT be brief.
+2. visualAdvice: HIGHLY DETAILED (4–7 sentences, 80–150 words). If a [Source Image URL: https...] is provided, you MUST include: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later." Scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text placement, color usage from brand, mood. Aspect {{aspectNote}}. Do NOT be brief.
 3. igCaption: Max 400 chars, max 3 hashtags.`;
 
 export function getCarouselDraftPrompt(vars: {
@@ -197,6 +197,7 @@ const FALLBACK_CAROUSEL = `You are an expert Instagram Art Director. Create a {{
 Format: {{format}}. Aspect ratio: {{aspectNote}}.
 
 ## Output Format
+If a [Source Image URL: https...] is provided, visualAdvice MUST include: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
 Return valid JSON only. imageTextOnImage: {{textGuide}}
 {
   "pages": [
@@ -218,6 +219,9 @@ Content goal: {{contentFrameworkDesc}}
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
 - ENRICH the idea: add scroll-stopping hooks, curiosity gaps, emotional angles, or counter-intuitive twists. Expand key points.
 - Create value-driven, shareable content—not a dry summary. Hook the reader in the first line.
+
+## Source Image Overlay
+- If a [Source Image URL: https...] is provided in the idea, you MUST structure your visualAdvice to include an explicit layout command: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
 
 ## Output
 Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sentences, max 500 chars). E.g. "Brand: [brief background]. This post aims to educate on X, build trust by Y."
@@ -241,6 +245,9 @@ Visual layout: {{layoutGuide}}
 ## Enrichment (CRITICAL)
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
 - ENRICH the idea: add scroll-stopping hooks, curiosity gaps, emotional angles. Expand key points. Create value-driven, shareable content.
+
+## Source Image Overlay
+- If a [Source Image URL: https...] is provided in the idea, you MUST structure visualAdvice on every page (or at least the cover) to include an explicit layout command: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
 
 ## Output
 Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sentences, max 500 chars).

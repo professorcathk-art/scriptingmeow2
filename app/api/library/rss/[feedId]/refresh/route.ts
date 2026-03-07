@@ -1,10 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import Parser from "rss-parser";
+import { extractImageFromRssItem } from "@/lib/rss-image-extract";
 
 export const dynamic = "force-dynamic";
 
-const parser = new Parser();
+const parser = new Parser({
+  customFields: {
+    item: [["media:content", "mediaContent", { keepArray: true }]],
+  },
+});
 
 /**
  * POST /api/library/rss/[feedId]/refresh - Re-fetch and parse RSS feed
@@ -47,7 +52,9 @@ export async function POST(
         .filter(Boolean)
         .join("\n\n");
       const sourceLine = item.link ? `\n\nSource: ${item.link}` : "";
-      const content = (baseContent + sourceLine).slice(0, 2500);
+      const imageUrl = extractImageFromRssItem(item as Parameters<typeof extractImageFromRssItem>[0]);
+      const imageLine = imageUrl ? `\n\n[Source Image URL: ${imageUrl}]` : "";
+      const content = (baseContent + sourceLine + imageLine).slice(0, 2500);
       if (!content.trim()) continue;
 
       await supabase.from("user_rss_ideas").insert({

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { GeneratedPost, DraftData } from "@/types/database";
+import { extractSourceImageUrlFromContent } from "@/lib/rss-image-extract";
 import { SaveTemplateModal } from "./save-template-modal";
 import { InstagramHandleForm } from "@/components/billing/instagram-handle-form";
 import { useCredits } from "@/components/credits/credits-provider";
@@ -69,6 +70,12 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
     if (d && "visualAdvice" in d && "imageTextOnImage" in d) return d;
     return null;
   });
+  const [sourceImageError, setSourceImageError] = useState(false);
+
+  const sourceImageUrl = useMemo(
+    () => extractSourceImageUrlFromContent(post.content_idea ?? ""),
+    [post.content_idea]
+  );
 
   const fetchRefinementHistory = useCallback(async () => {
     try {
@@ -227,9 +234,19 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
                   <img
                     src={url}
                     alt={`Carousel page ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                     onError={() => setImageError(true)}
                   />
+                  {index === 0 && sourceImageUrl && !sourceImageError && (
+                    <div className="absolute inset-[12%] flex items-center justify-center pointer-events-none">
+                      <img
+                        src={sourceImageUrl}
+                        alt="Source photo overlay"
+                        className="w-full h-full object-cover rounded"
+                        onError={() => setSourceImageError(true)}
+                      />
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <button
                       onClick={() => handleSaveImage(url, index)}
@@ -254,17 +271,29 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
                 )}
               </div>
               <div
-                className="bg-white/5 rounded-xl flex items-center justify-center overflow-hidden cursor-zoom-in"
+                className="relative bg-white/5 rounded-xl flex items-center justify-center overflow-hidden cursor-zoom-in"
                 style={{ aspectRatio: customAspect }}
                 onClick={() => post.visual_url && !imageError && setFullScreenImage({ url: post.visual_url, alt: "Post visual" })}
               >
                 {post.visual_url && !imageError ? (
-                  <img
-                    src={post.visual_url}
-                    alt="Post visual"
-                    className="w-full h-full object-cover rounded-lg"
-                    onError={() => setImageError(true)}
-                  />
+                  <>
+                    <img
+                      src={post.visual_url}
+                      alt="Post visual"
+                      className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                      onError={() => setImageError(true)}
+                    />
+                    {sourceImageUrl && !sourceImageError && (
+                      <div className="absolute inset-[12%] flex items-center justify-center pointer-events-none">
+                        <img
+                          src={sourceImageUrl}
+                          alt="Source photo overlay"
+                          className="w-full h-full object-cover rounded"
+                          onError={() => setSourceImageError(true)}
+                        />
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <span className="text-zinc-500 text-sm">
                     {imageError ? "Image failed to load" : "Visual will be generated"}
@@ -276,9 +305,9 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
         </div>
 
         <div className="glass-elevated p-6 rounded-2xl">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h2 className="text-xl font-semibold text-white">Caption</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleCopyCaption}
                 className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${

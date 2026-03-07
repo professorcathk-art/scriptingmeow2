@@ -43,6 +43,7 @@ export function BulkCreateForm({
   const [templateId, setTemplateId] = useState("");
   const [selectedIdeaIds, setSelectedIdeaIds] = useState<Set<string>>(new Set());
   const [selectedRssIdeaIds, setSelectedRssIdeaIds] = useState<Set<string>>(new Set());
+  const [useRealImagesFromWeb, setUseRealImagesFromWeb] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ created: string[]; failed: number } | null>(null);
@@ -104,6 +105,7 @@ export function BulkCreateForm({
           templateId,
           ideaIds: Array.from(selectedIdeaIds),
           rssIdeaIds: Array.from(selectedRssIdeaIds),
+          useRealImagesFromWeb,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -219,7 +221,21 @@ export function BulkCreateForm({
         </div>
       </div>
 
-      <div className="p-4 rounded-xl bg-zinc-900/50 border border-white/10">
+      <div className="p-4 rounded-xl bg-zinc-900/50 border border-white/10 space-y-3">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={useRealImagesFromWeb}
+            onChange={(e) => setUseRealImagesFromWeb(e.target.checked)}
+            className="rounded border-white/20"
+          />
+          <span className="text-sm text-zinc-300">
+            Use real images from web (RSS/URL)
+          </span>
+        </label>
+        <p className="text-xs text-zinc-500">
+          When ON: fetches og:image from Source URLs, generates design with empty frame, overlays real photo. When OFF: AI generates full design without real image overlay.
+        </p>
         <p className="text-sm text-zinc-400">
           Selected: <strong className="text-zinc-200">{totalIdeas}</strong> ideas
           {selectedTemplate && (
