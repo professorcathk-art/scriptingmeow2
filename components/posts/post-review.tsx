@@ -139,11 +139,15 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
                   className="relative group bg-white/5 rounded-xl overflow-hidden"
                   style={{
                     aspectRatio:
-                      post.format === "portrait"
-                        ? "4/5"
-                        : post.format === "story" || post.format === "reel-cover"
-                          ? "9/16"
-                          : "1/1",
+                      post.format === "custom" &&
+                      (post as { custom_width?: number }).custom_width &&
+                      (post as { custom_height?: number }).custom_height
+                        ? `${(post as { custom_width: number }).custom_width} / ${(post as { custom_height: number }).custom_height}`
+                        : post.format === "portrait"
+                          ? "4/5"
+                          : post.format === "story" || post.format === "reel-cover"
+                            ? "9/16"
+                            : "1/1",
                   }}
                 >
                   <img
@@ -179,11 +183,15 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
                 className="bg-white/5 rounded-xl flex items-center justify-center overflow-hidden"
                 style={{
                   aspectRatio:
-                    post.format === "portrait"
-                      ? "4/5"
-                      : post.format === "story" || post.format === "reel-cover"
-                        ? "9/16"
-                        : "1/1",
+                    post.format === "custom" &&
+                    (post as { custom_width?: number }).custom_width &&
+                    (post as { custom_height?: number }).custom_height
+                      ? `${(post as { custom_width: number }).custom_width} / ${(post as { custom_height: number }).custom_height}`
+                      : post.format === "portrait"
+                        ? "4/5"
+                        : post.format === "story" || post.format === "reel-cover"
+                          ? "9/16"
+                          : "1/1",
                 }}
               >
                 {post.visual_url && !imageError ? (
