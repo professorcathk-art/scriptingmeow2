@@ -3,15 +3,15 @@
 const STEPS = [
   {
     title: "Define Your Brand DNA",
-    description: "Create a Brand Space with your voice, tone, and visual style. AI learns your brand in seconds.",
+    description: "Create a Brand Space and brandbook with your voice, tone, colors, and visual style. Upload your logo and reference images. AI learns your brand in seconds.",
   },
   {
     title: "Prompt the AI Studio",
-    description: "Describe the post you want. Educational carousel, product launch, or testimonial—we&apos;ve got you.",
+    description: "Describe the post you want. Single image or carousel—educational, product launch, or testimonial. Steal a style from our gallery or use your brandbook.",
   },
   {
-    title: "Publish Perfectly Consistent Content",
-    description: "Download, schedule, or share. Every post stays on-brand, every time.",
+    title: "Generate & Download",
+    description: "Review your draft, generate the final image, then download or save to your library. Every post stays on-brand.",
   },
 ];
 

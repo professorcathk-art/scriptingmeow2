@@ -1,14 +1,12 @@
 "use client";
 
 const LOGOS = [
-  "Creator Co.",
-  "Brand Studio",
-  "Social Flow",
-  "Content AI",
-  "InstaPro",
-  "Postify",
-  "Visual Lab",
-  "Feed Magic",
+  "Professor Cat",
+  "TenthProject",
+  "Sito",
+  "Morna Crystal",
+  "Lifelab",
+  "Designermeow",
 ];
 
 export function LandingLogoCloud() {
