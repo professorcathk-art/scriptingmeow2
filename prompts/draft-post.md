@@ -60,10 +60,12 @@ Return valid JSON only containing the 2 variations.
    - *Hierarchy Tags:* You must use these exact labels so the image generator applies the correct typography: `主標題：` (Headline), `副標題：` (Subheadline), `內文：` (Body). 
    - *Constraints:* No markdown symbols (#, *, etc.). Be substantive (2–4 lines minimum for text-heavy/editorial layouts).
    - *Example:* "主標題：5 Mistakes That Kill Your Growth\n副標題：Here's what nobody tells you\n內文：Most people make these errors without realizing."
-2. **`visualAdvice`**: A highly detailed Image Generation Prompt (3–4 sentences). Must contain:
-   - *Action & Scene:* Detail exactly what is happening visually.
-   - *Spatial Layout:* Define text placement, graphic integration, and structural hierarchy.
-   - *Aesthetic Lock:* You MUST explicitly repeat the medium, texture, and colors from `{{style}}` and `{{colors}}` to ensure the final render perfectly matches the brandbook.
+2. **`visualAdvice`**: A HIGHLY DETAILED Image Generation Prompt (4–7 sentences, 80–150 words minimum). Do NOT be brief. Must contain:
+   - *Action & Scene:* Describe exactly what is happening—subject, pose, expression, environment, props. Be specific (e.g., "a confident female entrepreneur in a navy blazer, seated at a minimalist desk with a laptop, warm natural light from the left").
+   - *Composition & Layout:* Define camera angle, framing, negative space zones, text placement (top-left, bottom-right, etc.), and structural hierarchy.
+   - *Lighting & Mood:* Specify lighting (soft diffused, dramatic side light, golden hour, studio), shadows, and emotional tone.
+   - *Aesthetic Lock:* Explicitly repeat the medium, texture, and color usage from `{{style}}` and `{{colors}}` so the final render matches the brandbook.
+   - *Texture & Details:* Surface materials, background treatment (gradient, solid, texture), typography placement.
 3. **`igCaption`**: A comprehensive, standalone caption (up to 1000 chars) written in `{{tone}}`. 
    - *Structure:* (1) Scroll-stopping hook. (2) Deep-dive storytelling delivering immediate value (readers must get value without swiping). (3) Save/Share Call-to-Action. (4) Max 3 targeted hashtags.
 
@@ -90,8 +92,8 @@ Dynamically structure the slide functions based on the total page count:
 
 ## Typographic & Visual Rules
 - **`imageTextOnImage`**: Max 200 chars per slide. Plain text only, no markdown. Use `\n` for line breaks. You must use typography labels: `主標題：`, `副標題：`, `內文：`. Be substantive, not minimal.
-- **`visualAdvice` for Page 1 (Cover):** Dramatic, highly visual, scroll-stopping. Integrate `{{style}}`. Describe composition, lighting, subject placement, and text overlay in detail (2-4 sentences).
-- **`visualAdvice` for Pages 2 to N (Inner Pages):** Designer-level layout instructions (2-4 sentences). Specify: (1) Background—clean, minimal, or soft gradient; leave 40–60% negative space. (2) Text arrangement—headline + subheadline as one block, body as separate block; generous line spacing; max 3–4 lines per block. (3) Color harmony—cohesive palette (2–3 colors max); avoid clashing tones. (4) Optional: subtle motif or miniaturized graphic in one corner. Example: "Soft cream gradient background. Headline block top-left with 2× line spacing; body text block below with clear separation. Muted brand accent for highlights. Small watercolor motif bottom-right, 15% of frame."
+- **`visualAdvice` for Page 1 (Cover):** Dramatic, highly visual, scroll-stopping (4–6 sentences, 80–120 words). Integrate `{{style}}`. Specify: subject/scene in detail, composition (rule of thirds, center, etc.), lighting (direction, quality), text overlay placement, color usage, mood. Do NOT be minimal.
+- **`visualAdvice` for Pages 2 to N (Inner Pages):** Designer-level layout instructions (4–6 sentences each, 80–120 words). Specify: (1) Background—exact treatment (soft cream gradient, solid navy, textured paper, etc.); leave 40–60% negative space. (2) Text arrangement—headline block position (top-left, centered), subheadline placement, body block with line spacing; max 3–4 lines per block. (3) Color harmony—which colors for headline, body, accents; avoid clashing. (4) Optional: subtle motif, icon, or miniaturized graphic (position, size). Example: "Soft cream-to-beige gradient background, top to bottom. Headline block top-left, 2× line spacing, bold primary color. Body text block 20% from top, 3 lines max, secondary color. Small watercolor leaf motif bottom-right corner, 15% of frame. Muted brand accent for subheadline highlights."
 
 ## Output Format
 Return valid JSON only. For `visualAdvice` on every page, explicitly synthesize the specific slide action with the core `{{style}}` to maintain visual continuity.

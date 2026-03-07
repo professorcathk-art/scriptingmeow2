@@ -322,7 +322,7 @@ export async function generateBrandbook(
 
 **Style extraction (highest priority):**
 1. **Art/medium style**: Name the exact style (e.g. watercolor, oil painting, flat design, minimal line art, collage, photography, illustration, hand-drawn, digital art). If watercolor—say "watercolor". If mixed media—describe it.
-2. **Colors**: Extract hex codes from the images. Use them in colors array and colorDescriptionDetailed.
+2. **Colors**: Extract hex codes from the images. Put hex codes ONLY in the colors array (the palette). In colorDescriptionDetailed, NEVER use hex codes—use semantic labels only: "primary color", "secondary color", "accent color", "background color", "text color". Describe how each role is used (e.g. "primary color for headlines and key graphics") without stating #hex.
 3. **Texture & mood**: Paper texture, brush strokes, saturation, brightness. e.g. "watercolor on paper, soft bleed, muted tones".
 4. **Typography**: Font style, weights, hierarchy you see.
 5. **Layout**: Text placement, spacing, image-to-text ratio.
@@ -369,7 +369,7 @@ export async function generateBrandbook(
       } else {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
           safetySettings: [...DEFAULT_SAFETY],
         });
         const result = await model.generateContent(contentParts);
@@ -848,7 +848,7 @@ export async function generatePost(
         if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 1.0,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
             thinkingLevel: "low",
             safetySettings: safetyToV1Beta(safetySettings),
           });
@@ -856,7 +856,7 @@ export async function generatePost(
         } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.6, maxOutputTokens: 2048 },
+            generationConfig: { temperature: 0.6, maxOutputTokens: 4096 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(prompt);

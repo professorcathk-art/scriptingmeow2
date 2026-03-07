@@ -43,16 +43,22 @@ export async function POST() {
       process.env.NEXT_PUBLIC_APP_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
+    const returnUrl = `${baseUrl}/billing`;
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${baseUrl}/billing`,
+      return_url: returnUrl,
     });
 
     return NextResponse.json({ url: session.url });
-  } catch (error) {
-    console.error("Billing portal error:", error);
+  } catch (error: unknown) {
+    const err = error as { type?: string; code?: string; message?: string };
+    console.error("Billing portal error:", err?.message ?? error);
+    const message =
+      err?.type === "StripeInvalidRequestError"
+        ? err?.message ?? "Stripe request failed"
+        : "Failed to create portal session";
     return NextResponse.json(
-      { error: "Failed to create portal session" },
+      { error: message },
       { status: 500 }
     );
   }

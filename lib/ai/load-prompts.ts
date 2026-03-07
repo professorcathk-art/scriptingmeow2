@@ -137,7 +137,7 @@ Return valid JSON only:
 
 ### Field rules:
 1. imageTextOnImage: {{textGuide}}
-2. visualAdvice: Scene, composition, aspect {{aspectNote}}.
+2. visualAdvice: HIGHLY DETAILED (4–7 sentences, 80–150 words). Scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text placement, color usage from brand, mood. Aspect {{aspectNote}}. Do NOT be brief.
 3. igCaption: Max 400 chars, max 3 hashtags.`;
 
 export function getCarouselDraftPrompt(vars: {
@@ -200,7 +200,7 @@ Format: {{format}}. Aspect ratio: {{aspectNote}}.
 Return valid JSON only. imageTextOnImage: {{textGuide}}
 {
   "pages": [
-    { "pageIndex": 1, "imageTextOnImage": "Text (use \\n). Include 主標題：, 副標題：, 內文：.", "visualAdvice": "Scene + style" },
+    { "pageIndex": 1, "imageTextOnImage": "Text (use \\n). Include 主標題：, 副標題：, 內文：.", "visualAdvice": "HIGHLY DETAILED (4–6 sentences): scene, composition, lighting, text placement, color usage, mood" },
     ...
   ],
   "igCaption": "Full caption (max 400 chars, max 3 hashtags)."
@@ -227,7 +227,7 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
 
-Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DESIGNER LAYOUT for image gen (2–4 sentences: background, text arrangement with blocks and spacing, cohesive color palette), aspect {{aspectNote}}. igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
+Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = HIGHLY DETAILED DESIGNER LAYOUT (4–7 sentences, 80–150 words): scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text arrangement (blocks, spacing, positions), cohesive color palette, mood. Aspect {{aspectNote}}. Do NOT be brief—the image generator needs rich detail. igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
 
 const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Be DETAILED—imageTextOnImage (up to 200 chars/slide) and visualAdvice (2–4 sentences per page) must be substantive.
 
@@ -253,7 +253,7 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
   "igCaption": "COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags."
 }
 
-postAim = overall aim for image gen. imageTextOnImage = 2–5 lines, up to 200 chars per slide. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DESIGNER LAYOUT per page (2–4 sentences): background + text arrangement (blocks, 40–60% negative space, clear hierarchy) + cohesive color palette (2–3 colors, avoid clashing). igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
+postAim = overall aim for image gen. imageTextOnImage = 2–5 lines, up to 200 chars per slide. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = HIGHLY DETAILED DESIGNER LAYOUT per page (4–6 sentences, 80–120 words): background (exact treatment—gradient, solid, texture), text arrangement (headline block position, body block, line spacing, 40–60% negative space), cohesive color palette (which colors for what), optional motif (position, size). Do NOT be brief—each page needs rich detail for the image generator. igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;

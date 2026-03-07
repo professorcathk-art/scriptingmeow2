@@ -43,7 +43,7 @@ export default async function HomePage() {
       .eq("is_public_gallery", true)
       .eq("status", "saved")
       .order("created_at", { ascending: false })
-      .limit(15);
+      .limit(9);
     publicDesigns = (data ?? []).map((p) => ({
       id: p.id,
       image_url: (p.carousel_urls as string[])?.[0] ?? (p.visual_url as string) ?? "",

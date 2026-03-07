@@ -42,13 +42,12 @@ Formulate the guidelines specifically for a `{{brandTypeContext}}`. Return valid
 
 **`carouselInnerStyle`** – Optional guidance for inner carousel slides (Pages 2 to N). Light suggestions only—e.g., "Consider more whitespace for readability" or "Subtle motifs can support the narrative." Do NOT mandate strict ratios or restrict layout. The image generator will adapt inner pages based on context. Markdown allowed.
 
-**`colorDescriptionDetailed`** – A highly conceptual, semantic color palette. Use Markdown to structure:
+**`colorDescriptionDetailed`** – A highly conceptual, semantic color palette. Use Markdown to structure. **CRITICAL: Do NOT use hex codes or color codes here.** Use only semantic labels: "primary color", "secondary color", "accent color", "background color", "text color". The actual hex values are controlled by the `colors` array (palette). Describe the role and psychological purpose of each:
 - **Overall Vibe:** The emotional impact and visual texture (e.g., "Low saturation, high brightness, non-fatiguing").
-- **Primary background:** Main base color (hex + psychological purpose).
-- **Secondary background:** Alternate section background (hex + purpose).
-- **Primary text:** Main typographic color (hex + readability purpose, e.g., "Dark Brown #3E332A - softer contrast than pure black").
-- **Secondary text:** Accents and captions (hex + purpose).
-- **Backup color:** CTAs and highlights (hex + purpose).
+- **Primary color:** Main base/background (psychological purpose).
+- **Secondary color:** Alternate sections or supporting elements (purpose).
+- **Text color:** Main typography (readability purpose, e.g., "dark for strong contrast").
+- **Accent color:** CTAs, highlights, key graphics (purpose).
 
 **`visualAura`** – Define the spatial dynamics and emotional resonance of the layout. Establish a strict whitespace philosophy (e.g., "High whitespace, mandatory 40% negative space to evoke luxury and prevent visual fatigue"). Markdown allowed.
 
