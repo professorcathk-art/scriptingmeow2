@@ -210,13 +210,11 @@ export async function POST(request: Request) {
       if (isCarousel && carouselPages) {
         for (let i = 0; i < carouselPages.length; i++) {
           const page = carouselPages[i];
-          const header = (page.header ?? "").trim();
           const imageText = (page.imageTextOnImage ?? "").trim();
-          const combinedText = header ? (imageText ? `${header}\n${imageText}` : header) : imageText || undefined;
           const fullImagePrompt = buildImagePrompt({
             brandbook,
             visualAdvice: page.visualAdvice?.trim() || `Carousel page ${page.pageIndex}. ${idea.content}`,
-            imageTextOnImage: combinedText,
+            imageTextOnImage: imageText || undefined,
             postStyle: postStyle || "text-heavy",
             pageIndex: page.pageIndex,
             logoUrl: brandSpace?.logo_url ?? null,

@@ -281,11 +281,7 @@ export async function POST(request: Request) {
       const totalPages = carouselPages.length;
       for (let i = 0; i < carouselPages.length; i++) {
         const page = carouselPages[i];
-        const header = (page.header ?? "").trim();
         const imageText = (page.imageTextOnImage ?? "").trim();
-        const combinedText = header
-          ? (imageText ? `${header}\n${imageText}` : header)
-          : imageText || undefined;
         const previousPageUrls = carouselUrls.slice(0, i);
         const styleRefsWithContext = [
           ...previousPageUrls,
@@ -300,7 +296,7 @@ export async function POST(request: Request) {
         const fullImagePrompt = buildImagePrompt({
           brandbook,
           visualAdvice: page.visualAdvice?.trim() || `Carousel page ${page.pageIndex}. ${contentIdea || ""}`,
-          imageTextOnImage: combinedText,
+          imageTextOnImage: imageText || undefined,
           postStyle: postStyle || "text-heavy",
           pageIndex: page.pageIndex,
           carouselPageCount: totalPages,

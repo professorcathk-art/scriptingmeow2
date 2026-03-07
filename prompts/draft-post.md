@@ -89,7 +89,6 @@ Dynamically structure the slide functions based on the total page count:
 - **If 6+ Pages:** [Page 1: Hook] -> [Page 2: Empathy/Problem Setup] -> [Page 3: The Twist/Mythbust] -> [Pages 4 to N-2: Detailed Breakdown] -> [Page N-1: Summary] -> [Page N: CTA].
 
 ## Typographic & Visual Rules
-- **`header`**: The main content headline the viewer reads on the slide. Must be concrete and value-driven (e.g., "The Real Reason You're Stuck"). Do not use abstract slide labels like "Step 1".
 - **`imageTextOnImage`**: Max 250 chars per slide. Plain text only, no markdown. Use `\n` for line breaks. You must use typography labels: `主標題：`, `副標題：`, `內文：`. Be substantive, not minimal.
 - **`visualAdvice` for Page 1 (Cover):** Dramatic, highly visual, scroll-stopping. Integrate `{{style}}`. Describe composition, lighting, subject placement, and text overlay in detail (2-4 sentences).
 - **`visualAdvice` for Pages 2 to N (Inner Pages):** Designer-level layout instructions (2-4 sentences). Specify: (1) Background—clean, minimal, or soft gradient; leave 40–60% negative space. (2) Text arrangement—headline + subheadline as one block, body as separate block; generous line spacing; max 3–4 lines per block. (3) Color harmony—cohesive palette (2–3 colors max); avoid clashing tones. (4) Optional: subtle motif or miniaturized graphic in one corner. Example: "Soft cream gradient background. Headline block top-left with 2× line spacing; body text block below with clear separation. Muted brand accent for highlights. Small watercolor motif bottom-right, 15% of frame."
@@ -100,8 +99,7 @@ Return valid JSON only. For `visualAdvice` on every page, explicitly synthesize 
   "pages": [
     { 
       "pageIndex": 1, 
-      "header": "Concrete content headline", 
-      "imageTextOnImage": "Full text—2–5 lines, up to 250 chars per slide (use \\n). Include typography labels.", 
+      "imageTextOnImage": "Full text—2–5 lines, up to 250 chars per slide (use \\n). Include typography labels 主標題：, 副標題：, 內文：.", 
       "visualAdvice": "Designer layout (2–4 sentences): background + text arrangement (blocks, spacing, hierarchy) + color harmony (cohesive palette) + optional motif. Specify 40–60% negative space." 
     },
     ...

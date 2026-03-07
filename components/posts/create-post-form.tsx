@@ -618,12 +618,12 @@ export function CreatePostForm({
   }
 
   const Stepper = () => (
-    <div className="flex items-center justify-between mb-4 sm:mb-8 overflow-x-auto">
+    <div className="flex items-center mb-4 sm:mb-8 overflow-x-auto">
       {STEPS.map((s, i) => (
-        <div key={s.id} className="flex items-center flex-1">
-          <div className="flex flex-col items-center">
+        <div key={s.id} className="flex items-center flex-1 min-w-0">
+          <div className="flex flex-col items-center justify-center flex-1">
             <div
-              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold transition-all shrink-0 ${
+              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-center text-xs sm:text-sm font-semibold transition-all shrink-0 ${
                 step >= s.id
                   ? "bg-gradient-to-br from-violet-500 to-cyan-500 text-white ring-2 ring-violet-500/50"
                   : "bg-zinc-800 text-zinc-500 border border-white/10"
@@ -632,7 +632,7 @@ export function CreatePostForm({
               {s.id}
             </div>
             <span
-              className={`mt-1 sm:mt-2 text-[10px] sm:text-xs font-medium whitespace-nowrap ${
+              className={`mt-1 sm:mt-2 text-center text-[10px] sm:text-xs font-medium whitespace-nowrap ${
                 step >= s.id ? "text-zinc-100" : "text-zinc-500"
               }`}
             >
@@ -641,7 +641,7 @@ export function CreatePostForm({
           </div>
           {i < STEPS.length - 1 && (
             <div
-              className={`flex-1 h-0.5 mx-2 ${
+              className={`flex-1 min-w-4 h-0.5 mx-2 ${
                 step > s.id ? "bg-violet-500/50" : "bg-white/10"
               }`}
             />
@@ -730,20 +730,22 @@ export function CreatePostForm({
               onClick={() =>
                 setFormData({ ...formData, postType: "single-image" })
               }
-              className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col items-center gap-3 w-full ${
+              className={`p-6 rounded-2xl border-2 text-center transition-all flex flex-col items-center justify-center gap-3 w-full ${
                 formData.postType === "single-image"
                   ? "border-violet-500 bg-violet-500/10 shadow-[0_0_30px_-5px_rgba(139,92,246,0.4)]"
                   : "border-white/10 bg-zinc-800/30 hover:border-white/20"
               }`}
             >
-              <ImageIcon
-                className={`w-10 h-10 ${
-                  formData.postType === "single-image"
-                    ? "text-violet-400"
-                    : "text-zinc-500"
-                }`}
-              />
-              <div>
+              <div className="flex items-center justify-center w-10 h-10 shrink-0">
+                <ImageIcon
+                  className={`w-10 h-10 ${
+                    formData.postType === "single-image"
+                      ? "text-violet-400"
+                      : "text-zinc-500"
+                  }`}
+                />
+              </div>
+              <div className="text-center">
                 <div className="font-semibold text-zinc-100">Single Image</div>
                 <div className="text-sm text-zinc-400">One image post</div>
               </div>
@@ -751,20 +753,22 @@ export function CreatePostForm({
             <button
               type="button"
               onClick={() => setFormData({ ...formData, postType: "carousel" })}
-              className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col items-center gap-3 w-full ${
+              className={`p-6 rounded-2xl border-2 text-center transition-all flex flex-col items-center justify-center gap-3 w-full ${
                 formData.postType === "carousel"
                   ? "border-violet-500 bg-violet-500/10 shadow-[0_0_30px_-5px_rgba(139,92,246,0.4)]"
                   : "border-white/10 bg-zinc-800/30 hover:border-white/20"
               }`}
             >
-              <SquaresIcon
-                className={`w-10 h-10 ${
-                  formData.postType === "carousel"
-                    ? "text-violet-400"
-                    : "text-zinc-500"
-                }`}
-              />
-              <div>
+              <div className="flex items-center justify-center w-10 h-10 shrink-0">
+                <SquaresIcon
+                  className={`w-10 h-10 ${
+                    formData.postType === "carousel"
+                      ? "text-violet-400"
+                      : "text-zinc-500"
+                  }`}
+                />
+              </div>
+              <div className="text-center">
                 <div className="font-semibold text-zinc-100">Carousel</div>
                 <div className="text-sm text-zinc-400">Multi-image post</div>
               </div>
@@ -1287,25 +1291,11 @@ export function CreatePostForm({
                   className="p-4 rounded-xl bg-zinc-800/30 border border-white/10 space-y-3"
                 >
                   <div className="font-medium text-zinc-200">
-                    Page {page.pageIndex}: {page.header}
+                    Page {page.pageIndex}
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">
-                      Main Headline (content headline on image)
-                    </label>
-                    <input
-                      type="text"
-                      value={page.header}
-                      onChange={(e) =>
-                        setCarouselPageField(page.pageIndex, "header", e.target.value)
-                      }
-                      className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                      placeholder="e.g. 5 Mistakes That Kill Your Growth"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-500 mb-1">
-                      Text on Image (plain text only)
+                      Text on Image (plain text only) — Use 主標題：, 副標題：, 內文： for hierarchy
                     </label>
                     <textarea
                       value={page.imageTextOnImage}
@@ -1314,7 +1304,7 @@ export function CreatePostForm({
                       }
                       className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
                       rows={4}
-                      placeholder="Text to render on this page (2–5 lines, up to 250 chars)"
+                      placeholder="主標題：Headline\n副標題：Subheadline\n內文：Body text (2–5 lines, up to 250 chars)"
                     />
                   </div>
                   <div>
