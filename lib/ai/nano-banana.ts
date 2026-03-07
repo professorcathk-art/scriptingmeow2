@@ -55,14 +55,16 @@ async function generateWithModel(
 
   let instruction = "";
   if (styleRefUrls.length > 0 || importantUrls.length > 0) {
-    const instrParts: string[] = [];
+    const instrParts: string[] = [
+      "Reference images and brandbook are for inspiration only. Priority is a harmonious, professional design that looks good.",
+    ];
     if (styleRefUrls.length > 0) {
-      instrParts.push(`Style reference images (first ${styleRefUrls.length}): Use for colors, composition, mood, and visual style. Do NOT copy them literally—derive the aesthetic.`);
+      instrParts.push(`Style references (first ${styleRefUrls.length}): Use for composition, mood, and aesthetic. Derive a cohesive palette—if colors clash, choose harmony over literal matching.`);
     }
     if (importantUrls.length > 0) {
-      instrParts.push(`Important asset images (last ${importantUrls.length}): These MUST appear inside the generated image. Incorporate them exactly—e.g. portraits, product photos, or business assets that cannot be replaced.`);
+      instrParts.push(`Important assets (last ${importantUrls.length}): These MUST appear in the output (portraits, products, logos). Incorporate them; adjust surrounding colors for visual harmony.`);
     }
-    instruction = `Reference images: ${instrParts.join(" ")}\n\n`;
+    instruction = `${instrParts.join(" ")}\n\n`;
   }
   parts.push({ text: instruction + prompt });
 

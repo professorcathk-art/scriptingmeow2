@@ -502,7 +502,7 @@ export function BrandbookForm({
                 />
               </div>
               <div>
-                <label className={labelClass}>視覺氣質 (Visual Aura)</label>
+                <label className={labelClass}>Visual Aura</label>
                 <textarea
                   value={(brandbook.visual_style as { visualAura?: string })?.visualAura ?? ""}
                   onChange={(e) => {
@@ -522,7 +522,7 @@ export function BrandbookForm({
                 />
               </div>
               <div>
-                <label className={labelClass}>線條風格 (Line Style)</label>
+                <label className={labelClass}>Line Style</label>
                 <textarea
                   value={(brandbook.visual_style as { lineStyle?: string })?.lineStyle ?? ""}
                   onChange={(e) => {
@@ -561,7 +561,7 @@ export function BrandbookForm({
                 />
               </div>
               <div>
-                <label className={labelClass}>字型規範 (Typography)</label>
+                <label className={labelClass}>Typography</label>
                 <textarea
                   value={(brandbook.visual_style as { typographySpec?: string })?.typographySpec ?? ""}
                   onChange={(e) => {
@@ -581,7 +581,7 @@ export function BrandbookForm({
                 />
               </div>
               <div>
-                <label className={labelClass}>排版風格 (Layout Style)</label>
+                <label className={labelClass}>Layout Style</label>
                 <textarea
                   value={(brandbook.visual_style as { layoutStyleDetail?: string })?.layoutStyleDetail ?? ""}
                   onChange={(e) => {

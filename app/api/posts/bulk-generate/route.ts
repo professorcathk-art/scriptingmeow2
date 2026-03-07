@@ -158,13 +158,13 @@ export async function POST(request: Request) {
 
       if (isCarousel && draftResult && "pages" in draftResult) {
         carouselPages = draftResult.pages;
-        caption = { igCaption: (draftResult.igCaption ?? "").slice(0, 400) };
+        caption = { igCaption: (draftResult.igCaption ?? "").slice(0, 1000) };
         draftData = { carouselPages };
       } else {
         const single = Array.isArray(draftResult) ? draftResult[0] : null;
         imagePrompt = single?.visualAdvice?.trim() || "";
         imageTextOnImage = single?.imageTextOnImage ?? "";
-        caption = { igCaption: (single?.igCaption ?? "").slice(0, 400) };
+        caption = { igCaption: (single?.igCaption ?? "").slice(0, 1000) };
         draftData = { visualAdvice: imagePrompt, imageTextOnImage };
       }
 

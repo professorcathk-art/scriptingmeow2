@@ -64,8 +64,8 @@ Return valid JSON only containing the 2 variations.
    - *Action & Scene:* Detail exactly what is happening visually.
    - *Spatial Layout:* Define text placement, graphic integration, and structural hierarchy.
    - *Aesthetic Lock:* You MUST explicitly repeat the medium, texture, and colors from `{{style}}` and `{{colors}}` to ensure the final render perfectly matches the brandbook.
-3. **`igCaption`**: A comprehensive, standalone caption (250–400 chars) written in `{{tone}}`. 
-   - *Structure:* (1) Scroll-stopping hook. (2) Deep-dive storytelling delivering immediate value (readers must get value without swiping). (3) Save/Share Call-to-Action. (4) 2–3 targeted hashtags.
+3. **`igCaption`**: A comprehensive, standalone caption (up to 1000 chars) written in `{{tone}}`. 
+   - *Structure:* (1) Scroll-stopping hook. (2) Deep-dive storytelling delivering immediate value (readers must get value without swiping). (3) Save/Share Call-to-Action. (4) Max 3 targeted hashtags.
 
 ---
 
@@ -92,7 +92,7 @@ Dynamically structure the slide functions based on the total page count:
 - **`header`**: The main content headline the viewer reads on the slide. Must be concrete and value-driven (e.g., "The Real Reason You're Stuck"). Do not use abstract slide labels like "Step 1".
 - **`imageTextOnImage`**: Max 250 chars per slide. Plain text only, no markdown. Use `\n` for line breaks. You must use typography labels: `主標題：`, `副標題：`, `內文：`. Be substantive, not minimal.
 - **`visualAdvice` for Page 1 (Cover):** Dramatic, highly visual, scroll-stopping. Integrate `{{style}}`. Describe composition, lighting, subject placement, and text overlay in detail (2-4 sentences).
-- **`visualAdvice` for Pages 2 to N (Inner Pages):** These are reading pages. You MUST command a text-friendly layout (2-4 sentences). Specify clean backgrounds, subtle brand motifs, or miniaturized illustrations. Example: "A clean cream background with a small watercolor tuxedo cat in the bottom right corner, leaving 80% empty space for text. Centered text block. Soft shadows for legibility."
+- **`visualAdvice` for Pages 2 to N (Inner Pages):** Designer-level layout instructions (2-4 sentences). Specify: (1) Background—clean, minimal, or soft gradient; leave 40–60% negative space. (2) Text arrangement—headline + subheadline as one block, body as separate block; generous line spacing; max 3–4 lines per block. (3) Color harmony—cohesive palette (2–3 colors max); avoid clashing tones. (4) Optional: subtle motif or miniaturized graphic in one corner. Example: "Soft cream gradient background. Headline block top-left with 2× line spacing; body text block below with clear separation. Muted brand accent for highlights. Small watercolor motif bottom-right, 15% of frame."
 
 ## Output Format
 Return valid JSON only. For `visualAdvice` on every page, explicitly synthesize the specific slide action with the core `{{style}}` to maintain visual continuity.
@@ -102,9 +102,9 @@ Return valid JSON only. For `visualAdvice` on every page, explicitly synthesize 
       "pageIndex": 1, 
       "header": "Concrete content headline", 
       "imageTextOnImage": "Full text—2–5 lines, up to 250 chars per slide (use \\n). Include typography labels.", 
-      "visualAdvice": "Detailed scene (2–4 sentences): action + composition + text placement + style (medium, character design, colors, lighting). Specify whitespace." 
+      "visualAdvice": "Designer layout (2–4 sentences): background + text arrangement (blocks, spacing, hierarchy) + color harmony (cohesive palette) + optional motif. Specify 40–60% negative space." 
     },
     ...
   ],
-  "igCaption": "Comprehensive caption 250–400 chars. Hook + full storytelling + CTA to save/share + hashtags. Must stand alone."
+  "igCaption": "Comprehensive caption up to 1000 chars. Hook + full storytelling + CTA to save/share. Max 3 hashtags. Must stand alone."
 }

@@ -139,7 +139,7 @@ function parseSingleDraft(post: Record<string, unknown>, postAim?: string): Draf
   return {
     imageTextOnImage: stripMarkdownFromText(raw),
     visualAdvice: String(post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
-    igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, 400),
+    igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, 1000),
     postAim: postAim || (typeof post.postAim === "string" ? post.postAim : undefined),
   };
 }
@@ -625,7 +625,7 @@ function parseCarouselJson(text: string, pageCount: number): CarouselDraftOutput
     }
     return {
       pages,
-      igCaption: String(parsed.igCaption ?? parsed.caption ?? "").trim().slice(0, 400),
+      igCaption: String(parsed.igCaption ?? parsed.caption ?? "").trim().slice(0, 1000),
       postAim: typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined,
     };
   } catch {

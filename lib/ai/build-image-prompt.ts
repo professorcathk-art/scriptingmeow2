@@ -15,16 +15,62 @@ function stripMarkdown(s: string): string {
     .trim();
 }
 
+/**
+ * Parse imageTextOnImage and strip hierarchy labels (主標題：, 副標題：, 內文：) BEFORE
+ * passing to the image model. The model was drawing these labels literally.
+ * We extract only the content and pass it with explicit hierarchy instructions.
+ */
+function formatTextForImageModel(rawText: string): string {
+  if (!rawText) return "";
+
+  let cleaned = stripMarkdown(rawText);
+  const lines = cleaned.split(/\n/);
+  const contentLines: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    const headlineMatch = trimmed.match(/^(?:主標題|大標題|Headline)[：:]\s*(.*)$/i);
+    const subheadMatch = trimmed.match(/^(?:副標題|小標題|Subheadline)[：:]\s*(.*)$/i);
+    const bodyMatch = trimmed.match(/^(?:內文|Body)[：:]\s*(.*)$/i);
+
+    if (headlineMatch) {
+      contentLines.push(headlineMatch[1].trim());
+    } else if (subheadMatch) {
+      contentLines.push(subheadMatch[1].trim());
+    } else if (bodyMatch) {
+      contentLines.push(bodyMatch[1].trim());
+    } else {
+      contentLines.push(trimmed);
+    }
+  }
+
+  return contentLines.join("\n");
+}
+
 const BASE_PROMPT =
   "Generate a high-end, scroll-stopping Instagram graphic. Act as a master Art Director and Editorial Designer. Every visual element must be polished, cohesive, and meticulously composed.";
+
+const DESIGN_PRIORITY =
+  "DESIGN PRIORITY: Brandbook colors and reference images are for inspiration only. Your primary goal is a harmonious, professional design that looks good. If brand colors and reference image colors conflict, derive a cohesive palette—do not force clashing colors. Visual harmony and readability always win.";
 
 const FINAL_DESIGN_COMMANDS = `
 FINAL DESIGN COMMANDS (strictly enforce):
 - Magazine-quality execution. Sophisticated, premium, and intentional.
 - Perfect Typographic Hierarchy: The Headline must be the largest and boldest, immediately drawing the eye. Subheadlines are medium weight.
-- Color Harmony: Use the defined brand colors strategically for text accents, shapes, or backgrounds. Ensure flawless contrast between text and background for mobile readability.
+- Color Harmony: Use a cohesive, limited palette. Avoid mixing clashing tones (e.g. warm orange with cool purple without intentional design). Ensure flawless contrast between text and background for mobile readability.
 - Integration: Text and image must not fight for attention. Use intentional negative space, subtle gradients behind text, or creative overlay techniques to blend them smoothly.
 - Spacing: Generous, clean margins. Avoid cramped, cluttered, or amateur layouts at all costs.`;
+
+const DESIGNER_TEXT_ARRANGEMENT = `
+DESIGNER TEXT ARRANGEMENT (CRITICAL when text is present):
+Arrange like a professional editorial designer. Do NOT cram every word into a dense block.
+- Create breathing room: generous line spacing between headline, subheadline, and body. Leave 40–60% of the frame as intentional negative space.
+- Group related content: Headline + subheadline as one block. Body text as a separate, readable block.
+- Limit density: Max 3–4 lines per block. If body text is long, split into logical chunks with visual separation.
+- Use composition: Left-align, center, or asymmetric layout—choose one and apply consistently. Avoid walls of text.
+- Hierarchy through size: Headline 2–3× subheadline size. Subheadline 1.5× body size. Body text must remain readable at mobile scale.`;
 
 const LAYOUT_DESIGN_GUIDE: Record<string, string> = {
   editorial: `
@@ -32,7 +78,7 @@ VISUAL LAYOUT & SPATIAL RULES: editorial.
 MINIMALIST EDITORIAL: Clean, high-end magazine aesthetic. High whitespace. Frame the subject beautifully using negative space. Text is elegantly integrated into the composition, not just slapped on top.`,
   "text-heavy": `
 VISUAL LAYOUT & SPATIAL RULES: text-heavy.
-TEXT-HEAVY / INFOGRAPHIC: The text is the hero. Use bold, highly legible typography against a clean, uncluttered background area or soft brand-color gradient to ensure perfect readability.`,
+TEXT-HEAVY / INFOGRAPHIC: The text is the hero. Arrange like a designer: bold typography hierarchy, generous whitespace (40–60% of frame), clear visual blocks. Never cram text—use breathing room, limit lines per block, and ensure the layout feels intentional and premium. Avoid dense walls of text.`,
   "tweet-card": `
 VISUAL LAYOUT & SPATIAL RULES: tweet-card.
 TWEET / QUOTE CARD: Central stylized text block or UI-like card, resting on an aesthetically pleasing, soft background that matches the brand aura.`,
@@ -109,7 +155,15 @@ export function buildImagePrompt(options: {
 
   const brandContextParts: string[] = [];
   if (isInnerPage && carouselInnerStyle) {
-    brandContextParts.push(`CORE VISUAL IDENTITY (INNER PAGE): You are generating an inner carousel slide. The text is the hero. STRICTLY follow the inner page style: ${carouselInnerStyle}. Do NOT generate a complex, full-screen scene. Generate a clean, minimal background or use very subtle, small graphics to ensure maximum text readability. Scene directive: ${options.visualAdvice.trim() || "Clean, minimal background."}`);
+    const innerParts: string[] = [
+      `CORE VISUAL IDENTITY (INNER PAGE): You are generating an inner carousel slide. The text is the hero. STRICTLY follow the inner page style: ${carouselInnerStyle}.`,
+      `Arrange text like a designer: generous whitespace (40–60% of frame), clear typographic hierarchy, no cramped blocks. Scene directive: ${options.visualAdvice.trim() || "Clean, minimal background."}`,
+    ];
+    if (colorDescriptionDetailed) innerParts.push(`Color palette: ${colorDescriptionDetailed}`);
+    else if (colors) innerParts.push(`Colors (reference only—prioritize harmony): ${colors}`);
+    if (layoutStyle) innerParts.push(`Layout: ${layoutStyle}`);
+    if (typographySpec) innerParts.push(`Typography: ${typographySpec}`);
+    brandContextParts.push(innerParts.join("\n"));
   } else if (imageGenPrompt) {
     brandContextParts.push(`CORE VISUAL IDENTITY (COVER PAGE): Brand image generation prompt (use as primary style): ${imageGenPrompt}`);
   } else {
@@ -139,7 +193,7 @@ export function buildImagePrompt(options: {
     ? `CORE VISUAL IDENTITY (MANDATORY):\n${brandContextParts.join("\n")}`
     : "";
 
-  const parts: string[] = [BASE_PROMPT];
+  const parts: string[] = [BASE_PROMPT, DESIGN_PRIORITY];
 
   if (options.postAim?.trim()) {
     parts.push(`POST AIM & CONTEXT: This post aims to: ${options.postAim.trim()}. The visual should support this intent.`);
@@ -175,11 +229,13 @@ export function buildImagePrompt(options: {
   }
 
   const rawText = (options.imageTextOnImage ?? "").trim();
-  const textOnImage = stripMarkdown(rawText);
+  const textOnImage = formatTextForImageModel(rawText);
   if (textOnImage) {
+    parts.push(DESIGNER_TEXT_ARRANGEMENT);
+    basePrompt = parts.join("\n\n");
     const escaped = textOnImage.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-    basePrompt += `\n\nEXACT TEXT TO RENDER (CRITICAL): Render the following text perfectly, with zero typos. Do NOT render markdown tags like #, ##, ###, or **. Preserve line breaks as given.
-TEXT HIERARCHY LABELS (interpret these—do NOT render the labels literally): 主標題： = main headline (largest, boldest). 副標題： = subheadline (medium weight). 內文： = body text (smaller, readable). 大標題： = main title. 小標題： = subheadline. Apply the correct typographic hierarchy to each line based on its label.
+    basePrompt += `\n\nEXACT TEXT TO RENDER (CRITICAL): Render ONLY the text below. Do NOT render any labels, colons, or instruction words like "主標題", "副標題", "內文", "Headline", "Subheadline", or "Body". Preserve line breaks.
+TYPOGRAPHY: Line 1 = main headline (LARGEST, boldest). Line 2 = subheadline (medium). Line 3+ = body text (smaller, readable). Apply this hierarchy to the content only.
 Text to render:\n"${escaped}"`;
   }
 

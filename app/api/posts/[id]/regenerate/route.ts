@@ -88,7 +88,7 @@ export async function POST(
       }
       visualAdvice = generatedPost.visualAdvice?.trim() || "";
       imageTextOnImage = generatedPost.imageTextOnImage ?? "";
-      igCaption = (generatedPost.igCaption ?? "").slice(0, 400);
+      igCaption = (generatedPost.igCaption ?? "").slice(0, 1000);
     }
 
     const visualAdviceResolved =

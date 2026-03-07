@@ -216,7 +216,7 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
 
-Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DETAILED scene for image gen (2–4 sentences: composition, lighting, text placement, style), aspect {{aspectNote}}. igCaption = COMPREHENSIVE caption 250–400 chars: hook + full storytelling (key info from post) + CTA to save/share + hashtags. The caption should stand alone and make readers want to save and share.`;
+Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DESIGNER LAYOUT for image gen (2–4 sentences: background, text arrangement with blocks and spacing, cohesive color palette), aspect {{aspectNote}}. igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
 
 const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Be DETAILED—header, imageTextOnImage (up to 250 chars/slide), and visualAdvice (2–4 sentences per page) must be substantive.
 
@@ -236,13 +236,13 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
 {
   "postAim": "Brief brand context and post aim (max 500 chars)",
   "pages": [
-    { "pageIndex": 1, "header": "Concrete headline (e.g. 5 Mistakes That Kill Your Growth)", "imageTextOnImage": "Full text 2–5 lines (use \\n for breaks)", "visualAdvice": "DETAILED scene: composition, lighting, text placement, style (2–4 sentences)" },
+    { "pageIndex": 1, "header": "Concrete headline (e.g. 5 Mistakes That Kill Your Growth)", "imageTextOnImage": "Full text 2–5 lines (use \\n for breaks)", "visualAdvice": "Designer layout: background + text blocks + spacing + cohesive colors (2–4 sentences)" },
     ...
   ],
-  "igCaption": "COMPREHENSIVE caption 250–400 chars: hook + full storytelling (key info from post) + CTA to save/share + hashtags."
+  "igCaption": "COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags."
 }
 
-postAim = overall aim for image gen. header = main headline (not "Step 1"). imageTextOnImage = 2–5 lines, up to 250 chars per slide. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DETAILED scene (2–4 sentences per page). igCaption = COMPREHENSIVE caption 250–400 chars: hook + full storytelling (key info from post) + CTA to save/share + hashtags. The caption should stand alone and make readers want to save and share.`;
+postAim = overall aim for image gen. header = main headline (not "Step 1"). imageTextOnImage = 2–5 lines, up to 250 chars per slide. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DESIGNER LAYOUT per page (2–4 sentences): background + text arrangement (blocks, 40–60% negative space, clear hierarchy) + cohesive color palette (2–3 colors, avoid clashing). igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;

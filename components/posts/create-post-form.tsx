@@ -7,6 +7,20 @@ import type { BrandSpace, PostType, PostFormat, PlanTier } from "@/types/databas
 import { PLAN_LIMITS } from "@/types/database";
 
 const CREATE_POST_DRAFT_KEY = "createPost_draft";
+const MAX_CAPTION_CHARS = 1000;
+const MAX_HASHTAGS = 3;
+
+/** Enforce max chars and max 3 hashtags on caption input. */
+function enforceCaptionLimits(text: string): string {
+  const truncated = text.slice(0, MAX_CAPTION_CHARS);
+  const hashtags = truncated.match(/#\w+/g) ?? [];
+  if (hashtags.length <= MAX_HASHTAGS) return truncated;
+  let count = 0;
+  return truncated.replace(/#\w+/g, (m) => {
+    count++;
+    return count <= MAX_HASHTAGS ? m : "";
+  }).replace(/  +/g, " ");
+}
 
 interface LibraryPost {
   id: string;
@@ -1277,7 +1291,7 @@ export function CreatePostForm({
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">
-                      Main Headline 主標題 (content headline on image)
+                      Main Headline (content headline on image)
                     </label>
                     <input
                       type="text"
@@ -1323,7 +1337,7 @@ export function CreatePostForm({
           ) : (
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Text on Image (可編輯) — Plain text only, no markdown
+              Text on Image (editable) — Plain text only, no markdown
             </label>
             <p className="text-xs text-zinc-500 mb-1">
               {formData.postStyle === "immersive-photo"
@@ -1347,7 +1361,7 @@ export function CreatePostForm({
           {!isCarouselDraft && (
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              視覺建議 (Visual Advice for Image Generation)
+              Visual Advice for Image Generation
             </label>
             <textarea
               value={draft.visualAdvice}
@@ -1519,12 +1533,12 @@ export function CreatePostForm({
 
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              IG Caption (可編輯) — Max 400 chars, max 3 hashtags
+              IG Caption (editable) — Max 1000 chars, max 3 hashtags
             </label>
             <textarea
               value={carouselDraft ? carouselDraft.igCaption : (draft as SingleDraft).igCaption}
               onChange={(e) => {
-                const v = e.target.value.slice(0, 400);
+                const v = enforceCaptionLimits(e.target.value);
                 if (isCarouselDraft) {
                   setDraftVariations((prev) => {
                     if (!prev) return prev;
@@ -1539,11 +1553,11 @@ export function CreatePostForm({
               }}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
               rows={5}
-              maxLength={400}
+              maxLength={MAX_CAPTION_CHARS}
               placeholder="Full caption for Instagram post..."
             />
             <p className="text-xs text-zinc-500 mt-1">
-              {(carouselDraft ? carouselDraft.igCaption : (draft as SingleDraft).igCaption).length}/400
+              {(carouselDraft ? carouselDraft.igCaption : (draft as SingleDraft).igCaption).length}/{MAX_CAPTION_CHARS}
             </p>
           </div>
 

@@ -142,9 +142,9 @@ export async function POST(request: Request) {
       (confirmedCaption && (confirmedCaption.hook || confirmedCaption.body || confirmedCaption.cta));
 
     if (isCarousel) {
-      caption = { igCaption: igCaptionFromConfirmed.slice(0, 400) || "Carousel post." };
+      caption = { igCaption: igCaptionFromConfirmed.slice(0, 1000) || "Carousel post." };
     } else if (hasConfirmedDraft) {
-      caption = { igCaption: igCaptionFromConfirmed.slice(0, 400) };
+      caption = { igCaption: igCaptionFromConfirmed.slice(0, 1000) };
       imageTextOnImage = (confirmedImageTextOnImage ?? "").trim();
       imagePrompt = (confirmedVisualAdvice ?? "").trim();
     } else {
@@ -165,7 +165,7 @@ export async function POST(request: Request) {
       );
       const generatedPost = Array.isArray(genResult) ? genResult[0] : null;
       if (generatedPost && "imageTextOnImage" in generatedPost) {
-        caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, 400) };
+        caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, 1000) };
         imageTextOnImage = generatedPost.imageTextOnImage ?? "";
         imagePrompt = generatedPost.visualAdvice?.trim() || "";
       } else {
