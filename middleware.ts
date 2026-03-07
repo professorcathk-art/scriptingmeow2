@@ -27,8 +27,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Root: if OAuth code landed here (Supabase sometimes redirects to Site URL), forward to callback
+  if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const callbackUrl = new URL("/auth/callback", request.url);
+    request.nextUrl.searchParams.forEach((value, key) => callbackUrl.searchParams.set(key, value));
+    return NextResponse.redirect(callbackUrl);
+  }
+
   // Root: show landing page for everyone (zero-friction demo)
-  // Authenticated users can still access / and will see "Go to Dashboard" CTA
   if (request.nextUrl.pathname === "/") {
     return response;
   }
