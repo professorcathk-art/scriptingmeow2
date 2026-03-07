@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { DesignPlaygroundForm } from "./design-playground-form";
 
@@ -26,10 +27,14 @@ export function DesignPlaygroundThreads({
   brandSpaces,
   userCredits,
 }: DesignPlaygroundThreadsProps) {
+  const searchParams = useSearchParams();
+  const threadFromUrl = searchParams.get("thread");
+
   const [threads, setThreads] = useState<Thread[]>([]);
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(() => threadFromUrl || null);
   const [activeThread, setActiveThread] = useState<ThreadWithItems | null>(null);
   const [loadingThreads, setLoadingThreads] = useState(true);
+  const [loadingThread, setLoadingThread] = useState(false);
   const [creatingThread, setCreatingThread] = useState(false);
 
   const fetchThreads = useCallback(async () => {
@@ -48,6 +53,7 @@ export function DesignPlaygroundThreads({
   }, []);
 
   const fetchThread = useCallback(async (id: string) => {
+    setLoadingThread(true);
     try {
       const res = await fetch(`/api/design-playground/threads/${id}`);
       const data = await res.json().catch(() => ({}));
@@ -58,6 +64,8 @@ export function DesignPlaygroundThreads({
       }
     } catch {
       setActiveThread(null);
+    } finally {
+      setLoadingThread(false);
     }
   }, []);
 
@@ -66,10 +74,17 @@ export function DesignPlaygroundThreads({
   }, [fetchThreads]);
 
   useEffect(() => {
-    if (activeThreadId) {
+    if (threadFromUrl && activeThreadId !== threadFromUrl) {
+      setActiveThreadId(threadFromUrl);
+    }
+  }, [threadFromUrl, activeThreadId]);
+
+  useEffect(() => {
+    if (activeThreadId && activeThreadId !== "new") {
       fetchThread(activeThreadId);
     } else {
       setActiveThread(null);
+      setLoadingThread(false);
     }
   }, [activeThreadId, fetchThread]);
 
@@ -129,18 +144,25 @@ export function DesignPlaygroundThreads({
 
       {activeThreadId ? (
         <div className="space-y-4">
-          <DesignPlaygroundForm
-            brandSpaces={brandSpaces}
-            userCredits={userCredits}
-            threadId={activeThreadId === "new" ? undefined : activeThreadId}
-            initialPrompt={activeThread?.prompt ?? ""}
-            initialDimension={activeThread?.dimension ?? "1:1"}
-            initialItems={activeThread?.items ?? []}
-            onThreadId={(id) => {
-              setActiveThreadId(id);
-              fetchThreads();
-            }}
-          />
+          {activeThreadId !== "new" && loadingThread ? (
+            <div className="flex items-center justify-center py-24">
+              <div className="animate-pulse text-zinc-500">Loading design workspace…</div>
+            </div>
+          ) : (
+            <DesignPlaygroundForm
+              key={activeThreadId}
+              brandSpaces={brandSpaces}
+              userCredits={userCredits}
+              threadId={activeThreadId === "new" ? undefined : activeThreadId}
+              initialPrompt={activeThread?.prompt ?? ""}
+              initialDimension={activeThread?.dimension ?? "1:1"}
+              initialItems={activeThread?.items ?? []}
+              onThreadId={(id) => {
+                setActiveThreadId(id);
+                fetchThreads();
+              }}
+            />
+          )}
         </div>
       ) : (
         <>

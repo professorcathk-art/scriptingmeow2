@@ -34,6 +34,7 @@ type MyDesignItem = {
   image_url: string;
   created_at: string;
   metadata?: Record<string, unknown>;
+  source_id?: string | null;
 };
 
 function formatDate(date: string | Date): string {
@@ -175,26 +176,32 @@ export function LibraryTabs({
         <>
           {myDesignItems.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-              {myDesignItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="block bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
-                >
-                  <div className="aspect-square bg-zinc-800/50 relative overflow-hidden">
-                    <Image
-                      src={item.image_url}
-                      alt="Design"
-                      fill
-                      className="object-cover"
-                      unoptimized={item.image_url.startsWith("data:")}
-                    />
-                  </div>
-                  <div className="p-2 sm:p-4">
-                    <p className="text-xs text-zinc-500">Design Playground</p>
-                    <span className="text-[10px] text-zinc-500">{formatDate(item.created_at)}</span>
-                  </div>
-                </div>
-              ))}
+              {myDesignItems.map((item) => {
+                const threadHref = item.source_id
+                  ? `/design-playground?thread=${item.source_id}`
+                  : "/design-playground";
+                return (
+                  <Link
+                    key={item.id}
+                    href={threadHref}
+                    className="block bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden hover:border-violet-500/30 transition-all"
+                  >
+                    <div className="aspect-square bg-zinc-800/50 relative overflow-hidden">
+                      <Image
+                        src={item.image_url}
+                        alt="Design"
+                        fill
+                        className="object-cover"
+                        unoptimized={item.image_url.startsWith("data:")}
+                      />
+                    </div>
+                    <div className="p-2 sm:p-4">
+                      <p className="text-xs text-zinc-500">Design Playground</p>
+                      <span className="text-[10px] text-zinc-500">{formatDate(item.created_at)}</span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-24 rounded-2xl border-2 border-dashed border-white/10">

@@ -86,7 +86,7 @@ export default async function LibraryPage({
   const { data: myDesignItems } = myDesignFolder
     ? await supabase
         .from("library_items")
-        .select("id, image_url, created_at, metadata")
+        .select("id, image_url, created_at, metadata, source_id")
         .eq("folder_id", myDesignFolder.id)
         .order("created_at", { ascending: false })
     : { data: [] };
@@ -115,7 +115,7 @@ export default async function LibraryPage({
   type LibPost = { id: string; visual_url?: string; content_idea?: string; created_at: string; tags?: string[]; brand_spaces?: { name?: string } };
   type LibRef = { id: string; image_url: string; created_at: string; source: string };
   type LibIdea = { id: string; content: string; created_at: string };
-  type LibDesign = { id: string; image_url: string; created_at: string; metadata?: Record<string, unknown> };
+  type LibDesign = { id: string; image_url: string; created_at: string; metadata?: Record<string, unknown>; source_id?: string | null };
   type LibBrand = { id: string; name: string };
   const serializablePosts = JSON.parse(JSON.stringify(posts ?? [])) as LibPost[];
   const serializableReferences = JSON.parse(JSON.stringify(references)) as LibRef[];

@@ -224,6 +224,8 @@ const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Be
 {{idea}}
 Language: {{language}}. Format: {{format}}. Aspect: {{aspectNote}}.
 Content goal: {{contentFrameworkDesc}}
+Visual layout: {{layoutGuide}}
+{{#isTextHeavy}}TEXT-HEAVY MODE: Headlines and imageTextOnImage must be SUBSTANTIVE—2–5 lines per slide, up to 250 chars. Main headline (主標題) + subheadline + body. Do NOT be brief or minimal. Educational/value content: teach, inform, actionable advice.{{/isTextHeavy}}
 
 ## Enrichment (CRITICAL)
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
@@ -260,13 +262,17 @@ export function getCarouselDraftPromptLight(vars: {
   format: string;
   aspectNote: string;
   contentFrameworkDesc: string;
+  layoutGuide: string;
+  isTextHeavy: boolean;
 }): string {
   let t = DRAFT_CAROUSEL_LIGHT.replace(/\{\{pageCount\}\}/g, String(vars.pageCount));
+  t = t.replace(/\{\{#isTextHeavy\}\}([\s\S]*?)\{\{\/isTextHeavy\}\}/g, vars.isTextHeavy ? "$1" : "");
   return replaceAll(t, {
     idea: vars.idea,
     language: vars.language,
     format: vars.format,
     aspectNote: vars.aspectNote,
     contentFrameworkDesc: vars.contentFrameworkDesc,
+    layoutGuide: vars.layoutGuide,
   });
 }

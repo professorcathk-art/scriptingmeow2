@@ -499,6 +499,8 @@ export async function generatePostLight(
 
   if (isCarousel) {
     const pageCount = carouselPageCount!;
+    const isTextHeavy = postStyle === "text-heavy";
+    const layoutGuide = LAYOUT_TEXT_GUIDE[postStyle || "immersive-photo"] || LAYOUT_TEXT_GUIDE["immersive-photo"];
     const prompt = getCarouselDraftPromptLight({
       pageCount,
       idea,
@@ -506,6 +508,8 @@ export async function generatePostLight(
       format,
       aspectNote,
       contentFrameworkDesc,
+      layoutGuide,
+      isTextHeavy,
     });
     const parts: ContentPart[] = [{ text: prompt }];
     for (const modelName of GEMINI_MODELS) {

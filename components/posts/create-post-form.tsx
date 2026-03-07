@@ -67,8 +67,7 @@ interface CreatePostFormProps {
 const STEPS = [
   { id: 1, label: "Select Brand" },
   { id: 2, label: "Content & Style" },
-  { id: 3, label: "Review Draft" },
-  { id: 4, label: "Generate Image" },
+  { id: 3, label: "Review Draft & Generate" },
 ];
 
 function ImageIcon({ className }: { className?: string }) {
@@ -104,7 +103,7 @@ export function CreatePostForm({
   const router = useRouter();
   const creditsCtx = useCredits();
   const userCredits = creditsCtx?.creditsRemaining ?? initialCredits;
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
   const [tryStyleSetupLoading, setTryStyleSetupLoading] = useState(!!prefillFromTryStyle);
   type SingleDraft = { imageTextOnImage: string; visualAdvice: string; igCaption: string; postAim?: string };
@@ -156,7 +155,7 @@ export function CreatePostForm({
   }, [formData, step, draftVariations, selectedDraftIndex, carouselPages, selectedSampleUrls, referenceImageUrls, referenceText]);
 
   const saveDraftAndSetStep = useCallback(
-    (nextStep: 1 | 2 | 3 | 4) => {
+    (nextStep: 1 | 2 | 3) => {
       saveDraft();
       setStep(nextStep);
     },
@@ -272,7 +271,7 @@ export function CreatePostForm({
         };
         setDraftVariations([single, single]);
       }
-      setStep(4);
+      setStep(3);
       return;
     }
     try {
@@ -281,7 +280,7 @@ export function CreatePostForm({
         const data = JSON.parse(saved);
         if (data?.formData && typeof data?.step === "number" && data.step >= 1 && data.step <= 4) {
           setFormData((prev) => ({ ...prev, ...data.formData }));
-          setStep(data.step);
+          setStep(Math.min(data.step, 3) as 1 | 2 | 3);
           if (data.draftVariations?.length) setDraftVariations(data.draftVariations);
           if (typeof data.selectedDraftIndex === "number") setSelectedDraftIndex(data.selectedDraftIndex as 0 | 1);
           if (Array.isArray(data.carouselPages)) setCarouselPages(data.carouselPages);
@@ -304,7 +303,7 @@ export function CreatePostForm({
   }, [formData.brandSpaceId]);
 
   useEffect(() => {
-    if (step === 4 && formData.brandSpaceId) {
+    if (step === 3 && formData.brandSpaceId) {
       fetchReferenceImages();
       setSelectedSampleUrls([]);
     }
@@ -454,7 +453,7 @@ export function CreatePostForm({
             setDraftVariations([single, single]);
             setSelectedDraftIndex(0);
           }
-          setStep(4);
+          setStep(3);
           return;
         } catch (error: unknown) {
           lastError = error instanceof Error ? error : new Error(String(error));
@@ -1120,74 +1119,38 @@ export function CreatePostForm({
           </button>
           <button
             type="button"
-            onClick={() => saveDraftAndSetStep(3)}
+            onClick={handleGenerateDraft}
             disabled={
               !formData.contentIdea ||
-              (formData.language === "Other" && !formData.customLanguage.trim())
+              (formData.language === "Other" && !formData.customLanguage.trim()) ||
+              loading
             }
             className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
-            Next: Generate Draft
+            {loading ? "Generating draft…" : "Generate Draft"}
           </button>
         </div>
       </div>
     );
   }
 
-  if (step === 3) {
-    return (
-      <div className={cardClass}>
-        <Stepper />
-        {loading && (
-          <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
-            Please stay on this page. Do not leave or refresh while AI is generating the draft.
-          </div>
-        )}
-        <h2 className="text-xl font-semibold text-zinc-100">
-          Step 3: Generate Draft (Caption + 視覺建議)
-        </h2>
-        <p className="text-sm text-zinc-400">
-          AI will generate the post caption and visual advice. Review and confirm before generating the image.
-        </p>
-
-        <div className="flex gap-4 pt-4">
-          <button
-            type="button"
-            onClick={() => saveDraftAndSetStep(2)}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
-          >
-            Back
-          </button>
-          <button
-            type="button"
-            onClick={handleGenerateDraft}
-            disabled={loading}
-            className="flex-1 px-4 py-2.5 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-          >
-            {loading ? "Generating draft..." : "Generate Draft"}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 4 && !draftVariations?.length) {
+  if (step === 3 && !draftVariations?.length) {
     return (
       <div className={cardClass}>
         <Stepper />
         <p className="text-zinc-400">No draft yet. Please go back and generate a draft.</p>
         <button
           type="button"
-          onClick={() => saveDraftAndSetStep(3)}
+          onClick={() => saveDraftAndSetStep(2)}
           className="mt-4 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5"
         >
-          Back to Step 3
+          Back to Step 2
         </button>
       </div>
     );
   }
 
-  if (step === 4 && draftVariations?.length) {
+  if (step === 3 && draftVariations?.length) {
     const draft = draftVariations[selectedDraftIndex];
     const isCarouselDraft = "pages" in draft;
     const carouselDraft = isCarouselDraft ? (draft as CarouselDraftItem) : null;
@@ -1219,7 +1182,7 @@ export function CreatePostForm({
           </div>
         )}
         <h2 className="text-xl font-semibold text-zinc-100">
-          Step 4: Confirm & Generate Image
+          Step 3: Confirm & Generate Image
         </h2>
         <p className="text-sm text-zinc-400 mb-4">
           Review the caption and visual advice. Edit if needed, then confirm to generate the image.
@@ -1566,7 +1529,7 @@ export function CreatePostForm({
         <div className="flex gap-4 pt-4">
           <button
             type="button"
-            onClick={() => saveDraftAndSetStep(3)}
+            onClick={() => saveDraftAndSetStep(2)}
             className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
           >
             Back

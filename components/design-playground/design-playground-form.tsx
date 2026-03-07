@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useCredits } from "@/components/credits/credits-provider";
-import { DIMENSION_PRESETS, MAX_DIMENSION_PX, parseDimensionInput } from "@/lib/dimensions";
+import { DIMENSION_PRESETS, MAX_DIMENSION_PX, parseWidthHeight } from "@/lib/dimensions";
 
 interface DesignItem {
   id: string;
@@ -52,7 +52,8 @@ export function DesignPlaygroundForm({
 
   const [prompt, setPrompt] = useState(initialPrompt);
   const [dimension, setDimension] = useState(initialDimension);
-  const [customDimension, setCustomDimension] = useState("");
+  const [customWidth, setCustomWidth] = useState("");
+  const [customHeight, setCustomHeight] = useState("");
   const [customUnit, setCustomUnit] = useState<"px" | "mm">("px");
   const [brandSpaceId, setBrandSpaceId] = useState("");
   const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
@@ -92,10 +93,14 @@ export function DesignPlaygroundForm({
   };
 
   const buildDimensionPayload = () => {
-    const dim = dimension === "custom" && customDimension.trim()
-      ? { customDimension: customDimension.trim(), customUnit }
-      : {};
-    return { dimension, ...dim };
+    if (dimension === "custom" && customWidth.trim() && customHeight.trim()) {
+      return {
+        dimension: "custom",
+        customDimension: `${customWidth.trim()}x${customHeight.trim()}`,
+        customUnit,
+      };
+    }
+    return { dimension };
   };
 
   const handleGenerate = async () => {
@@ -103,10 +108,10 @@ export function DesignPlaygroundForm({
       setError("Enter a prompt");
       return;
     }
-    if (dimension === "custom" && customDimension.trim()) {
-      const parsed = parseDimensionInput(customDimension.trim(), customUnit);
+    if (dimension === "custom") {
+      const parsed = parseWidthHeight(customWidth, customHeight, customUnit);
       if (!parsed) {
-        setError(`Enter valid dimensions (e.g. 1080x1920 or 100mm). Max ${MAX_DIMENSION_PX}px per side.`);
+        setError(`Enter valid width and height. Max ${MAX_DIMENSION_PX}px per side.`);
         return;
       }
     }
@@ -323,18 +328,26 @@ export function DesignPlaygroundForm({
               ))}
             </select>
             {dimension === "custom" && (
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex items-center gap-2">
                 <input
                   type="text"
-                  value={customDimension}
-                  onChange={(e) => setCustomDimension(e.target.value)}
-                  placeholder="e.g. 1080x1920 or 100mm"
+                  value={customWidth}
+                  onChange={(e) => setCustomWidth(e.target.value)}
+                  placeholder="Width"
+                  className="flex-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 text-sm"
+                />
+                <span className="text-zinc-500 shrink-0">×</span>
+                <input
+                  type="text"
+                  value={customHeight}
+                  onChange={(e) => setCustomHeight(e.target.value)}
+                  placeholder="Height"
                   className="flex-1 px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 text-sm"
                 />
                 <select
                   value={customUnit}
                   onChange={(e) => setCustomUnit(e.target.value as "px" | "mm")}
-                  className="px-3 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+                  className="px-3 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm shrink-0"
                 >
                   <option value="px">px</option>
                   <option value="mm">mm</option>
@@ -343,7 +356,7 @@ export function DesignPlaygroundForm({
             )}
             {dimension === "custom" && (
               <p className="text-xs text-zinc-500 mt-1">
-                Max {MAX_DIMENSION_PX}px per side. Use format: 1080x1920 or 100mm
+                Max {MAX_DIMENSION_PX}px per side
               </p>
             )}
           </div>

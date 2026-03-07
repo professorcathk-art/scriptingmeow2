@@ -62,6 +62,28 @@ export function parseDimensionInput(
   return null;
 }
 
+/** Parse width and height from two separate values. */
+export function parseWidthHeight(
+  widthInput: string,
+  heightInput: string,
+  unit: "px" | "mm"
+): { width: number; height: number } | null {
+  const num = (v: string) => {
+    const n = parseFloat(String(v).replace(/[^\d.]/g, ""));
+    if (isNaN(n)) return null;
+    return unit === "mm" ? Math.round(n * MM_TO_PX) : Math.round(n);
+  };
+  const w = num(widthInput.trim());
+  const h = num(heightInput.trim());
+  if (w != null && h != null && w > 0 && h > 0) {
+    return {
+      width: clampDimension(w),
+      height: clampDimension(h),
+    };
+  }
+  return null;
+}
+
 /** Convert width x height to closest Gemini aspect ratio. */
 export function dimensionsToAspectRatio(width: number, height: number): string {
   const decimal = width / height;
