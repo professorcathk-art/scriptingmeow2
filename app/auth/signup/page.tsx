@@ -9,6 +9,7 @@ function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -19,13 +20,19 @@ function SignupForm() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      },
     });
 
     if (error) {
       alert(error.message);
+      setLoading(false);
+    } else if (data.user && !data.session) {
+      setMessage("Check your email for a confirmation link.");
       setLoading(false);
     } else {
       router.push(redirectTo);
@@ -42,6 +49,11 @@ function SignupForm() {
         <h2 className="text-lg font-medium text-center text-zinc-400 mb-6">
           Create Account
         </h2>
+        {message && (
+          <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-sm">
+            {message}
+          </div>
+        )}
         <form onSubmit={handleSignup} className="space-y-4">
           <div>
             <label
