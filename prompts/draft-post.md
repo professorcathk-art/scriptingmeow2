@@ -67,7 +67,7 @@ Return valid JSON only with 2 variations. Make them meaningfully different in an
    - **Text/Graphic Integration:** How should text or graphic elements (like stamps/shapes) sit on the image? Specify placement, size, hierarchy.
    - **Vibe & Style Prompt:** Explicitly repeat the core elements from `{{style}}` and `{{colors}}` so the image generator knows the exact medium, lighting, character design, and texture (e.g., "Japanese healing watercolor, anthropomorphic tuxedo cat with glasses..."). Aspect: {{aspectNote}}.
 
-3. **igCaption**: Full IG caption. Max 400 chars. Max 3 hashtags at end. Must be highly engaging, on-brand, utilizing emojis strategically as bullet points, and written in the `{{tone}}`.
+3. **igCaption**: Write a FULL caption 250–400 chars. Include: scroll-stopping hook (first line), 2–3 emoji bullet points with value, soft CTA, 2–3 hashtags at end. On-brand, written in `{{tone}}`. Do NOT be minimal—aim for the full 250–400 chars.
 
 ---
 
@@ -116,5 +116,5 @@ Return valid JSON only. For `visualAdvice` on every page, you MUST synthesize th
     },
     ...
   ],
-  "igCaption": "Full IG caption (max 400 chars, max 3 hashtags at end). Written in brand tone."
+  "igCaption": "FULL caption 250–400 chars: hook + emoji bullets + value + CTA + hashtags. Written in brand tone."
 }

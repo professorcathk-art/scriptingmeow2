@@ -103,3 +103,33 @@ export async function uploadPostImage(
     return `data:image/png;base64,${imageBuffer.toString("base64")}`;
   }
 }
+
+/**
+ * Uploads a design playground image to Supabase Storage.
+ * Path: design-playground/{userId}/{uuid}.png
+ */
+export async function uploadDesignPlaygroundImage(
+  imageBuffer: Buffer,
+  userId: string,
+  id: string
+): Promise<string> {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return `data:image/png;base64,${imageBuffer.toString("base64")}`;
+  }
+  try {
+    const supabase = createAdminClient();
+    const path = `design-playground/${userId}/${id}.png`;
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, imageBuffer, { contentType: "image/png", upsert: true });
+    if (error) {
+      console.warn("[design-playground] Upload failed:", error.message);
+      return `data:image/png;base64,${imageBuffer.toString("base64")}`;
+    }
+    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(data.path);
+    return urlData.publicUrl;
+  } catch (err) {
+    console.warn("[design-playground] Upload error:", err);
+    return `data:image/png;base64,${imageBuffer.toString("base64")}`;
+  }
+}

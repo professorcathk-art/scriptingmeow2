@@ -216,7 +216,7 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
 
-Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). visualAdvice = DETAILED scene for image gen (2–4 sentences: composition, lighting, text placement, style), aspect {{aspectNote}}. igCaption = WRITE A FULL ENGAGING CAPTION - do NOT just repeat the content idea or title. Create an original, scroll-stopping caption that hooks the reader. Max 400 chars, max 3 hashtags.`;
+Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). visualAdvice = DETAILED scene for image gen (2–4 sentences: composition, lighting, text placement, style), aspect {{aspectNote}}. igCaption = WRITE A FULL CAPTION 250–400 chars: hook line + 2–3 emoji bullet points + value + soft CTA + 2–3 hashtags. Do NOT be minimal—aim for full length.`;
 
 const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Be DETAILED—header, imageTextOnImage (up to 250 chars/slide), and visualAdvice (2–4 sentences per page) must be substantive.
 
@@ -234,13 +234,13 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
 {
   "postAim": "Brief brand context and post aim (max 500 chars)",
   "pages": [
-    { "pageIndex": 1, "header": "Headline", "imageTextOnImage": "Text (use \\n)", "visualAdvice": "Scene" },
+    { "pageIndex": 1, "header": "Concrete headline (e.g. 5 Mistakes That Kill Your Growth)", "imageTextOnImage": "Full text 2–5 lines (use \\n for breaks)", "visualAdvice": "DETAILED scene: composition, lighting, text placement, style (2–4 sentences)" },
     ...
   ],
-  "igCaption": "Caption (max 400 chars, max 3 hashtags)."
+  "igCaption": "FULL caption 250–400 chars: hook + emoji bullets + value + CTA + hashtags."
 }
 
-postAim = overall aim for image gen. header = main headline (not "Step 1"). imageTextOnImage = 2–5 lines, up to 250 chars per slide. visualAdvice = DETAILED scene (2–4 sentences per page). igCaption = WRITE A FULL ENGAGING CAPTION - do NOT just repeat the content idea or title. Create an original caption. Max 400 chars, max 3 hashtags.`;
+postAim = overall aim for image gen. header = main headline (not "Step 1"). imageTextOnImage = 2–5 lines, up to 250 chars per slide. visualAdvice = DETAILED scene (2–4 sentences per page). igCaption = WRITE A FULL CAPTION 250–400 chars: hook + emoji bullets + value + CTA + hashtags. Do NOT be minimal.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;
