@@ -216,7 +216,7 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
 
-Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). visualAdvice = DETAILED scene for image gen (2–4 sentences: composition, lighting, text placement, style), aspect {{aspectNote}}. igCaption = WRITE A FULL CAPTION 250–400 chars: hook line + 2–3 emoji bullet points + value + soft CTA + 2–3 hashtags. Do NOT be minimal—aim for full length.`;
+Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DETAILED scene for image gen (2–4 sentences: composition, lighting, text placement, style), aspect {{aspectNote}}. igCaption = COMPREHENSIVE caption 250–400 chars: hook + full storytelling (key info from post) + CTA to save/share + hashtags. The caption should stand alone and make readers want to save and share.`;
 
 const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Be DETAILED—header, imageTextOnImage (up to 250 chars/slide), and visualAdvice (2–4 sentences per page) must be substantive.
 
@@ -239,10 +239,10 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
     { "pageIndex": 1, "header": "Concrete headline (e.g. 5 Mistakes That Kill Your Growth)", "imageTextOnImage": "Full text 2–5 lines (use \\n for breaks)", "visualAdvice": "DETAILED scene: composition, lighting, text placement, style (2–4 sentences)" },
     ...
   ],
-  "igCaption": "FULL caption 250–400 chars: hook + emoji bullets + value + CTA + hashtags."
+  "igCaption": "COMPREHENSIVE caption 250–400 chars: hook + full storytelling (key info from post) + CTA to save/share + hashtags."
 }
 
-postAim = overall aim for image gen. header = main headline (not "Step 1"). imageTextOnImage = 2–5 lines, up to 250 chars per slide. visualAdvice = DETAILED scene (2–4 sentences per page). igCaption = WRITE A FULL CAPTION 250–400 chars: hook + emoji bullets + value + CTA + hashtags. Do NOT be minimal.`;
+postAim = overall aim for image gen. header = main headline (not "Step 1"). imageTextOnImage = 2–5 lines, up to 250 chars per slide. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = DETAILED scene (2–4 sentences per page). igCaption = COMPREHENSIVE caption 250–400 chars: hook + full storytelling (key info from post) + CTA to save/share + hashtags. The caption should stand alone and make readers want to save and share.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;

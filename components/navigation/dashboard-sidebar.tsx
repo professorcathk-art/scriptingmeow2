@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const navItems = [
+const navItemsBase = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/brand-spaces", label: "Brand Spaces" },
   { href: "/create-post", label: "Create Post" },
@@ -18,6 +18,22 @@ const navItems = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [discoverCount, setDiscoverCount] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/discover/count")
+      .then((r) => r.json())
+      .then((d) => setDiscoverCount(d.count ?? 0))
+      .catch(() => {});
+  }, []);
+
+  const navItems = discoverCount > 50
+    ? [
+        { href: "/dashboard", label: "Dashboard" },
+        { href: "/discover", label: "Discover" },
+        ...navItemsBase.slice(1),
+      ]
+    : navItemsBase;
 
   return (
     <aside

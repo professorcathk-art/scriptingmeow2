@@ -12,7 +12,11 @@ const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 export interface GenerateImageOptions {
   /** Aspect ratio: "1:1", "4:5", "9:16", etc. Default 1:1 for square. */
   aspectRatio?: string;
-  /** Up to 3 reference image URLs for style guidance. */
+  /** Style reference URLs—colors, composition, mood. Used for visual guidance only. */
+  styleReferenceUrls?: string[];
+  /** Important asset URLs—images that MUST appear in the output (portraits, products, etc.). */
+  importantAssetUrls?: string[];
+  /** @deprecated Use styleReferenceUrls + importantAssetUrls */
   referenceImageUrls?: string[];
 }
 
@@ -36,22 +40,31 @@ async function generateWithModel(
   prompt: string,
   aspectRatio: string,
   apiKey: string,
-  referenceImageUrls: string[] = []
+  styleRefUrls: string[] = [],
+  importantUrls: string[] = []
 ): Promise<Buffer | null> {
   const url = `${API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
   const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
 
-  for (let i = 0; i < Math.min(referenceImageUrls.length, 3); i++) {
-    const part = await fetchImagePart(referenceImageUrls[i]);
+  const allUrls = [...styleRefUrls, ...importantUrls].slice(0, 5);
+  for (let i = 0; i < allUrls.length; i++) {
+    const part = await fetchImagePart(allUrls[i]);
     if (part) parts.push(part);
   }
 
-  const styleInstruction =
-    parts.length > 0
-      ? "Reference images: These can be style references, logos, or real assets to include in the image. Use them as the user intends—logos exactly as provided, assets to incorporate, or style/color guidance. Generate an image matching the prompt below.\n\n"
-      : "";
-  parts.push({ text: styleInstruction + prompt });
+  let instruction = "";
+  if (styleRefUrls.length > 0 || importantUrls.length > 0) {
+    const instrParts: string[] = [];
+    if (styleRefUrls.length > 0) {
+      instrParts.push(`Style reference images (first ${styleRefUrls.length}): Use for colors, composition, mood, and visual style. Do NOT copy them literally—derive the aesthetic.`);
+    }
+    if (importantUrls.length > 0) {
+      instrParts.push(`Important asset images (last ${importantUrls.length}): These MUST appear inside the generated image. Incorporate them exactly—e.g. portraits, product photos, or business assets that cannot be replaced.`);
+    }
+    instruction = `Reference images: ${instrParts.join(" ")}\n\n`;
+  }
+  parts.push({ text: instruction + prompt });
 
   const body: Record<string, unknown> = {
     contents: [{ parts }],
@@ -105,12 +118,13 @@ export async function generateImageWithNanoBanana(
   }
 
   const aspectRatio = options.aspectRatio ?? "1:1";
-  const referenceImageUrls = options.referenceImageUrls ?? [];
+  const styleRefUrls = options.styleReferenceUrls ?? options.referenceImageUrls ?? [];
+  const importantUrls = options.importantAssetUrls ?? [];
 
-  const buffer = await generateWithModel(MODEL_PRO, prompt, aspectRatio, apiKey, referenceImageUrls);
+  const buffer = await generateWithModel(MODEL_PRO, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls);
   if (buffer) return buffer;
 
-  const fallback = await generateWithModel(MODEL_FLASH, prompt, aspectRatio, apiKey, referenceImageUrls);
+  const fallback = await generateWithModel(MODEL_FLASH, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls);
   if (fallback) return fallback;
 
   console.warn("[nano-banana] Both models failed");

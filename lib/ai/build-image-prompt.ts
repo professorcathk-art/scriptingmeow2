@@ -178,7 +178,9 @@ export function buildImagePrompt(options: {
   const textOnImage = stripMarkdown(rawText);
   if (textOnImage) {
     const escaped = textOnImage.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-    basePrompt += `\n\nEXACT TEXT TO RENDER (CRITICAL): Render the following text perfectly, with zero typos. Do NOT render markdown tags like #, ##, ###, or **. Preserve line breaks as given. Use typographic hierarchy appropriate to the content:\n"${escaped}"`;
+    basePrompt += `\n\nEXACT TEXT TO RENDER (CRITICAL): Render the following text perfectly, with zero typos. Do NOT render markdown tags like #, ##, ###, or **. Preserve line breaks as given.
+TEXT HIERARCHY LABELS (interpret these—do NOT render the labels literally): 主標題： = main headline (largest, boldest). 副標題： = subheadline (medium weight). 內文： = body text (smaller, readable). 大標題： = main title. 小標題： = subheadline. Apply the correct typographic hierarchy to each line based on its label.
+Text to render:\n"${escaped}"`;
   }
 
   return basePrompt + FINAL_DESIGN_COMMANDS;

@@ -121,7 +121,7 @@ export type CarouselDraftOutput = {
   postAim?: string;
 };
 
-/** Strip markdown formatting so it never appears on the image. */
+/** Strip markdown formatting so it never appears on the image. Keep hierarchy labels (主標題：, 副標題：, 內文：) — the image generator understands them. */
 function stripMarkdownFromText(s: string): string {
   return String(s || "")
     .replace(/^#+\s*/gm, "")
@@ -327,7 +327,8 @@ export async function generateBrandbook(
 4. **Typography**: Font style, weights, hierarchy you see.
 5. **Layout**: Text placement, spacing, image-to-text ratio.
 6. **Ignore** status bars, navigation, UI chrome—focus only on post content.
-7. **Do NOT** output generic content. Every field must reflect the visual language of the provided images.`
+7. **Do NOT** output generic content. Every field must reflect the visual language of the provided images.
+8. **Translate subjects into reusable principles**: When a sample shows a specific subject (e.g. sculpture, character, product), extract the HOW it is presented—composition, lighting, style, mood, texture—and write that as a principle that can apply to different subjects. Example: a sculpture in one sample → "3D objects or tangible focal points with dramatic side lighting and clean negative space" (not "include a sculpture"). A mascot character → "approachable character illustrations with soft expressions and [specific art style]" (not "a tuxedo cat"). The brandbook must be specific enough to guide image generation, but written as principles so different post topics can use the same style.`
     : "## No Reference Images\nCreate a cohesive, highly specific visual system. No generic phrases—every detail must be concrete and usable for image generation.";
 
   const prompt = getBrandbookPrompt({

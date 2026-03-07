@@ -126,7 +126,9 @@ export function CreatePostForm({
   });
   const [referenceImages, setReferenceImages] = useState<{ id: string; image_url: string }[]>([]);
   const [selectedSampleUrls, setSelectedSampleUrls] = useState<string[]>([]);
+  const [importantAssetUrls, setImportantAssetUrls] = useState<string[]>([]);
   const [sampleUploading, setSampleUploading] = useState(false);
+  const [importantAssetUploading, setImportantAssetUploading] = useState(false);
   const [referenceImageUrls, setReferenceImageUrls] = useState<string[]>([]);
   const [referenceText, setReferenceText] = useState("");
   const [referenceUploading, setReferenceUploading] = useState(false);
@@ -145,6 +147,7 @@ export function CreatePostForm({
           selectedDraftIndex,
           carouselPages,
           selectedSampleUrls,
+          importantAssetUrls,
           referenceImageUrls,
           referenceText,
         })
@@ -152,7 +155,7 @@ export function CreatePostForm({
     } catch {
       // ignore
     }
-  }, [formData, step, draftVariations, selectedDraftIndex, carouselPages, selectedSampleUrls, referenceImageUrls, referenceText]);
+  }, [formData, step, draftVariations, selectedDraftIndex, carouselPages, selectedSampleUrls, importantAssetUrls, referenceImageUrls, referenceText]);
 
   const saveDraftAndSetStep = useCallback(
     (nextStep: 1 | 2 | 3) => {
@@ -285,6 +288,7 @@ export function CreatePostForm({
           if (typeof data.selectedDraftIndex === "number") setSelectedDraftIndex(data.selectedDraftIndex as 0 | 1);
           if (Array.isArray(data.carouselPages)) setCarouselPages(data.carouselPages);
           if (Array.isArray(data.selectedSampleUrls)) setSelectedSampleUrls(data.selectedSampleUrls);
+          if (Array.isArray(data.importantAssetUrls)) setImportantAssetUrls(data.importantAssetUrls);
           if (Array.isArray(data.referenceImageUrls)) setReferenceImageUrls(data.referenceImageUrls);
           if (typeof data.referenceText === "string") setReferenceText(data.referenceText);
         }
@@ -360,6 +364,32 @@ export function CreatePostForm({
     } finally {
       setReferenceUploading(false);
     }
+  };
+
+  const handleUploadImportantAssets = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const valid = Array.from(files).filter((f) => f.size <= 10 * 1024 * 1024 && /\.(png|jpe?g|webp)$/i.test(f.name)).slice(0, 5);
+    if (valid.length === 0) {
+      alert("Upload images (PNG/JPG/WebP). Max 10MB per file, up to 5.");
+      return;
+    }
+    setImportantAssetUploading(true);
+    try {
+      const fd = new FormData();
+      valid.forEach((f) => fd.append("files", f));
+      const res = await fetch("/api/upload/references", { method: "POST", body: fd });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setImportantAssetUrls((prev) => [...prev, ...(data.imageUrls ?? [])].slice(0, 5));
+    } catch {
+      alert("Upload failed");
+    } finally {
+      setImportantAssetUploading(false);
+    }
+  };
+
+  const removeImportantAsset = (url: string) => {
+    setImportantAssetUrls((prev) => prev.filter((u) => u !== url));
   };
 
   const removeReferenceImage = (url: string) => {
@@ -519,6 +549,7 @@ export function CreatePostForm({
                 : (draftVariations?.[selectedDraftIndex] as { pages?: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[] })?.pages
               : undefined,
           selectedSampleImageUrls: selectedSampleUrls,
+          importantAssetUrls: importantAssetUrls,
           referenceImageUrls,
         }),
       });
@@ -685,7 +716,7 @@ export function CreatePostForm({
               onClick={() =>
                 setFormData({ ...formData, postType: "single-image" })
               }
-              className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col items-start gap-3 ${
+              className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col items-center gap-3 w-full ${
                 formData.postType === "single-image"
                   ? "border-violet-500 bg-violet-500/10 shadow-[0_0_30px_-5px_rgba(139,92,246,0.4)]"
                   : "border-white/10 bg-zinc-800/30 hover:border-white/20"
@@ -706,7 +737,7 @@ export function CreatePostForm({
             <button
               type="button"
               onClick={() => setFormData({ ...formData, postType: "carousel" })}
-              className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col items-start gap-3 ${
+              className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col items-center gap-3 w-full ${
                 formData.postType === "carousel"
                   ? "border-violet-500 bg-violet-500/10 shadow-[0_0_30px_-5px_rgba(139,92,246,0.4)]"
                   : "border-white/10 bg-zinc-800/30 hover:border-white/20"
@@ -748,7 +779,7 @@ export function CreatePostForm({
                     format: format.value as PostFormat,
                   })
                 }
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
+                className={`p-4 rounded-xl border-2 transition-all text-center flex flex-col items-center ${
                   formData.format === format.value
                     ? "border-violet-500 bg-violet-500/10 text-zinc-100"
                     : "border-white/10 bg-zinc-800/30 text-zinc-400 hover:border-white/20"
@@ -935,56 +966,51 @@ export function CreatePostForm({
           <label className="block text-sm font-medium text-zinc-400 mb-2">
             Describe the post you want to create *
           </label>
-          <div className="mb-2 space-y-2">
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
-              <span className="text-xs text-zinc-500 shrink-0">Idea Bank:</span>
-              {postIdeas.length > 0 ? (
-                <select
-                  className="px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                  value=""
-                  onChange={(e) => {
-                    const opt = e.target.value;
-                    if (opt) {
-                      const idea = postIdeas.find((i) => i.id === opt);
-                      if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
-                    }
-                  }}
-                >
-                  <option value="">— Select —</option>
-                  {postIdeas.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.content.slice(0, 60)}{i.content.length > 60 ? "…" : ""}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-xs text-zinc-500">
-                  No ideas. <a href="/library" className="text-violet-400 hover:text-violet-300">Add in Library</a>
-                </span>
-              )}
-              {rssIdeas.length > 0 && (
-                <>
-                  <span className="text-xs text-zinc-500 shrink-0">RSS:</span>
-                  <select
-                    className="px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                    value=""
-                    onChange={(e) => {
-                      const opt = e.target.value;
-                      if (opt) {
-                        const idea = rssIdeas.find((i) => i.id === opt);
-                        if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
-                      }
-                    }}
-                  >
-                    <option value="">— Select —</option>
-                    {rssIdeas.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {(i.title || i.content).slice(0, 60)}{(i.title || i.content).length > 60 ? "…" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </>
-              )}
+          <p className="text-sm text-zinc-500 mb-3">
+            Import content from Idea Bank or RSS feed, or type below.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 mb-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-zinc-400 mb-1">Idea Bank</label>
+              <select
+                className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                value=""
+                onChange={(e) => {
+                  const opt = e.target.value;
+                  if (opt) {
+                    const idea = postIdeas.find((i) => i.id === opt);
+                    if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
+                  }
+                }}
+              >
+                <option value="">— Select —</option>
+                {postIdeas.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.content.slice(0, 60)}{i.content.length > 60 ? "…" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-zinc-400 mb-1">RSS Feed</label>
+              <select
+                className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                value=""
+                onChange={(e) => {
+                  const opt = e.target.value;
+                  if (opt) {
+                    const idea = rssIdeas.find((i) => i.id === opt);
+                    if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
+                  }
+                }}
+              >
+                <option value="">— Select —</option>
+                {rssIdeas.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {(i.title || i.content).slice(0, 60)}{(i.title || i.content).length > 60 ? "…" : ""}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <textarea
@@ -1068,7 +1094,7 @@ export function CreatePostForm({
                 onClick={() =>
                   setFormData({ ...formData, contentFramework: value })
                 }
-                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                className={`p-4 rounded-xl border-2 text-center transition-all flex flex-col items-center ${
                   formData.contentFramework === value
                     ? "border-indigo-500 bg-indigo-500/20 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
                     : "border-white/10 hover:border-indigo-500/30 hover:bg-zinc-800/50"
@@ -1096,7 +1122,7 @@ export function CreatePostForm({
                 onClick={() =>
                   setFormData({ ...formData, postStyle: value })
                 }
-                className={`p-4 rounded-xl border-2 text-left transition-all hover:border-indigo-500/50 hover:bg-zinc-800/50 ${
+                className={`p-4 rounded-xl border-2 text-center transition-all hover:border-indigo-500/50 hover:bg-zinc-800/50 flex flex-col items-center ${
                   formData.postStyle === value
                     ? "border-indigo-500 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.2)]"
                     : "border-white/10 bg-zinc-800/20"
@@ -1338,8 +1364,11 @@ export function CreatePostForm({
           {formData.brandSpaceId && (
             <div>
               <label className="block text-sm font-medium text-zinc-400 mb-2">
-                Sample Photos (optional, up to 5) — Style reference for image generation
+                Sample Photos for Post style (optional, up to 5)
               </label>
+              <p className="text-xs text-zinc-500 mb-2">
+                Reference images for the style of the generated image (colors, composition, mood).
+              </p>
               <p className="text-xs text-violet-400 font-medium mb-2">
                 {selectedSampleUrls.length}/5 selected
               </p>
@@ -1440,6 +1469,53 @@ export function CreatePostForm({
               </p>
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Important Assets (optional, up to 5)
+            </label>
+            <p className="text-xs text-zinc-500 mb-2">
+              Images that MUST appear inside the generated image—e.g. portraits, product photos, or business assets that AI cannot produce.
+            </p>
+            <div className="flex flex-wrap gap-3 items-center">
+              {importantAssetUrls.map((url) => (
+                <div key={url} className="relative group">
+                  <img
+                    src={url}
+                    alt="Asset"
+                    className="w-20 h-20 object-cover rounded-xl border-2 border-violet-500/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImportantAsset(url)}
+                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500/80 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {importantAssetUrls.length < 5 && (
+                <label className="w-20 h-20 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center cursor-pointer hover:border-violet-500/50 hover:bg-white/5 transition-all shrink-0">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      handleUploadImportantAssets(e.target.files);
+                      e.target.value = "";
+                    }}
+                    disabled={importantAssetUploading}
+                  />
+                  {importantAssetUploading ? (
+                    <span className="text-zinc-500 text-xs">...</span>
+                  ) : (
+                    <span className="text-2xl text-zinc-500">+</span>
+                  )}
+                </label>
+              )}
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">

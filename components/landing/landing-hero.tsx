@@ -15,9 +15,10 @@ interface PublicDesign {
 interface LandingHeroProps {
   isAuthenticated?: boolean;
   publicDesigns?: PublicDesign[];
+  publicDesignCount?: number;
 }
 
-export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: LandingHeroProps) {
+export function LandingHero({ isAuthenticated = false, publicDesigns = [], publicDesignCount = 0 }: LandingHeroProps) {
   const [scratchInput, setScratchInput] = useState("");
   const [selectedStyle, setSelectedStyle] = useState<typeof LANDING_STYLES[0] | null>(null);
 
@@ -71,7 +72,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: Lan
       </header>
 
       {/* Hero Section */}
-      <section className="text-center max-w-3xl mx-auto mb-16">
+      <section className="text-center max-w-4xl mx-auto mb-16">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-tight">
           Designer-quality Instagram posts{" "}
           <span
@@ -84,7 +85,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: Lan
             in seconds.
           </span>
         </h1>
-        <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+        <p className="text-lg text-zinc-400 max-w-3xl mx-auto">
           Skip the blank canvas. Tell us your brand name below or steal a winning
           aesthetic from our gallery, and let AI generate your first complete post
           instantly.
@@ -92,7 +93,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: Lan
       </section>
 
       {/* CTA - before Steal a Style */}
-      <section className="max-w-2xl mx-auto w-full mb-16">
+      <section className="max-w-3xl mx-auto w-full mb-16">
         <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
           <div className="flex flex-col sm:flex-row gap-3">
             <input
@@ -100,7 +101,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: Lan
               value={scratchInput}
               onChange={(e) => setScratchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleStartFromScratch()}
-              placeholder="e.g. Acme Coffee, Luna Skincare..."
+              placeholder="Type your brandname to get started"
               className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-violet-500/50 transition-all shadow-inner"
             />
             <button
@@ -190,7 +191,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: Lan
             </Link>
           ))}
         </div>
-        {publicDesigns.length > 0 && (
+        {publicDesignCount > 50 && (
           <div className="mt-6 text-center">
             <Link
               href="/discover"

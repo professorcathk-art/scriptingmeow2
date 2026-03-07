@@ -28,8 +28,15 @@ export default async function HomePage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   let publicDesigns: { id: string; image_url: string; content_idea?: string }[] = [];
+  let publicDesignCount = 0;
   try {
     const admin = createAdminClient();
+    const { count } = await admin
+      .from("generated_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("is_public_gallery", true)
+      .eq("status", "saved");
+    publicDesignCount = count ?? 0;
     const { data } = await admin
       .from("generated_posts")
       .select("id, visual_url, carousel_urls, content_idea")
@@ -58,7 +65,7 @@ export default async function HomePage() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_80%_0%,rgba(6,182,212,0.08),transparent)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_20%_50%,rgba(236,72,153,0.06),transparent)] pointer-events-none" />
       <div className="relative z-10">
-        <LandingHero isAuthenticated={!!user} publicDesigns={publicDesigns} />
+        <LandingHero isAuthenticated={!!user} publicDesigns={publicDesigns} publicDesignCount={publicDesignCount} />
         <LandingLogoCloud />
         <LandingDemoSection />
         <LandingHowItWorks />

@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     confirmedCaption,
     postAim,
     selectedSampleImageUrls,
+    importantAssetUrls,
     referenceImageUrls,
   } = body as {
     brandSpaceId?: string;
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
     confirmedCaption?: { hook: string; body: string; cta: string; hashtags: string[] };
     postAim?: string;
     selectedSampleImageUrls?: string[];
+    importantAssetUrls?: string[];
     referenceImageUrls?: string[];
   };
 
@@ -259,7 +261,7 @@ export async function POST(request: Request) {
     const logoUrlForRef = brandSpace?.logo_url && (brandSpace as { logo_placement?: string | null })?.logo_placement && (brandSpace as { logo_placement?: string }).logo_placement !== "none"
       ? [brandSpace.logo_url]
       : [];
-    const sampleUrls = [
+    const styleRefUrls = [
       ...logoUrlForRef,
       ...(Array.isArray(referenceImageUrls)
         ? referenceImageUrls.slice(0, 3).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
@@ -268,6 +270,9 @@ export async function POST(request: Request) {
         ? selectedSampleImageUrls.slice(0, 5).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
         : []),
     ].slice(0, 5);
+    const importantUrls = Array.isArray(importantAssetUrls)
+      ? importantAssetUrls.slice(0, 5).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
+      : [];
 
     let visualUrl: string;
     let carouselUrls: string[] = [];
@@ -295,7 +300,8 @@ export async function POST(request: Request) {
         });
         const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
           aspectRatio,
-          referenceImageUrls: sampleUrls,
+          styleReferenceUrls: styleRefUrls,
+          importantAssetUrls: importantUrls,
         });
         const pageUrl =
           imageBuffer
@@ -327,7 +333,8 @@ export async function POST(request: Request) {
       });
       const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
         aspectRatio,
-        referenceImageUrls: sampleUrls,
+        styleReferenceUrls: styleRefUrls,
+        importantAssetUrls: importantUrls,
       });
 
       if (imageBuffer) {
