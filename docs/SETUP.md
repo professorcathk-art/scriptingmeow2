@@ -55,7 +55,15 @@ The “Functions cannot be passed to Client Components” error was fixed by mov
 
 ---
 
-## 5. Stripe Customer Portal (Billing Management)
+## 5. Stripe Redirect / Login Issue
+
+If users must log in again after returning from Stripe (checkout or portal):
+
+1. **NEXT_PUBLIC_SITE_URL** – Must match your app URL exactly (e.g. `https://designermeow.com`). No trailing slash.
+2. **Same domain** – success_url and cancel_url must use the same domain as the app.
+3. **Supabase** – In Supabase Dashboard → Authentication → URL Configuration, add your app URL to Redirect URLs.
+
+## 6. Stripe Customer Portal (Billing Management)
 
 The billing page includes a **Manage billing** button that opens Stripe Customer Portal. Users can:
 
@@ -70,6 +78,10 @@ The billing page includes a **Manage billing** button that opens Stripe Customer
 3. Set **Return URL** to `https://your-domain.com/billing` (or your app URL)
 
 No extra API setup needed – the portal uses your Stripe secret key. Ensure `stripe_customer_id` is set on the user (happens automatically on first checkout).
+
+### Upgrade with Proration (補差價)
+
+For Basic → Pro upgrades, Stripe automatically prorates: the customer is charged the difference for the remaining billing period. The app uses `/api/billing/upgrade` for existing subscribers (subscription update) and `/api/checkout` for new subscriptions (free users).
 
 ---
 

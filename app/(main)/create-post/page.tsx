@@ -117,6 +117,7 @@ export default async function CreatePostPage({
         prefillFromTryStyle={prefillFromTryStyle}
         prefillIdeaContent={prefillIdeaContent}
         postIdeas={postIdeas ?? []}
+        skipDraftRestore={!editPost && !prefillFromTryStyle}
       />
     </div>
   );

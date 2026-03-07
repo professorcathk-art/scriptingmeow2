@@ -14,7 +14,7 @@ type PolishField = "targetAudiences" | "painPoints" | "desiredOutcomes" | "value
 const POLISH_FIELD_LABELS: Record<PolishField, string> = {
   targetAudiences: "Target Audiences",
   painPoints: "Audience Pain Points",
-  desiredOutcomes: "Desired Outcomes",
+  desiredOutcomes: "Audiences Desired Outcomes",
   valueProposition: "Value Proposition",
 };
 
@@ -23,6 +23,8 @@ export function CreateBrandSpaceForm() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [selectedLibraryUrls, setSelectedLibraryUrls] = useState<string[]>([]);
+  const [libraryRefs, setLibraryRefs] = useState<{ id: string; image_url: string }[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [polishField, setPolishField] = useState<PolishField | null>(null);
@@ -52,6 +54,15 @@ export function CreateBrandSpaceForm() {
       // ignore
     }
   }, []);
+
+  useEffect(() => {
+    if (step === 3) {
+      fetch("/api/library/references")
+        .then((r) => r.json())
+        .then((data) => setLibraryRefs(data.references ?? []))
+        .catch(() => setLibraryRefs([]));
+    }
+  }, [step]);
 
   const saveDraftAndSetStep = (nextStep: 1 | 2 | 3) => {
     try {
@@ -157,7 +168,7 @@ export function CreateBrandSpaceForm() {
       <form onSubmit={(e) => { e.preventDefault(); saveDraftAndSetStep(2); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-zinc-400 mb-2">
-            Brand Name *
+            What is your brand name? *
           </label>
           <input
             type="text"
@@ -172,7 +183,7 @@ export function CreateBrandSpaceForm() {
 
         <div>
           <label htmlFor="brandType" className="block text-sm font-medium text-zinc-400 mb-2">
-            Brand Type *
+            What type of brand is this? *
           </label>
           <select
             id="brandType"
@@ -235,7 +246,7 @@ export function CreateBrandSpaceForm() {
 
         <div>
           <label htmlFor="targetAudiences" className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
-            Target Audiences *
+            Who do you want to reach? *
             <TipIcon fieldKey="targetAudiences" />
           </label>
           <textarea
@@ -259,7 +270,7 @@ export function CreateBrandSpaceForm() {
 
         <div>
           <label htmlFor="painPoints" className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
-            Audience Pain Points *
+            What problems does your audience face? *
             <TipIcon fieldKey="painPoints" />
           </label>
           <textarea
@@ -283,7 +294,7 @@ export function CreateBrandSpaceForm() {
 
         <div>
           <label htmlFor="desiredOutcomes" className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
-            Desired Outcomes *
+            What outcomes do your audiences desire? *
             <TipIcon fieldKey="desiredOutcomes" />
           </label>
           <textarea
@@ -307,7 +318,7 @@ export function CreateBrandSpaceForm() {
 
         <div>
           <label htmlFor="valueProposition" className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
-            Value Proposition *
+            What makes your brand unique and valuable? *
             <TipIcon fieldKey="valueProposition" />
           </label>
           <textarea
@@ -388,7 +399,8 @@ export function CreateBrandSpaceForm() {
       setUploading(true);
       if (logoFile) {
         const logoFd = new FormData();
-        logoFd.append("file", logoFile);
+        const compressedLogo = await compressImageForUpload(logoFile);
+        logoFd.append("file", compressedLogo);
         const logoRes = await fetch(`/api/brand-spaces/${brandSpaceId}/logo`, {
           method: "POST",
           body: logoFd,
@@ -409,12 +421,30 @@ export function CreateBrandSpaceForm() {
           }
         }
       }
+      if (selectedLibraryUrls.length > 0) {
+        const urlRes = await fetch(`/api/brand-spaces/${brandSpaceId}/images-from-urls`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ urls: selectedLibraryUrls }),
+        });
+        if (!urlRes.ok) console.warn("Failed to add library images");
+      }
       setUploading(false);
 
       clearDraft();
       if (data.brandDetails) {
         sessionStorage.setItem(`brandDetails_${brandSpaceId}`, JSON.stringify(data.brandDetails));
       }
+      const genRes = await fetch("/api/brandbooks/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandSpaceId, brandDetails: data.brandDetails ?? null }),
+      });
+      if (!genRes.ok) {
+        const errData = await genRes.json().catch(() => ({}));
+        throw new Error(errData.details || errData.error || "Failed to generate brandbook");
+      }
+      router.refresh();
       router.push(`/brand-spaces/${brandSpaceId}/brandbook`);
     } catch (error) {
       console.error("Error creating brand space:", error);
@@ -455,10 +485,39 @@ export function CreateBrandSpaceForm() {
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-4">Upload Reference Images (Optional)</h2>
+        <h2 className="text-xl font-semibold mb-2">Upload Reference Images (Optional)</h2>
         <p className="text-sm text-zinc-400 mb-4">
-          Upload 3-10 of your past IG posts or target style references for better results.
+          Upload 3-10 of your past IG posts or target style references. Or choose from your Library.
         </p>
+        {libraryRefs.length > 0 && (
+          <div className="mb-4 p-4 rounded-xl bg-zinc-800/50 border border-white/10">
+            <p className="text-sm font-medium text-zinc-300 mb-2">Choose from Library</p>
+            <div className="flex flex-wrap gap-2">
+              {libraryRefs.slice(0, 12).map((ref) => {
+                const isSelected = selectedLibraryUrls.includes(ref.image_url);
+                return (
+                  <button
+                    key={ref.id}
+                    type="button"
+                    onClick={() =>
+                      setSelectedLibraryUrls((prev) =>
+                        isSelected ? prev.filter((u) => u !== ref.image_url) : [...prev, ref.image_url]
+                      )
+                    }
+                    className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                      isSelected ? "border-violet-500 ring-2 ring-violet-500/50" : "border-white/10 hover:border-violet-500/50"
+                    }`}
+                  >
+                    <img src={ref.image_url} alt="" className="w-full h-full object-cover" />
+                    {isSelected && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-violet-500/30 text-white text-lg">✓</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div
           className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center transition-colors hover:border-violet-500/30"
           onDragOver={(e) => {
@@ -536,7 +595,7 @@ export function CreateBrandSpaceForm() {
           disabled={loading || uploading}
           className="flex-1 px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
-          {uploading ? "Uploading images..." : loading ? "Creating..." : "Create Brand Space"}
+          {uploading ? "Uploading..." : loading ? "Generating brandbook..." : "Generate Brandbook with AI"}
         </button>
       </div>
     </form>

@@ -5,6 +5,8 @@ import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
 import { BillingCheckoutButton } from "@/components/billing/billing-checkout-button";
 import { BillingPortalButton } from "@/components/billing/billing-portal-button";
+import { BillingReturnHandler } from "@/components/billing/billing-return-handler";
+import { DeleteAccountButton } from "@/components/billing/delete-account-button";
 import { SignOutButton } from "./sign-out-button";
 
 function CheckIcon() {
@@ -88,6 +90,7 @@ export default async function BillingPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      <BillingReturnHandler />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 mb-2">
@@ -100,10 +103,17 @@ export default async function BillingPage() {
             {user.email}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {userProfile.stripe_customer_id && (
+            <BillingPortalButton
+              className="px-4 py-2.5 rounded-xl border-2 border-violet-500/50 text-violet-300 hover:bg-violet-500/20 hover:border-violet-500/70 transition-colors text-sm font-medium"
+            >
+              Manage billing
+            </BillingPortalButton>
+          )}
           <Link
             href="/support"
-            className="px-4 py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/5 transition-colors text-sm"
+            className="px-4 py-2.5 rounded-xl border-2 border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-500/70 transition-colors text-sm font-medium"
           >
             Support
           </Link>
@@ -134,7 +144,7 @@ export default async function BillingPage() {
           </div>
           <div className="flex items-center gap-3">
             {userProfile.stripe_customer_id && (
-              <BillingPortalButton className="px-4 py-2 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 transition-colors text-sm">
+              <BillingPortalButton className="px-4 py-2.5 rounded-xl border-2 border-violet-500/50 text-violet-300 hover:bg-violet-500/20 transition-colors text-sm font-medium">
                 Manage billing
               </BillingPortalButton>
             )}
@@ -148,6 +158,14 @@ export default async function BillingPage() {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="bg-zinc-900/50 rounded-2xl border border-red-500/20 p-6">
+        <h2 className="text-xl font-semibold text-zinc-100 mb-2">Danger zone</h2>
+        <p className="text-sm text-zinc-400 mb-4">
+          Permanently delete your account and all data. This cannot be undone.
+        </p>
+        <DeleteAccountButton />
       </div>
 
       <div>

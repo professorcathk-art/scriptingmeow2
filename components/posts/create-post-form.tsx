@@ -19,6 +19,7 @@ interface CreatePostFormProps {
   brandSpaces: BrandSpace[];
   userCredits: number;
   planTier: PlanTier;
+  skipDraftRestore?: boolean;
   editPost?: {
     id: string;
     brand_space_id: string;
@@ -68,6 +69,7 @@ export function CreatePostForm({
   prefillFromTryStyle,
   prefillIdeaContent,
   postIdeas = [],
+  skipDraftRestore = false,
 }: CreatePostFormProps) {
   const router = useRouter();
   const creditsCtx = useCredits();
@@ -189,12 +191,15 @@ export function CreatePostForm({
   useEffect(() => {
     if (prefillIdeaContent) {
       setFormData((prev) => ({ ...prev, contentIdea: prefillIdeaContent }));
-      setStep(2);
     }
   }, [prefillIdeaContent]);
 
   useEffect(() => {
     if (prefillFromTryStyle) return;
+    if (skipDraftRestore) {
+      clearPostDraft();
+      return;
+    }
     if (editPost) {
       const draft = editPost.draft_data as { visualAdvice?: string; imageTextOnImage?: string; carouselPages?: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[] } | null;
       const cap = editPost.caption as { igCaption?: string };
@@ -237,7 +242,7 @@ export function CreatePostForm({
     } catch {
       // ignore
     }
-  }, [editPost, prefillFromTryStyle]);
+  }, [editPost, prefillFromTryStyle, skipDraftRestore, clearPostDraft]);
 
   const fetchReferenceImages = useCallback(() => {
     if (!formData.brandSpaceId) return;

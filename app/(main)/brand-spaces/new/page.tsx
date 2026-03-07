@@ -7,7 +7,7 @@ export default function NewBrandSpacePage() {
         Create New Brand Space
       </h1>
       <p className="text-zinc-400 mb-6">
-        Step 1: The Vibe → Step 2: The Audience → Step 3: Visual References
+        This helps ensure your posts serve your purpose. It&apos;s the first step of creating a social media post.
       </p>
       <CreateBrandSpaceForm />
     </div>

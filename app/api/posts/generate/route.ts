@@ -223,7 +223,7 @@ export async function POST(request: Request) {
         visual_url: null,
         carousel_urls: isCarousel ? [] : undefined,
         caption,
-        status: "generated",
+        status: "saved",
         credits_used: creditsNeeded,
         draft_data: draftData,
       })

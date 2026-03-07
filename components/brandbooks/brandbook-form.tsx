@@ -173,6 +173,7 @@ export function BrandbookForm({
 
       const data = await response.json();
       setBrandbook(data);
+      router.refresh();
     } catch (error) {
       console.error("Error generating brandbook:", error);
       alert("Failed to generate brandbook. Please try again.");
@@ -199,6 +200,7 @@ export function BrandbookForm({
         throw new Error("Failed to save brandbook");
       }
 
+      router.refresh();
       router.push(`/brand-spaces/${brandSpaceId}`);
     } catch (error) {
       console.error("Error saving brandbook:", error);
@@ -224,7 +226,7 @@ export function BrandbookForm({
             <img
               src={logoUrl}
               alt="Brand logo"
-              className="w-16 h-16 object-contain rounded-lg border border-white/10"
+              className="w-20 h-20 object-contain rounded-lg border border-white/10"
             />
             <div className="flex gap-2">
               <label className="px-4 py-2 rounded-xl bg-white/10 cursor-pointer hover:bg-white/15 text-white text-sm transition-colors">
@@ -290,6 +292,18 @@ export function BrandbookForm({
           <p className="text-sm text-zinc-400 mb-3">
             Upload 3–10 of your past IG posts or style references. AI will analyze them for colors, typography, and art style (e.g. watercolor).
           </p>
+          {referenceImages.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {referenceImages.map((img) => (
+                <img
+                  key={img.id}
+                  src={img.image_url}
+                  alt="Reference"
+                  className="w-16 h-16 object-cover rounded-lg border border-white/10"
+                />
+              ))}
+            </div>
+          )}
           <div
             className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-violet-500/30 transition-colors cursor-pointer"
             onDragOver={(e) => { e.preventDefault(); }}
@@ -371,19 +385,6 @@ export function BrandbookForm({
 
         <div className="space-y-6">
           {logoSection}
-
-          <div>
-            <h3 className="font-semibold text-zinc-100 mb-2">Brand Personality</h3>
-            <textarea
-              value={brandbook.brand_personality ?? ""}
-              onChange={(e) => {
-                setHasEdited(true);
-                setBrandbook((prev) => (prev ? { ...prev, brand_personality: e.target.value } : prev));
-              }}
-              className={inputClass}
-              rows={3}
-            />
-          </div>
 
           <div>
             <h3 className="font-semibold text-zinc-100 mb-2">Tone of Voice</h3>
