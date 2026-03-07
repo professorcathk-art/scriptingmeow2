@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { AddIdeaForm } from "./add-idea-form";
+import { RssAutofeedTab } from "./rss-autofeed-tab";
 
 type Post = {
   id: string;
@@ -42,6 +43,7 @@ interface LibraryTabsProps {
   references: Reference[];
   postIdeas: PostIdea[];
   brandSpaces: { id: string; name: string }[];
+  planTier?: string;
 }
 
 function FolderIcon() {
@@ -58,6 +60,7 @@ export function LibraryTabs({
   references,
   postIdeas,
   brandSpaces,
+  planTier = "free",
 }: LibraryTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,6 +88,7 @@ export function LibraryTabs({
     { id: "posts", label: "My Posts" },
     { id: "references", label: "References" },
     { id: "ideas", label: "Idea Bank" },
+    ...(planTier !== "free" ? [{ id: "rss", label: "RSS Autofeed" }] : []),
   ];
 
   const handleAddIdea = (idea: PostIdea) => {
@@ -193,6 +197,8 @@ export function LibraryTabs({
           )}
         </>
       )}
+
+      {tab === "rss" && <RssAutofeedTab />}
 
       {tab === "ideas" && (
         <>

@@ -25,6 +25,12 @@ export default async function LibraryPage({
 
   if (!user) redirect("/auth/login");
 
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("plan_tier")
+    .eq("id", user.id)
+    .single();
+
   const { data: brandSpaces } = await supabase
     .from("brand_spaces")
     .select("id, name")
@@ -140,6 +146,7 @@ export default async function LibraryPage({
         references={serializableReferences}
         postIdeas={serializablePostIdeas}
         brandSpaces={serializableBrandSpaces}
+        planTier={userProfile?.plan_tier ?? "free"}
       />
     </div>
   );

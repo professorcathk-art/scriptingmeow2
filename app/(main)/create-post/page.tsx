@@ -5,7 +5,7 @@ import { CreatePostForm } from "@/components/posts/create-post-form";
 export default async function CreatePostPage({
   searchParams,
 }: {
-  searchParams: { edit?: string; styleId?: string; contentIdea?: string; ideaId?: string };
+  searchParams: { edit?: string; styleId?: string; contentIdea?: string; ideaId?: string; rssIdeaId?: string; templateId?: string };
 }) {
   const supabase = await createClient();
   const {
@@ -62,6 +62,12 @@ export default async function CreatePostPage({
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const { data: templates } = await supabase
+    .from("post_templates")
+    .select("id, name, brand_space_id, content_framework, post_style, post_type, format, custom_width, custom_height, carousel_page_count, carousel_pages")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
   const { data: libraryPosts } = await supabase
     .from("generated_posts")
     .select("id, visual_url, carousel_urls, content_idea")
@@ -84,6 +90,43 @@ export default async function CreatePostPage({
       .eq("user_id", user.id)
       .single();
     if (idea) prefillIdeaContent = idea.content;
+  }
+  if (!prefillIdeaContent && searchParams.rssIdeaId) {
+    const { data: rssIdea } = await supabase
+      .from("user_rss_ideas")
+      .select("content")
+      .eq("id", searchParams.rssIdeaId)
+      .eq("user_id", user.id)
+      .single();
+    if (rssIdea) prefillIdeaContent = rssIdea.content;
+  }
+
+  let prefillTemplate: {
+    brandSpaceId: string;
+    contentFramework: string;
+    postStyle: string;
+    postType: string;
+    format: string;
+    customWidth?: number;
+    customHeight?: number;
+    carouselPageCount: number;
+    carouselPages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }>;
+  } | null = null;
+  if (searchParams.templateId && templates?.length) {
+    const t = templates.find((x) => x.id === searchParams.templateId);
+    if (t) {
+      prefillTemplate = {
+        brandSpaceId: t.brand_space_id,
+        contentFramework: t.content_framework ?? "educational-value",
+        postStyle: t.post_style ?? "immersive-photo",
+        postType: t.post_type,
+        format: t.format,
+        customWidth: t.custom_width ?? undefined,
+        customHeight: t.custom_height ?? undefined,
+        carouselPageCount: t.carousel_page_count ?? 3,
+        carouselPages: Array.isArray(t.carousel_pages) ? t.carousel_pages : undefined,
+      };
+    }
   }
 
   if ((!brandSpaces || brandSpaces.length === 0) && !prefillFromTryStyle) {
@@ -116,7 +159,9 @@ export default async function CreatePostPage({
         libraryPosts={libraryPosts ?? []}
         prefillFromTryStyle={prefillFromTryStyle}
         prefillIdeaContent={prefillIdeaContent}
+        prefillTemplate={prefillTemplate}
         postIdeas={postIdeas ?? []}
+        templates={templates ?? []}
         skipDraftRestore={!editPost && !prefillFromTryStyle}
       />
     </div>

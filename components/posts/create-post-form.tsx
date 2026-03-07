@@ -15,11 +15,37 @@ interface LibraryPost {
   content_idea?: string;
 }
 
+type PostTemplate = {
+  id: string;
+  name: string;
+  brand_space_id: string;
+  content_framework?: string;
+  post_style?: string;
+  post_type: string;
+  format: string;
+  custom_width?: number | null;
+  custom_height?: number | null;
+  carousel_page_count?: number | null;
+  carousel_pages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }> | null;
+};
+
 interface CreatePostFormProps {
   brandSpaces: BrandSpace[];
   userCredits: number;
   planTier: PlanTier;
   skipDraftRestore?: boolean;
+  templates?: PostTemplate[];
+  prefillTemplate?: {
+    brandSpaceId: string;
+    contentFramework: string;
+    postStyle: string;
+    postType: string;
+    format: string;
+    customWidth?: number;
+    customHeight?: number;
+    carouselPageCount: number;
+    carouselPages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }>;
+  } | null;
   editPost?: {
     id: string;
     brand_space_id: string;
@@ -68,7 +94,9 @@ export function CreatePostForm({
   libraryPosts = [],
   prefillFromTryStyle,
   prefillIdeaContent,
+  prefillTemplate,
   postIdeas = [],
+  templates = [],
   skipDraftRestore = false,
 }: CreatePostFormProps) {
   const router = useRouter();
@@ -85,6 +113,8 @@ export function CreatePostForm({
     brandSpaceId: "",
     postType: "single-image" as PostType,
     format: "square" as PostFormat,
+    customWidth: 1080 as number | undefined,
+    customHeight: 1080 as number | undefined,
     language: "English",
     customLanguage: "",
     contentIdea: "",
@@ -193,6 +223,25 @@ export function CreatePostForm({
       setFormData((prev) => ({ ...prev, contentIdea: prefillIdeaContent }));
     }
   }, [prefillIdeaContent]);
+
+  useEffect(() => {
+    if (prefillTemplate) {
+      setFormData((prev) => ({
+        ...prev,
+        brandSpaceId: prefillTemplate.brandSpaceId,
+        contentFramework: prefillTemplate.contentFramework,
+        postStyle: prefillTemplate.postStyle,
+        postType: prefillTemplate.postType as PostType,
+        format: prefillTemplate.format as PostFormat,
+        customWidth: prefillTemplate.customWidth,
+        customHeight: prefillTemplate.customHeight,
+        carouselPageCount: prefillTemplate.carouselPageCount,
+      }));
+      if (prefillTemplate.carouselPages?.length) {
+        setCarouselPages(prefillTemplate.carouselPages);
+      }
+    }
+  }, [prefillTemplate]);
 
   useEffect(() => {
     if (prefillFromTryStyle) return;
@@ -449,6 +498,8 @@ export function CreatePostForm({
           brandSpaceId: formData.brandSpaceId,
           postType: formData.postType,
           format: formData.format,
+          customWidth: formData.format === "custom" ? formData.customWidth : undefined,
+          customHeight: formData.format === "custom" ? formData.customHeight : undefined,
           language: effectiveLanguage,
           contentIdea: formData.contentIdea,
           variations: formData.variations,
@@ -560,6 +611,46 @@ export function CreatePostForm({
           Step 1: Select Brand & Post Type
         </h2>
 
+        {templates.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Start from template (optional)
+            </label>
+            <select
+              value=""
+              onChange={(e) => {
+                const id = e.target.value;
+                if (!id) return;
+                const t = templates.find((x) => x.id === id);
+                if (t) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    brandSpaceId: t.brand_space_id,
+                    contentFramework: t.content_framework ?? "educational-value",
+                    postStyle: t.post_style ?? "immersive-photo",
+                    postType: t.post_type as PostType,
+                    format: t.format as PostFormat,
+                    customWidth: t.custom_width ?? undefined,
+                    customHeight: t.custom_height ?? undefined,
+                    carouselPageCount: t.carousel_page_count ?? 3,
+                  }));
+                  if (Array.isArray(t.carousel_pages) && t.carousel_pages.length > 0) {
+                    setCarouselPages(t.carousel_pages);
+                  }
+                }
+              }}
+              className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+            >
+              <option value="">No template</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-zinc-400 mb-2">
             Brand Space *
@@ -637,12 +728,13 @@ export function CreatePostForm({
           <label className="block text-sm font-medium text-zinc-400 mb-3">
             Format *
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { value: "square", label: "Square", ratio: "1:1", hint: "Most common for feed" },
               { value: "portrait", label: "Portrait", ratio: "4:5", hint: "Recommended for feed" },
               { value: "story", label: "Story", ratio: "9:16", hint: "Stories / Reels" },
               { value: "reel-cover", label: "Reel Cover", ratio: "9:16", hint: "Stories / Reels" },
+              { value: "custom", label: "Custom", ratio: "px", hint: "Custom dimensions" },
             ].map((format) => (
               <button
                 key={format.value}
@@ -666,6 +758,39 @@ export function CreatePostForm({
             ))}
           </div>
         </div>
+
+        {formData.format === "custom" && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Width (px, max 2000)</label>
+              <input
+                type="number"
+                min={100}
+                max={2000}
+                value={formData.customWidth ?? 1080}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  setFormData((prev) => ({ ...prev, customWidth: isNaN(v) ? undefined : Math.min(2000, Math.max(100, v)) }));
+                }}
+                className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Height (px, max 2000)</label>
+              <input
+                type="number"
+                min={100}
+                max={2000}
+                value={formData.customHeight ?? 1080}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  setFormData((prev) => ({ ...prev, customHeight: isNaN(v) ? undefined : Math.min(2000, Math.max(100, v)) }));
+                }}
+                className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              />
+            </div>
+          </div>
+        )}
 
         {formData.postType === "carousel" && (
           <div>

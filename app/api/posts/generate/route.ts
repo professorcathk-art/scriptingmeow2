@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     brandSpaceId,
     postType,
     format,
+    customWidth,
+    customHeight,
     language,
     contentIdea,
     variations,
@@ -50,6 +52,8 @@ export async function POST(request: Request) {
     brandSpaceId?: string;
     postType?: string;
     format?: string;
+    customWidth?: number;
+    customHeight?: number;
     language?: string;
     contentIdea?: string;
     variations?: number;
@@ -212,21 +216,28 @@ export async function POST(request: Request) {
       ? { carouselPages }
       : { visualAdvice: imagePrompt, imageTextOnImage };
 
+    const insertPayload: Record<string, unknown> = {
+      brand_space_id: brandSpaceId,
+      post_type: postType,
+      format,
+      language,
+      content_idea: contentIdea || "",
+      visual_url: null,
+      carousel_urls: isCarousel ? [] : undefined,
+      caption,
+      status: "saved",
+      credits_used: creditsNeeded,
+      draft_data: draftData,
+      content_framework: contentFramework ?? "educational-value",
+      post_style: postStyle ?? "immersive-photo",
+      custom_width: typeof customWidth === "number" ? customWidth : null,
+      custom_height: typeof customHeight === "number" ? customHeight : null,
+      carousel_page_count: isCarousel && Array.isArray(carouselPages) ? carouselPages.length : null,
+      carousel_pages: isCarousel && Array.isArray(carouselPages) ? carouselPages : null,
+    };
     const { data: post, error: postError } = await supabase
       .from("generated_posts")
-      .insert({
-        brand_space_id: brandSpaceId,
-        post_type: postType,
-        format,
-        language,
-        content_idea: contentIdea || "",
-        visual_url: null,
-        carousel_urls: isCarousel ? [] : undefined,
-        caption,
-        status: "saved",
-        credits_used: creditsNeeded,
-        draft_data: draftData,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -236,7 +247,13 @@ export async function POST(request: Request) {
     }
 
     const aspectRatio =
-      format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
+      format === "custom" && typeof customWidth === "number" && typeof customHeight === "number"
+        ? `${customWidth}:${customHeight}`
+        : format === "portrait"
+          ? "4:5"
+          : format === "story" || format === "reel-cover"
+            ? "9:16"
+            : "1:1";
     const sampleUrls = [
       ...(Array.isArray(referenceImageUrls)
         ? referenceImageUrls.slice(0, 3).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))

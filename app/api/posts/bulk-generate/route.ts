@@ -1,0 +1,294 @@
+import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { generatePostLight } from "@/lib/ai/gemini";
+import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
+import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
+import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
+
+export const maxDuration = 600;
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const { templateId, ideaIds = [], rssIdeaIds = [] } = body as {
+    templateId?: string;
+    ideaIds?: string[];
+    rssIdeaIds?: string[];
+  };
+
+  if (!templateId || !Array.isArray(ideaIds) || !Array.isArray(rssIdeaIds)) {
+    return NextResponse.json(
+      { error: "templateId, ideaIds, and rssIdeaIds required" },
+      { status: 400 }
+    );
+  }
+
+  const { data: template } = await supabase
+    .from("post_templates")
+    .select("*")
+    .eq("id", templateId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!template) {
+    return NextResponse.json({ error: "Template not found" }, { status: 404 });
+  }
+
+  const brandSpaceId = template.brand_space_id;
+  const { data: brandSpace } = await supabase
+    .from("brand_spaces")
+    .select("id, logo_url, logo_placement, brand_type, brand_details")
+    .eq("id", brandSpaceId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!brandSpace) {
+    return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
+  }
+
+  const { data: brandbook } = await supabase
+    .from("brandbooks")
+    .select("*")
+    .eq("brand_space_id", brandSpaceId)
+    .single();
+
+  if (!brandbook) {
+    return NextResponse.json(
+      { error: "Brandbook not found. Create a brandbook first." },
+      { status: 400 }
+    );
+  }
+
+  const ideas: { content: string }[] = [];
+  if (ideaIds.length > 0) {
+    const { data: rows } = await supabase
+      .from("user_post_ideas")
+      .select("content")
+      .eq("user_id", user.id)
+      .in("id", ideaIds);
+    if (rows) ideas.push(...rows.map((r) => ({ content: r.content })));
+  }
+  if (rssIdeaIds.length > 0) {
+    const { data: rows } = await supabase
+      .from("user_rss_ideas")
+      .select("content")
+      .eq("user_id", user.id)
+      .in("id", rssIdeaIds);
+    if (rows) ideas.push(...rows.map((r) => ({ content: r.content })));
+  }
+
+  if (ideas.length === 0) {
+    return NextResponse.json({ error: "No valid ideas selected" }, { status: 400 });
+  }
+
+  const postType = template.post_type || "single-image";
+  const format = template.format || "square";
+  const customWidth = template.custom_width;
+  const customHeight = template.custom_height;
+  const isCarousel = postType === "carousel";
+  const carouselPageCount = template.carousel_page_count ?? template.carousel_pages?.length ?? 3;
+  const postStyle = template.post_style ?? "immersive-photo";
+  const contentFramework = template.content_framework ?? "educational-value";
+
+  const creditsPerPost = isCarousel ? carouselPageCount : 1;
+  const totalCreditsNeeded = ideas.length * creditsPerPost;
+
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("credits_remaining")
+    .eq("id", user.id)
+    .single();
+
+  const unlimitedCredits = process.env.UNLIMITED_CREDITS_FOR_TESTING === "true";
+  if (!unlimitedCredits && (userProfile?.credits_remaining ?? 0) < totalCreditsNeeded) {
+    return NextResponse.json(
+      {
+        error: `Not enough credits. Need ${totalCreditsNeeded} (${creditsPerPost} per post), have ${userProfile?.credits_remaining ?? 0}.`,
+      },
+      { status: 403 }
+    );
+  }
+
+  const aspectRatio =
+    format === "custom" && typeof customWidth === "number" && typeof customHeight === "number"
+      ? `${customWidth}:${customHeight}`
+      : format === "portrait"
+        ? "4:5"
+        : format === "story" || format === "reel-cover"
+          ? "9:16"
+          : "1:1";
+
+  const brandDetails = brandSpace as { brand_details?: { otherBrandType?: string } };
+  const created: string[] = [];
+  let failed = 0;
+  let creditsDeducted = 0;
+
+  for (const idea of ideas) {
+    try {
+      const draftResult = await generatePostLight(
+        idea.content,
+        "English",
+        postType,
+        format,
+        postStyle,
+        contentFramework,
+        isCarousel ? carouselPageCount : undefined
+      );
+
+      let caption: { igCaption: string };
+      let draftData: { carouselPages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }> } | { visualAdvice: string; imageTextOnImage: string };
+      let imagePrompt = "";
+      let imageTextOnImage = "";
+      let carouselPages: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }> | undefined;
+
+      if (isCarousel && draftResult && "pages" in draftResult) {
+        carouselPages = draftResult.pages;
+        caption = { igCaption: (draftResult.igCaption ?? "").slice(0, 400) };
+        draftData = { carouselPages };
+      } else {
+        const single = Array.isArray(draftResult) ? draftResult[0] : null;
+        imagePrompt = single?.visualAdvice?.trim() || "";
+        imageTextOnImage = single?.imageTextOnImage ?? "";
+        caption = { igCaption: (single?.igCaption ?? "").slice(0, 400) };
+        draftData = { visualAdvice: imagePrompt, imageTextOnImage };
+      }
+
+      if (!isCarousel && !imagePrompt) {
+        const vs = brandbook.visual_style as { primaryColor?: string; colors?: string[]; imageStyle?: string } | null;
+        imagePrompt = `Professional Instagram post. Style: ${vs?.imageStyle || "professional"}. High-quality visual.`;
+      }
+
+      const insertPayload: Record<string, unknown> = {
+        brand_space_id: brandSpaceId,
+        post_type: postType,
+        format,
+        language: "English",
+        content_idea: idea.content,
+        visual_url: null,
+        carousel_urls: isCarousel ? [] : undefined,
+        caption,
+        status: "saved",
+        credits_used: creditsPerPost,
+        draft_data: draftData,
+        content_framework: contentFramework,
+        post_style: postStyle,
+        custom_width: customWidth ?? null,
+        custom_height: customHeight ?? null,
+        carousel_page_count: isCarousel && carouselPages ? carouselPages.length : null,
+        carousel_pages: isCarousel && carouselPages ? carouselPages : null,
+      };
+
+      const { data: post, error: postError } = await supabase
+        .from("generated_posts")
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      if (postError || !post) {
+        failed++;
+        continue;
+      }
+
+      let visualUrl: string;
+      const carouselUrls: string[] = [];
+
+      if (isCarousel && carouselPages) {
+        for (let i = 0; i < carouselPages.length; i++) {
+          const page = carouselPages[i];
+          const header = (page.header ?? "").trim();
+          const imageText = (page.imageTextOnImage ?? "").trim();
+          const combinedText = header ? (imageText ? `${header}\n${imageText}` : header) : imageText || undefined;
+          const fullImagePrompt = buildImagePrompt({
+            brandbook,
+            visualAdvice: page.visualAdvice?.trim() || `Carousel page ${page.pageIndex}. ${idea.content}`,
+            imageTextOnImage: combinedText,
+            postStyle: postStyle || "text-heavy",
+            pageIndex: page.pageIndex,
+            logoUrl: brandSpace?.logo_url ?? null,
+            logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
+            brandType: brandSpace?.brand_type,
+            otherBrandType: brandDetails?.brand_details?.otherBrandType,
+            contentFramework,
+          });
+          const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
+            aspectRatio,
+            referenceImageUrls: [],
+          });
+          const pageUrl = imageBuffer
+            ? await uploadPostImage(imageBuffer, post.id, user.id, page.pageIndex)
+            : await uploadPostPlaceholder(
+                page.visualAdvice || `Page ${page.pageIndex}`,
+                `${post.id}-page-${page.pageIndex}`,
+                user.id
+              );
+          carouselUrls.push(pageUrl);
+        }
+        visualUrl = carouselUrls[0] ?? "";
+        await supabase
+          .from("generated_posts")
+          .update({ visual_url: visualUrl, carousel_urls: carouselUrls })
+          .eq("id", post.id);
+      } else {
+        const fullImagePrompt = buildImagePrompt({
+          brandbook,
+          visualAdvice: imagePrompt,
+          imageTextOnImage: imageTextOnImage || undefined,
+          postStyle,
+          logoUrl: brandSpace?.logo_url ?? null,
+          logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
+          brandType: brandSpace?.brand_type,
+          otherBrandType: brandDetails?.brand_details?.otherBrandType,
+          contentFramework,
+        });
+        const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
+          aspectRatio,
+          referenceImageUrls: [],
+        });
+        visualUrl = imageBuffer
+          ? await uploadPostImage(imageBuffer, post.id, user.id)
+          : await uploadPostPlaceholder(imagePrompt, post.id, user.id);
+        await supabase.from("generated_posts").update({ visual_url: visualUrl }).eq("id", post.id);
+      }
+
+      created.push(post.id);
+      creditsDeducted += creditsPerPost;
+    } catch (err) {
+      console.error("[bulk-generate] Error for idea:", err);
+      failed++;
+    }
+  }
+
+  let newCreditsRemaining = userProfile?.credits_remaining ?? 0;
+  if (!unlimitedCredits && creditsDeducted > 0) {
+    newCreditsRemaining = (userProfile?.credits_remaining ?? 0) - creditsDeducted;
+    await supabase.from("users").update({ credits_remaining: newCreditsRemaining }).eq("id", user.id);
+    await supabase.from("credit_transactions").insert({
+      user_id: user.id,
+      amount: -creditsDeducted,
+      description: `Bulk: generated ${created.length} post(s)`,
+    });
+  }
+
+  revalidatePath("/", "layout");
+
+  return NextResponse.json({
+    created,
+    failed,
+    credits_remaining: newCreditsRemaining,
+  });
+}

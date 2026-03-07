@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { GeneratedPost, DraftData } from "@/types/database";
+import { SaveTemplateModal } from "./save-template-modal";
 
 interface PostReviewProps {
   post: GeneratedPost & { brand_spaces?: { name: string }; format?: string };
@@ -112,6 +113,7 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
 
   const carouselUrls = post.carousel_urls ?? [];
   const hasCarousel = carouselUrls.length > 0;
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
 
   return (
     <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
@@ -282,21 +284,36 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
         </div>
       )}
 
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-4">
         <button
           onClick={() => router.back()}
-          className="flex-1 px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+          className="flex-1 min-w-[120px] px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
         >
           Back
         </button>
         <button
+          type="button"
+          onClick={() => setShowSaveTemplate(true)}
+          className="px-4 py-2 border border-violet-500/30 rounded-xl text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 transition-colors"
+        >
+          Save as Template
+        </button>
+        <button
           onClick={handleSave}
           disabled={loading}
-          className="flex-1 px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+          className="flex-1 min-w-[120px] px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
         >
           {loading ? "Saving..." : "Save to Library"}
         </button>
       </div>
+
+      {showSaveTemplate && (
+        <SaveTemplateModal
+          postId={post.id}
+          onClose={() => setShowSaveTemplate(false)}
+          onSaved={() => router.refresh()}
+        />
+      )}
     </div>
   );
 }

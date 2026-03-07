@@ -9,6 +9,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/brand-spaces", label: "Brand Spaces" },
   { href: "/create-post", label: "Create Post" },
+  { href: "/bulk-create", label: "AI Bulk Create" },
   { href: "/library", label: "Library" },
   { href: "/billing", label: "Billing" },
 ];
