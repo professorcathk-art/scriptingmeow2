@@ -40,7 +40,7 @@ export default async function PostReviewPage({
 
   const { data: userProfile } = await supabase
     .from("users")
-    .select("credits_remaining")
+    .select("credits_remaining, instagram_handle")
     .eq("id", user.id)
     .single();
 
@@ -48,6 +48,7 @@ export default async function PostReviewPage({
     <PostReview
       post={post}
       userCredits={userProfile?.credits_remaining ?? 0}
+      instagramHandle={(userProfile as { instagram_handle?: string | null })?.instagram_handle ?? null}
     />
   );
 }

@@ -17,6 +17,9 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
               designermeow
             </Link>
             <div className="flex items-center gap-4">
+              <Link href="/discover" className="text-sm text-zinc-400 hover:text-white transition-colors">
+                Discover
+              </Link>
               <Link href="/auth/login" className="text-sm text-zinc-400 hover:text-white transition-colors">
                 Sign in
               </Link>

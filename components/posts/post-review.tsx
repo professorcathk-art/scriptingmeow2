@@ -20,8 +20,9 @@ interface RefinementVersion {
 }
 
 interface PostReviewProps {
-  post: GeneratedPost & { brand_spaces?: { name: string }; format?: string };
+  post: GeneratedPost & { brand_spaces?: { name: string }; format?: string; is_public_gallery?: boolean };
   userCredits?: number;
+  instagramHandle?: string | null;
 }
 
 type CaptionShape =
@@ -45,7 +46,7 @@ function paragraphToCaption(text: string): CaptionShape {
   return { igCaption: text.trim() };
 }
 
-export function PostReview({ post: initialPost, userCredits: initialCredits = 0 }: PostReviewProps) {
+export function PostReview({ post: initialPost, userCredits: initialCredits = 0, instagramHandle }: PostReviewProps) {
   const router = useRouter();
   const creditsCtx = useCredits();
   const userCredits = creditsCtx?.creditsRemaining ?? initialCredits;
@@ -60,6 +61,9 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0 
   const [refinedPageIndex, setRefinedPageIndex] = useState(0);
   const [refining, setRefining] = useState(false);
   const [refineError, setRefineError] = useState<string | null>(null);
+  const [isPublicGallery, setIsPublicGallery] = useState<boolean>(
+    (initialPost as { is_public_gallery?: boolean }).is_public_gallery ?? false
+  );
   const [draftData, setDraftData] = useState<DraftData | null>(() => {
     const d = (initialPost as { draft_data?: DraftData }).draft_data;
     if (d && "visualAdvice" in d && "imageTextOnImage" in d) return d;
@@ -81,6 +85,7 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0 
   useEffect(() => {
     setPost(initialPost);
     setCaption(initialPost.caption);
+    setIsPublicGallery((initialPost as { is_public_gallery?: boolean }).is_public_gallery ?? false);
     const d = (initialPost as { draft_data?: DraftData }).draft_data;
     if (d && "visualAdvice" in d && "imageTextOnImage" in d) setDraftData(d);
   }, [initialPost]);
@@ -92,9 +97,10 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0 
   const handleSave = async () => {
     setLoading(true);
     try {
-      const payload: { caption: CaptionShape; status: string; draft_data?: DraftData } = {
+      const payload: { caption: CaptionShape; status: string; draft_data?: DraftData; is_public_gallery?: boolean } = {
         caption,
         status: "saved",
+        is_public_gallery: isPublicGallery,
       };
       if (draftData) payload.draft_data = draftData;
       const response = await fetch(`/api/posts/${post.id}`, {
@@ -514,6 +520,33 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0 
           </div>
         </div>
       )}
+
+      <div className="glass-elevated p-6 rounded-2xl space-y-4">
+        <div className="flex items-start gap-4">
+          <input
+            type="checkbox"
+            id="public-gallery"
+            checked={isPublicGallery}
+            onChange={(e) => setIsPublicGallery(e.target.checked)}
+            className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 text-violet-500 focus:ring-violet-500/50"
+          />
+          <div>
+            <label htmlFor="public-gallery" className="block text-sm font-medium text-zinc-100 cursor-pointer">
+              Publish to public Discover Gallery
+            </label>
+            <p className="text-xs text-zinc-500 mt-1">
+              Share this design to inspire others. We&apos;ll link directly to your Instagram{" "}
+              {instagramHandle ? (
+                <span className="text-violet-400">{instagramHandle}</span>
+              ) : (
+                <Link href="/billing" className="text-violet-400 hover:text-violet-300 underline">
+                  Set your handle
+                </Link>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-4">
         <button

@@ -6,11 +6,18 @@ import Image from "next/image";
 import { LANDING_STYLES } from "@/lib/landing-styles";
 import { SaveStyleModal } from "./save-style-modal";
 
-interface LandingHeroProps {
-  isAuthenticated?: boolean;
+interface PublicDesign {
+  id: string;
+  image_url: string;
+  content_idea?: string;
 }
 
-export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
+interface LandingHeroProps {
+  isAuthenticated?: boolean;
+  publicDesigns?: PublicDesign[];
+}
+
+export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: LandingHeroProps) {
   const [scratchInput, setScratchInput] = useState("");
   const [selectedStyle, setSelectedStyle] = useState<typeof LANDING_STYLES[0] | null>(null);
 
@@ -97,7 +104,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
               onChange={(e) => setScratchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleStartFromScratch()}
               placeholder="Enter your brand name..."
-              className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
+              className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-violet-500/50 transition-all shadow-inner"
             />
             <button
               type="button"
@@ -127,7 +134,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
               <button
                 type="button"
                 onClick={() => setSelectedStyle(item)}
-                className="w-full text-left glass-elevated rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                className="group w-full text-left glass-elevated rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
               >
                 <div className="relative aspect-[4/5] overflow-hidden">
                   <Image
@@ -135,7 +142,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
                     alt={item.category}
                     fill
                     sizes="(max-width: 640px) 50vw, 33vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                     priority={parseInt(item.id, 10) <= 4}
                   />
                   {/* Desktop: hover overlay. Mobile: always show tap hint */}
@@ -154,7 +161,48 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
               </button>
             </div>
           ))}
+          {publicDesigns.map((design) => (
+            <Link
+              key={design.id}
+              href={`/discover/${design.id}`}
+              className="group block break-inside-avoid mb-4"
+            >
+              <div className="w-full text-left glass-elevated rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all duration-300">
+                <div className="relative aspect-[4/5] overflow-hidden">
+                  <Image
+                    src={design.image_url}
+                    alt={design.content_idea?.slice(0, 60) ?? "Community design"}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    unoptimized={design.image_url.startsWith("data:")}
+                  />
+                  <div className="absolute inset-0 bg-black/40 sm:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <span className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold text-sm shadow-lg">
+                      View design
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <span className="inline-block px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-medium mb-2">
+                    Community
+                  </span>
+                  <p className="text-zinc-500 text-sm line-clamp-2">{design.content_idea?.slice(0, 80)}</p>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
+        {publicDesigns.length > 0 && (
+          <div className="mt-6 text-center">
+            <Link
+              href="/discover"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-violet-500/30 text-violet-400 hover:bg-violet-500/10 transition-colors font-medium"
+            >
+              View all community designs
+            </Link>
+          </div>
+        )}
       </section>
 
       {selectedStyle && (

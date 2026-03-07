@@ -43,7 +43,14 @@ All tables have Row Level Security (RLS) enabled. Policies ensure:
 
 The app auto-creates the "My design" folder when the user first saves a design. No manual setup needed.
 
-## 6. Verification
+## 6. Discover Gallery (migration 014)
+
+Apply `014_discover_gallery.sql` to add:
+- `instagram_handle` (optional TEXT) on `users` — for cross-promotion in Discover
+- `is_public_gallery` (boolean, default false) on `generated_posts` — opt-in for public gallery
+- Index and RLS policy for public read of posts where `is_public_gallery = true`
+
+## 7. Verification
 
 After running the migration:
 

@@ -1,5 +1,6 @@
 import Script from "next/script";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingLogoCloud } from "@/components/landing/landing-logo-cloud";
 import { LandingDemoSection } from "@/components/landing/landing-demo-section";
@@ -25,6 +26,26 @@ const faqSchema = {
 export default async function HomePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  let publicDesigns: { id: string; image_url: string; content_idea?: string }[] = [];
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("generated_posts")
+      .select("id, visual_url, carousel_urls, content_idea")
+      .eq("is_public_gallery", true)
+      .eq("status", "saved")
+      .order("created_at", { ascending: false })
+      .limit(15);
+    publicDesigns = (data ?? []).map((p) => ({
+      id: p.id,
+      image_url: (p.carousel_urls as string[])?.[0] ?? (p.visual_url as string) ?? "",
+      content_idea: p.content_idea as string,
+    })).filter((p) => p.image_url);
+  } catch {
+    // Admin client may not be configured
+  }
+
   return (
     <main className="min-h-screen bg-zinc-950 overflow-x-hidden">
       <Script
@@ -37,7 +58,7 @@ export default async function HomePage() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_80%_0%,rgba(6,182,212,0.08),transparent)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_20%_50%,rgba(236,72,153,0.06),transparent)] pointer-events-none" />
       <div className="relative z-10">
-        <LandingHero isAuthenticated={!!user} />
+        <LandingHero isAuthenticated={!!user} publicDesigns={publicDesigns} />
         <LandingLogoCloud />
         <LandingDemoSection />
         <LandingHowItWorks />

@@ -15,7 +15,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { caption, status, tags, draft_data: draftData } = await request.json();
+    const { caption, status, tags, draft_data: draftData, is_public_gallery: isPublicGallery } = await request.json();
 
     // Verify ownership
     const { data: post } = await supabase
@@ -36,6 +36,7 @@ export async function PUT(
     if (status) updateData.status = status;
     if (tags) updateData.tags = tags;
     if (draftData !== undefined) updateData.draft_data = draftData;
+    if (typeof isPublicGallery === "boolean") updateData.is_public_gallery = isPublicGallery;
 
     const { data, error } = await supabase
       .from("generated_posts")

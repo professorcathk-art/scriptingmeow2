@@ -100,6 +100,7 @@ export interface GeneratedPost {
   content_idea: string;
   visual_url?: string;
   carousel_urls?: string[];
+  is_public_gallery?: boolean;
   draft_data?: DraftData | null;
   caption:
     | { igCaption: string }
@@ -117,6 +118,7 @@ export interface User {
   plan_tier: PlanTier;
   credits_remaining: number;
   credits_reset_date: string;
+  instagram_handle?: string | null;
   stripe_customer_id?: string | null;
   stripe_subscription_id?: string | null;
   stripe_price_id?: string | null;
