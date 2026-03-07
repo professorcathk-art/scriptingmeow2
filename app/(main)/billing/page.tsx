@@ -44,6 +44,7 @@ export default async function BillingPage() {
     limits: typeof PLAN_LIMITS[PlanTier];
     features: string[];
     popular?: boolean;
+    footerNote?: string;
   }> = [
     {
       tier: "free",
@@ -53,6 +54,7 @@ export default async function BillingPage() {
       features: [
         `${PLAN_LIMITS.free.brand_spaces} Brand Space${PLAN_LIMITS.free.brand_spaces > 1 ? "s" : ""}`,
         `${PLAN_LIMITS.free.monthly_credits} credits/month`,
+        `${PLAN_LIMITS.free.storage_mb} MB library storage`,
         "AI post generation",
         "No RSS feeds",
         "Basic support",
@@ -66,11 +68,13 @@ export default async function BillingPage() {
       features: [
         `${PLAN_LIMITS.basic.brand_spaces} Brand Spaces`,
         `${PLAN_LIMITS.basic.monthly_credits} credits/month`,
+        `${PLAN_LIMITS.basic.storage_mb} MB library storage`,
         `Up to ${PLAN_LIMITS.basic.rss_feeds} RSS feed${PLAN_LIMITS.basic.rss_feeds > 1 ? "s" : ""}`,
         "AI post generation",
         "Priority support",
         "Export options",
       ],
+      footerNote: "Data may be removed after 6 months of inactivity.",
     },
     {
       tier: "pro",
@@ -80,6 +84,7 @@ export default async function BillingPage() {
       features: [
         `${PLAN_LIMITS.pro.brand_spaces} Brand Spaces`,
         `${PLAN_LIMITS.pro.monthly_credits} credits/month`,
+        `${PLAN_LIMITS.pro.storage_mb} MB library storage`,
         `Up to ${PLAN_LIMITS.pro.rss_feeds} RSS feeds`,
         "AI post generation",
         "Priority support",
@@ -216,6 +221,9 @@ export default async function BillingPage() {
                     </li>
                   ))}
                 </ul>
+                {plan.footerNote && (
+                  <p className="text-xs text-zinc-500 mb-4 italic">{plan.footerNote}</p>
+                )}
                 {isCurrentPlan ? (
                   <button
                     disabled

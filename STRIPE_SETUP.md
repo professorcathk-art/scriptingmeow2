@@ -1,4 +1,18 @@
-# Stripe Setup Guide (Test Mode)
+# Stripe Setup Guide
+
+## Production (designermeow.com)
+
+| Variable | Value |
+|----------|-------|
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_51PzIjVA61RbBP8C28aI4U99q1D6RMOI2pygya1yTrtyc7mllnUXNtgXxoPlY2cZ2skBIKWBEECY1LfxUxlhaw1iw00CTW6zZZK` |
+| `STRIPE_SECRET_KEY` | Your live secret key (`sk_live_...`) from Stripe Dashboard |
+| `STRIPE_PRICE_BASIC` | `price_1T8Ls6A61RbBP8C2PRbq5rrW` |
+| `STRIPE_PRICE_PRO` | `price_1T8LsVA61RbBP8C2Un0NHOtY` |
+| `STRIPE_WEBHOOK_SECRET` | From live webhook (Stripe → Developers → Webhooks) |
+
+Product IDs (reference): Basic `prod_U6Z0fSedU4VJ45`, Pro `prod_U6Z0R0qkarZPcP`
+
+---
 
 ## Reset account to Free (for testing upgrade flow)
 

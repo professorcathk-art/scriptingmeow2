@@ -149,6 +149,9 @@ export function getCarouselDraftPrompt(vars: {
   colors: string;
   contentFrameworkDesc: string;
   layoutGuide: string;
+  layoutStyleDetail?: string;
+  dosDonts?: string;
+  textGuide?: string;
   idea: string;
   format: string;
   aspectNote: string;
@@ -159,6 +162,11 @@ export function getCarouselDraftPrompt(vars: {
   let template = section || FALLBACK_CAROUSEL;
   template = template.replace(/\{\{pageCount\}\}/g, String(vars.pageCount));
   template = template.replace(/\{\{isTextHeavy\}\}/g, String(vars.isTextHeavy));
+  const extraParts: string[] = [];
+  if (vars.layoutStyleDetail) extraParts.push(`Layout: ${vars.layoutStyleDetail}`);
+  if (vars.dosDonts) extraParts.push(`Brand rules: ${vars.dosDonts}`);
+  const extraContext = extraParts.length > 0 ? extraParts.join(". ") : "";
+
   return replaceAll(template, {
     personality: vars.personality,
     tone: vars.tone,
@@ -166,6 +174,8 @@ export function getCarouselDraftPrompt(vars: {
     colors: vars.colors,
     contentFrameworkDesc: vars.contentFrameworkDesc,
     layoutGuide: vars.layoutGuide,
+    extraContext,
+    textGuide: vars.textGuide || "2–5 lines per slide, use 主標題：, 副標題：, 內文：. Plain text only.",
     idea: vars.idea,
     format: vars.format,
     aspectNote: vars.aspectNote,
@@ -179,6 +189,7 @@ const FALLBACK_CAROUSEL = `You are an expert Instagram Art Director. Create a {{
 - Brand: {{personality}}. Tone: {{tone}}. Style: {{style}}. Colors: {{colors}}.
 - Content framework: {{contentFrameworkDesc}}
 - Visual layout: {{layoutGuide}}
+{{extraContext}}
 
 ## User Brief
 {{idea}}
@@ -186,7 +197,7 @@ const FALLBACK_CAROUSEL = `You are an expert Instagram Art Director. Create a {{
 Format: {{format}}. Aspect ratio: {{aspectNote}}.
 
 ## Output Format
-Return valid JSON only:
+Return valid JSON only. imageTextOnImage: {{textGuide}}
 {
   "pages": [
     { "pageIndex": 1, "imageTextOnImage": "Text (use \\n). Include 主標題：, 副標題：, 內文：.", "visualAdvice": "Scene + style" },

@@ -916,31 +916,14 @@ export function CreatePostForm({
     ];
 
     const VISUAL_LAYOUT_OPTIONS = [
-      {
-        value: "editorial",
-        title: "Minimalist Editorial",
-        description: "Clean, magazine-like design with plenty of white space and elegant typography.",
-      },
-      {
-        value: "text-heavy",
-        title: "Text-Heavy / Carousel",
-        description: "Bold, easy-to-read typography taking center stage, perfect for step-by-step guides.",
-      },
-      {
-        value: "immersive-photo",
-        title: "Immersive Visual",
-        description: "Focuses entirely on high-quality photography or graphics with minimal text overlay.",
-      },
-      {
-        value: "tweet-card",
-        title: "Tweet / Quote Card",
-        description: "A stylized social media post or quote placed on an attractive background.",
-      },
-      {
-        value: "split-screen",
-        title: "Split Screen / Collage",
-        description: "Dynamic mix of multiple images or a side-by-side comparison with text areas.",
-      },
+      { value: "magazine-editorial", title: "Magazine Editorial", description: "Edge-to-edge visual with a massive top masthead and framing text." },
+      { value: "cinematic-poster", title: "Cinematic Poster", description: "Dramatic center focus with integrated titles and bottom-heavy text." },
+      { value: "immersive-visual", title: "Immersive Visual", description: "Focuses entirely on high-quality graphics with minimal text overlay." },
+      { value: "split-screen", title: "Split Screen / Collage", description: "Clean 50/50 geometric division separating the visual from the text area." },
+      { value: "text-top", title: "Text Top / Image Bottom", description: "Subject anchored at the bottom, leaving clean space above for reading." },
+      { value: "text-bottom", title: "Image Top / Text Bottom", description: "Subject anchored high, leaving a solid foundation below for text." },
+      { value: "text-heavy-infographic", title: "Infographic / Text-Heavy", description: "Clean background with small motifs, designed for dense, readable text." },
+      { value: "quote-card", title: "Quote / Tweet Card", description: "Extreme minimalism. Abstract background focused entirely on text." },
     ];
 
     return (

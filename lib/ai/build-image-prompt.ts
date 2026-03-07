@@ -73,21 +73,42 @@ Arrange like a professional editorial designer. Do NOT cram every word into a de
 - Hierarchy through size: Headline 2–3× subheadline size. Subheadline 1.5× body size. Body text must remain readable at mobile scale.`;
 
 const LAYOUT_DESIGN_GUIDE: Record<string, string> = {
-  editorial: `
-VISUAL LAYOUT & SPATIAL RULES: editorial.
-MINIMALIST EDITORIAL: Clean, high-end magazine aesthetic. High whitespace. Frame the subject beautifully using negative space. Text is elegantly integrated into the composition, not just slapped on top.`,
-  "text-heavy": `
-VISUAL LAYOUT & SPATIAL RULES: text-heavy.
-TEXT-HEAVY / INFOGRAPHIC: The text is the hero. Arrange like a designer: bold typography hierarchy, generous whitespace (40–60% of frame), clear visual blocks. Never cram text—use breathing room, limit lines per block, and ensure the layout feels intentional and premium. Avoid dense walls of text.`,
-  "tweet-card": `
-VISUAL LAYOUT & SPATIAL RULES: tweet-card.
-TWEET / QUOTE CARD: Central stylized text block or UI-like card, resting on an aesthetically pleasing, soft background that matches the brand aura.`,
+  "magazine-editorial": `
+VISUAL LAYOUT & SPATIAL RULES: magazine-editorial.
+MAGAZINE EDITORIAL LAYOUT: Edge-to-edge full-bleed background. Leave generous negative space at the absolute top for a massive masthead (Headline). Place the primary subject centrally. Leave smaller pockets of negative space on borders for subheadlines.`,
+  "cinematic-poster": `
+VISUAL LAYOUT & SPATIAL RULES: cinematic-poster.
+CINEMATIC POSTER LAYOUT: Dramatic composition. Center the main subject perfectly. Leave a horizontal band of negative space across the middle for a Title. Leave a small band of empty space at the absolute bottom for body text.`,
+  "immersive-visual": `
+VISUAL LAYOUT & SPATIAL RULES: immersive-visual.
+IMMERSIVE VISUAL LAYOUT: Edge-to-edge subject focus. Do not force large blocks of negative space. The image should be rich and full, as text will be minimally overlaid.`,
   "split-screen": `
 VISUAL LAYOUT & SPATIAL RULES: split-screen.
-SPLIT SCREEN / COLLAGE: Distinct visual zones (e.g., top/bottom or left/right) separating the subject/illustration from the text block. Use sharp, modern geometric divisions.`,
+SPLIT-SCREEN LAYOUT: Use a sharp geometric division (vertical or horizontal split). One half must be completely clean negative space strictly for text. The other half contains the visual subject.`,
+  "text-top": `
+VISUAL LAYOUT & SPATIAL RULES: text-top.
+BOTTOM-HEAVY SUBJECT LAYOUT: Anchor the main subject or illustration heavily at the absolute bottom of the frame. Ensure the top 40% of the canvas is clean, uncluttered negative space for top-aligned typography.`,
+  "text-bottom": `
+VISUAL LAYOUT & SPATIAL RULES: text-bottom.
+TOP-HEAVY SUBJECT LAYOUT: Anchor the main subject or illustration at the top or upper-center. Ensure the bottom 40% of the canvas is clean, uncluttered negative space for bottom-aligned typography.`,
+  "text-heavy-infographic": `
+VISUAL LAYOUT & SPATIAL RULES: text-heavy-infographic.
+INFOGRAPHIC GRID LAYOUT: Highly structured. Do not generate a massive hero subject. Use a clean background with small, supportive graphical motifs. Maximize whitespace (80% empty) to accommodate dense, multi-point typography.`,
+  "quote-card": `
+VISUAL LAYOUT & SPATIAL RULES: quote-card.
+STATEMENT CARD LAYOUT: Extreme minimalism. The text is the hero. Generate a beautifully textured, soft, or abstract background with ZERO distracting subjects. Ensure 90% negative space for massive, centered typography.`,
+  editorial: `
+VISUAL LAYOUT & SPATIAL RULES: magazine-editorial.
+MAGAZINE EDITORIAL LAYOUT: Edge-to-edge full-bleed background. Leave generous negative space at the absolute top for a massive masthead (Headline). Place the primary subject centrally.`,
+  "text-heavy": `
+VISUAL LAYOUT & SPATIAL RULES: text-heavy-infographic.
+INFOGRAPHIC GRID LAYOUT: Highly structured. Use a clean background with small, supportive graphical motifs. Maximize whitespace (80% empty) to accommodate dense typography.`,
+  "tweet-card": `
+VISUAL LAYOUT & SPATIAL RULES: quote-card.
+STATEMENT CARD LAYOUT: Extreme minimalism. The text is the hero. Generate a beautifully textured, soft, or abstract background with ZERO distracting subjects.`,
   "immersive-photo": `
-VISUAL LAYOUT & SPATIAL RULES: immersive-photo.
-IMMERSIVE VISUAL: Edge-to-edge premium illustration or photography. Text is minimal and acts as a subtle overlay placed specifically in a naturally empty/clean area of the image.`,
+VISUAL LAYOUT & SPATIAL RULES: immersive-visual.
+IMMERSIVE VISUAL LAYOUT: Edge-to-edge subject focus. Do not force large blocks of negative space. The image should be rich and full, as text will be minimally overlaid.`,
 };
 
 const CONTENT_FRAMEWORK_IMAGE_GUIDE: Record<string, string> = {
@@ -146,6 +167,7 @@ export function buildImagePrompt(options: {
   const imageStyle = vs?.imageStyle || vs?.image_style || "professional";
   const colorArray = Array.isArray(vs?.colors) ? vs.colors.filter((c) => c && String(c).trim()) : [];
   const colorLabels = ["Primary background", "Secondary background", "Primary text", "Secondary text", "Backup"];
+  const colorUsageInstructions = (vs as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed?.trim() || "";
   const colorDescriptionFromPalette =
     colorArray.length > 0
       ? colorArray
@@ -154,8 +176,9 @@ export function buildImagePrompt(options: {
           .filter(Boolean)
           .join(". ")
       : "";
-  const colorDescriptionDetailed =
-    colorDescriptionFromPalette || (vs as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed?.trim() || "";
+  const colorDescriptionDetailed = colorUsageInstructions
+    ? (colors ? `Colors (use these): ${colors}. How to apply: ${colorUsageInstructions}` : `Color usage: ${colorUsageInstructions}`)
+    : colorDescriptionFromPalette || (colors ? `Colors (use these): ${colors}` : "");
   const visualAura = (vs as { visualAura?: string })?.visualAura || "";
   const lineStyle = (vs as { lineStyle?: string })?.lineStyle || "";
   const layoutTendencies = vs?.layoutTendencies || "";
@@ -227,7 +250,7 @@ export function buildImagePrompt(options: {
   }
 
   const layout = options.postStyle || "editorial";
-  const layoutGuide = LAYOUT_DESIGN_GUIDE[layout] || LAYOUT_DESIGN_GUIDE.editorial;
+  const layoutGuide = LAYOUT_DESIGN_GUIDE[layout] || LAYOUT_DESIGN_GUIDE["magazine-editorial"];
   parts.push(layoutGuide);
 
   let basePrompt = parts.join("\n\n");

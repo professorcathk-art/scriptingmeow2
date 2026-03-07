@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+import { canUpload } from "@/lib/storage-quota";
+import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 
 const BUCKET = "brand-reference-images";
 
@@ -75,6 +77,23 @@ export async function POST(
 
     if (!files || files.length === 0) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
+    }
+
+    const { data: userProfile } = await supabase
+      .from("users")
+      .select("plan_tier")
+      .eq("id", user.id)
+      .single();
+
+    const planTier = (userProfile?.plan_tier ?? "free") as PlanTier;
+    const totalNewBytes = files.reduce((sum, f) => sum + f.size, 0);
+    const { allowed, usageBytes, limitBytes } = await canUpload(user.id, planTier, totalNewBytes);
+    if (!allowed) {
+      const limitMB = PLAN_LIMITS[planTier].storage_mb ?? 20;
+      return NextResponse.json(
+        { error: `Storage limit reached (${limitMB} MB). Delete some files or upgrade your plan.` },
+        { status: 403 }
+      );
     }
 
     const uploadedImages = [];

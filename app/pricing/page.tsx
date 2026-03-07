@@ -9,6 +9,7 @@ const plans: Array<{
   price: number;
   features: string[];
   popular?: boolean;
+  footerNote?: string;
 }> = [
   {
     tier: "free",
@@ -17,6 +18,7 @@ const plans: Array<{
     features: [
       `${PLAN_LIMITS.free.brand_spaces} Brand Space${PLAN_LIMITS.free.brand_spaces > 1 ? "s" : ""}`,
       `${PLAN_LIMITS.free.monthly_credits} credits/month`,
+      `${PLAN_LIMITS.free.storage_mb} MB library storage`,
       "AI post generation",
       "Single image & carousel",
       "No RSS feeds",
@@ -31,6 +33,7 @@ const plans: Array<{
     features: [
       `${PLAN_LIMITS.basic.brand_spaces} Brand Spaces`,
       `${PLAN_LIMITS.basic.monthly_credits} credits/month`,
+      `${PLAN_LIMITS.basic.storage_mb} MB library storage`,
       `Up to ${PLAN_LIMITS.basic.rss_feeds} RSS feed${PLAN_LIMITS.basic.rss_feeds > 1 ? "s" : ""}`,
       "AI post generation",
       "All formats (square, portrait, story)",
@@ -38,6 +41,7 @@ const plans: Array<{
       "Reference materials",
       "Priority support",
     ],
+    footerNote: "Data may be removed after 6 months of inactivity.",
   },
   {
     tier: "pro",
@@ -46,6 +50,7 @@ const plans: Array<{
     features: [
       `${PLAN_LIMITS.pro.brand_spaces} Brand Spaces`,
       `${PLAN_LIMITS.pro.monthly_credits} credits/month`,
+      `${PLAN_LIMITS.pro.storage_mb} MB library storage`,
       `Up to ${PLAN_LIMITS.pro.rss_feeds} RSS feeds`,
       "Everything in Basic",
       "Batch generation",
@@ -108,6 +113,9 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
+              {plan.footerNote && (
+                <p className="text-xs text-zinc-500 mb-4 italic">{plan.footerNote}</p>
+              )}
               <Link
                 href="/auth/signup"
                 className={`block w-full py-2.5 rounded-xl text-center font-medium transition-opacity ${

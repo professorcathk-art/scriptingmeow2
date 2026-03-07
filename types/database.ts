@@ -137,6 +137,7 @@ export interface PlanLimits {
   brand_spaces: number;
   monthly_credits: number;
   rss_feeds: number;
+  storage_mb: number;
   priority_support: boolean;
   batch_generation: boolean;
 }
@@ -146,6 +147,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     brand_spaces: 2,
     monthly_credits: 5,
     rss_feeds: 0,
+    storage_mb: 20,
     priority_support: false,
     batch_generation: false,
   },
@@ -153,6 +155,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     brand_spaces: 5,
     monthly_credits: 50,
     rss_feeds: 2,
+    storage_mb: 100,
     priority_support: false,
     batch_generation: false,
   },
@@ -160,6 +163,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     brand_spaces: 15,
     monthly_credits: 200,
     rss_feeds: 5,
+    storage_mb: 500,
     priority_support: true,
     batch_generation: true,
   },

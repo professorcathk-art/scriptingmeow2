@@ -542,6 +542,29 @@ export function BrandbookForm({
                 </div>
               </div>
               <div>
+                <label className={labelClass}>Color Description (how to use)</label>
+                <p className="text-xs text-zinc-500 mb-2">
+                  Describe how to apply the palette—e.g. &quot;Primary background for main areas. Secondary for labels. Use backup to highlight keywords.&quot; Exact hex codes come from the palette above.
+                </p>
+                <textarea
+                  value={(brandbook.visual_style as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed ?? ""}
+                  onChange={(e) => {
+                    setHasEdited(true);
+                    setBrandbook((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            visual_style: { ...prev.visual_style, colorDescriptionDetailed: e.target.value },
+                          }
+                        : prev
+                    );
+                  }}
+                  className={inputClass}
+                  rows={2}
+                  placeholder="e.g. Primary for backgrounds, secondary for labels, backup to highlight keywords"
+                />
+              </div>
+              <div>
                 <label className={labelClass}>Visual Aura</label>
                 <textarea
                   value={(brandbook.visual_style as { visualAura?: string })?.visualAura ?? ""}

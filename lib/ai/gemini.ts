@@ -439,12 +439,46 @@ function truncate(s: string, max: number): string {
   return t.length <= max ? t : t.slice(0, max) + "...";
 }
 
+function formatDosAndDonts(dosAndDonts: unknown): string {
+  const d = dosAndDonts as { dos?: string[]; donts?: string[] } | null | undefined;
+  if (!d) return "";
+  const dos = Array.isArray(d.dos) ? d.dos.filter(Boolean).slice(0, 5) : [];
+  const donts = Array.isArray(d.donts) ? d.donts.filter(Boolean).slice(0, 5) : [];
+  if (dos.length === 0 && donts.length === 0) return "";
+  const parts: string[] = [];
+  if (dos.length > 0) parts.push(`Do: ${dos.join("; ")}`);
+  if (donts.length > 0) parts.push(`Don't: ${donts.join("; ")}`);
+  return parts.join(". ");
+}
+
+const LAYOUT_SPATIAL_DIRECTIVES: Record<string, string> = {
+  "magazine-editorial": "MAGAZINE EDITORIAL LAYOUT: Edge-to-edge full-bleed background. Leave generous negative space at the absolute top for a massive masthead (Headline). Place the primary subject centrally. Leave smaller pockets of negative space on borders for subheadlines.",
+  "cinematic-poster": "CINEMATIC POSTER LAYOUT: Dramatic composition. Center the main subject perfectly. Leave a horizontal band of negative space across the middle for a Title. Leave a small band of empty space at the absolute bottom for body text.",
+  "immersive-visual": "IMMERSIVE VISUAL LAYOUT: Edge-to-edge subject focus. Do not force large blocks of negative space. The image should be rich and full, as text will be minimally overlaid.",
+  "split-screen": "SPLIT-SCREEN LAYOUT: Use a sharp geometric division (vertical or horizontal split). One half must be completely clean negative space strictly for text. The other half contains the visual subject.",
+  "text-top": "BOTTOM-HEAVY SUBJECT LAYOUT: Anchor the main subject or illustration heavily at the absolute bottom of the frame. Ensure the top 40% of the canvas is clean, uncluttered negative space for top-aligned typography.",
+  "text-bottom": "TOP-HEAVY SUBJECT LAYOUT: Anchor the main subject or illustration at the top or upper-center. Ensure the bottom 40% of the canvas is clean, uncluttered negative space for bottom-aligned typography.",
+  "text-heavy-infographic": "INFOGRAPHIC GRID LAYOUT: Highly structured. Do not generate a massive hero subject. Use a clean background with small, supportive graphical motifs. Maximize whitespace (80% empty) to accommodate dense, multi-point typography.",
+  "quote-card": "STATEMENT CARD LAYOUT: Extreme minimalism. The text is the hero. Generate a beautifully textured, soft, or abstract background with ZERO distracting subjects. Ensure 90% negative space for massive, centered typography.",
+  "immersive-photo": "IMMERSIVE VISUAL LAYOUT: Edge-to-edge subject focus. Do not force large blocks of negative space. The image should be rich and full, as text will be minimally overlaid.",
+  editorial: "MAGAZINE EDITORIAL LAYOUT: Edge-to-edge full-bleed background. Leave generous negative space at the absolute top for a massive masthead (Headline). Place the primary subject centrally. Leave smaller pockets of negative space on borders for subheadlines.",
+  "text-heavy": "INFOGRAPHIC GRID LAYOUT: Highly structured. Do not generate a massive hero subject. Use a clean background with small, supportive graphical motifs. Maximize whitespace (80% empty) to accommodate dense, multi-point typography.",
+  "tweet-card": "STATEMENT CARD LAYOUT: Extreme minimalism. The text is the hero. Generate a beautifully textured, soft, or abstract background with ZERO distracting subjects. Ensure 90% negative space for massive, centered typography.",
+};
+
 const LAYOUT_TEXT_GUIDE: Record<string, string> = {
+  "magazine-editorial": "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown. Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography. Be substantive—2–4 lines.",
+  "cinematic-poster": "Cinematic Poster: Line 1 = title. Line 2+ = supporting text. Bold, dramatic typography. Plain text only, no markdown.",
+  "immersive-visual": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
+  "split-screen": "Split Screen: Line 1 = main headline, Line 2+ = body. Be substantive. Plain text only, no markdown.",
+  "text-top": "Text Top: Headline and subheadline at top. Line 1 = headline, Line 2 = subheadline, Line 3+ = body. Plain text only.",
+  "text-bottom": "Image Top / Text Bottom: Headline and body at bottom. Line 1 = headline, Line 2+ = body. Plain text only.",
+  "text-heavy-infographic": "Text-Heavy / Infographic: Bold typography center stage. imageTextOnImage: 2–5 lines (main headline 主標題 + subheadline + body). Up to 200 chars per slide. Plain text only, no markdown.",
+  "quote-card": "Quote / Tweet Card: Stylized quote. imageTextOnImage: the key quote (2–3 lines), plain text only, no markdown.",
   "immersive-photo": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
-  editorial: "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown (#, ##, ###, **). Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography. Be substantive—2–4 lines of real content.",
-  "text-heavy": "Text-Heavy / Carousel: Bold typography center stage. imageTextOnImage: 2–5 lines (main headline 主標題 + subheadline + body). Each line adds value. Up to 200 chars per slide for text-heavy—be substantive, not minimal. Plain text only, no markdown.",
-  "tweet-card": "Tweet / Quote Card: Stylized quote or social post. imageTextOnImage: the key quote (can be 2–3 lines), plain text only, no markdown. Attractive background.",
-  "split-screen": "Split Screen / Collage: Dynamic mix. imageTextOnImage: Line 1 = main headline, Line 2+ = body. Be substantive. Side-by-side or collage layout with text areas.",
+  editorial: "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown. Line 1 = main headline. Line 2 = subheadline. Line 3+ = body.",
+  "text-heavy": "Text-Heavy / Infographic: Bold typography center stage. imageTextOnImage: 2–5 lines. Up to 200 chars per slide. Plain text only, no markdown.",
+  "tweet-card": "Quote / Tweet Card: Stylized quote. imageTextOnImage: the key quote (2–3 lines), plain text only, no markdown.",
 };
 
 /** Single post (單頁圖表): impress target audience. Carousel (複頁教學貼文): save value. */
@@ -673,8 +707,11 @@ export async function generatePost(
     const tone = truncate(brandbook.toneOfVoice, 150);
     const aspectNote = format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
 
-    const isTextHeavy = postStyle === "text-heavy";
-    const layoutGuide = LAYOUT_TEXT_GUIDE[postStyle || "text-heavy"] || LAYOUT_TEXT_GUIDE["text-heavy"];
+    const isTextHeavy = postStyle === "text-heavy-infographic" || postStyle === "text-heavy";
+    const layoutGuide = LAYOUT_SPATIAL_DIRECTIVES[postStyle || "text-heavy-infographic"] || LAYOUT_SPATIAL_DIRECTIVES["text-heavy-infographic"];
+    const textGuide = LAYOUT_TEXT_GUIDE[postStyle || "text-heavy-infographic"] || LAYOUT_TEXT_GUIDE["text-heavy-infographic"];
+    const dosDonts = formatDosAndDonts(brandbook.dosAndDonts);
+    const layoutStyleDetail = truncate((vs as { layoutStyleDetail?: string })?.layoutStyleDetail || "", 200);
 
     const carouselPrompt = getCarouselDraftPrompt({
       pageCount,
@@ -685,6 +722,9 @@ export async function generatePost(
       colors: colors || "professional palette",
       contentFrameworkDesc: CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"],
       layoutGuide,
+      layoutStyleDetail,
+      dosDonts,
+      textGuide,
       idea,
       format,
       aspectNote,
@@ -765,10 +805,13 @@ export async function generatePost(
     ? `Other (${brandbook.otherBrandType.trim()})`
     : BRAND_TYPE_GUIDANCE[brandbook.brandType || ""]?.split(":")[0] || brandbook.brandType || "";
 
+  const spatialDirective = LAYOUT_SPATIAL_DIRECTIVES[layout] || LAYOUT_SPATIAL_DIRECTIVES["immersive-visual"];
+  const dosDonts = formatDosAndDonts(brandbook.dosAndDonts);
   const visualLayoutContext = [
-    `Visual layout (user chose): ${layout}. ${LAYOUT_TEXT_GUIDE[layout] || ""}`,
+    `Visual layout (user chose): ${layout}. ${spatialDirective}`,
     typography ? `Typography: ${typography}` : "",
     layoutDetail ? `Layout: ${layoutDetail}` : "",
+    dosDonts ? `Brand rules: ${dosDonts}` : "",
   ]
     .filter(Boolean)
     .join(". ");
