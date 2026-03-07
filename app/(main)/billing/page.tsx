@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
-import Link from "next/link";
 import { BillingCheckoutButton } from "@/components/billing/billing-checkout-button";
 import { SignOutButton } from "./sign-out-button";
 
@@ -95,14 +95,17 @@ export default async function BillingPage() {
           <p className="text-zinc-400 text-sm sm:text-base">
             Manage your subscription and credits
           </p>
+          <p className="text-zinc-500 text-sm mt-1">
+            {user.email}
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <a
-            href="mailto:chris.lau@professor-cat.com"
+          <Link
+            href="/support"
             className="px-4 py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:bg-white/5 transition-colors text-sm"
           >
             Support
-          </a>
+          </Link>
           <SignOutButton />
         </div>
       </div>

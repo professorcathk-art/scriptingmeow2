@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PublicPageLayout } from "@/components/landing/public-page-layout";
 import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
 
@@ -17,6 +18,8 @@ const plans: Array<{
       `${PLAN_LIMITS.free.brand_spaces} Brand Space${PLAN_LIMITS.free.brand_spaces > 1 ? "s" : ""}`,
       `${PLAN_LIMITS.free.monthly_credits} credits/month`,
       "AI post generation",
+      "Single image & carousel",
+      "Style gallery access",
       "Basic support",
     ],
   },
@@ -28,8 +31,10 @@ const plans: Array<{
       `${PLAN_LIMITS.basic.brand_spaces} Brand Spaces`,
       `${PLAN_LIMITS.basic.monthly_credits} credits/month`,
       "AI post generation",
+      "All formats (square, portrait, story)",
+      "Logo integration",
+      "Reference materials",
       "Priority support",
-      "Export options",
     ],
   },
   {
@@ -39,11 +44,11 @@ const plans: Array<{
     features: [
       `${PLAN_LIMITS.pro.brand_spaces} Brand Spaces`,
       `${PLAN_LIMITS.pro.monthly_credits} credits/month`,
-      "AI post generation",
-      "Priority support",
+      "Everything in Basic",
       "Batch generation",
-      "Advanced analytics",
+      "Library & export",
       "Custom branding",
+      "Priority support",
     ],
     popular: true,
   },
@@ -59,15 +64,19 @@ function CheckIcon() {
 
 export default function PricingPage() {
   return (
-    <main className="min-h-screen bg-zinc-950">
-      <div className="max-w-5xl mx-auto px-4 py-16">
+    <PublicPageLayout>
+      <div className="max-w-5xl mx-auto">
         <Link href="/" className="text-violet-400 hover:text-violet-300 text-sm mb-8 inline-block">
           ← Back to home
         </Link>
-        <h1 className="text-3xl font-bold text-white mb-4">Pricing</h1>
-        <p className="text-zinc-400 mb-12">
+        <h1 className="text-3xl font-bold text-white mb-2">Pricing</h1>
+        <p className="text-zinc-400 mb-4">
           Simple, transparent pricing. Start free, upgrade when you need more.
         </p>
+        <p className="text-zinc-500 text-sm mb-12">
+          1 credit = 1 generated variation. Credits reset monthly. No rollover.
+        </p>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {plans.map((plan) => (
             <div
@@ -109,7 +118,13 @@ export default function PricingPage() {
             </div>
           ))}
         </div>
+
+        <div className="text-center">
+          <Link href="/features" className="text-violet-400 hover:text-violet-300 text-sm">
+            Compare all features →
+          </Link>
+        </div>
       </div>
-    </main>
+    </PublicPageLayout>
   );
 }

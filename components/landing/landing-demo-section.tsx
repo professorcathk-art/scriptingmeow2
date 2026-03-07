@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 export function LandingDemoSection() {
   return (
     <section className="py-24 px-4">
@@ -14,37 +16,41 @@ export function LandingDemoSection() {
 
       <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
         <div className="order-2 md:order-1">
-          <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-6 shadow-2xl">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">
-              Brand Space / Prompt
-            </p>
-            <div className="space-y-4">
-              <div className="h-6 bg-white/5 rounded-lg w-3/4" />
-              <div className="h-4 bg-white/5 rounded w-full" />
-              <div className="h-4 bg-white/5 rounded w-5/6" />
-              <div className="h-4 bg-white/5 rounded w-4/5" />
-              <div className="mt-6 p-4 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                <span className="text-sm text-violet-400 font-medium">
-                  AI generates your brandbook →
-                </span>
-              </div>
+          <div className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+            <Image
+              src="/landing-demo/brand-space.png"
+              alt="Brand Space / Prompt"
+              width={600}
+              height={400}
+              className="w-full h-auto object-cover"
+            />
+            <div className="bg-zinc-900/50 p-4 border-t border-white/10">
+              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">
+                Brand Space / Prompt
+              </p>
+              <p className="text-sm text-violet-400 font-medium">
+                AI generates your brandbook →
+              </p>
             </div>
           </div>
         </div>
 
         <div className="order-1 md:order-2">
           <div className="grid grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
+            {["post-1", "post-2", "post-3"].map((name, i) => (
               <div
-                key={i}
+                key={name}
                 className={`rounded-2xl border border-white/10 overflow-hidden bg-zinc-900/50 ${
-                  i === 2 ? "col-span-2" : ""
+                  i === 1 ? "col-span-2" : ""
                 }`}
               >
-                <div className="aspect-square bg-gradient-to-br from-violet-500/20 via-cyan-500/10 to-pink-500/20" />
-                <div className="p-3">
-                  <div className="h-2 bg-white/10 rounded w-2/3 mb-2" />
-                  <div className="h-2 bg-white/5 rounded w-1/2" />
+                <div className="relative aspect-[4/5]">
+                  <Image
+                    src={`/landing-demo/${name}.png`}
+                    alt={`AI-generated post ${i + 1}`}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
               </div>
             ))}
