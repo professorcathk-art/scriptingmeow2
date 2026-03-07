@@ -32,6 +32,8 @@ interface CreatePostFormProps {
   } | null;
   libraryPosts?: LibraryPost[];
   prefillFromTryStyle?: { styleId: string; contentIdea: string };
+  prefillIdeaContent?: string;
+  postIdeas?: { id: string; content: string }[];
 }
 
 const STEPS = [
@@ -64,6 +66,8 @@ export function CreatePostForm({
   editPost,
   libraryPosts = [],
   prefillFromTryStyle,
+  prefillIdeaContent,
+  postIdeas = [],
 }: CreatePostFormProps) {
   const router = useRouter();
   const creditsCtx = useCredits();
@@ -181,6 +185,13 @@ export function CreatePostForm({
       }
     })();
   }, [prefillFromTryStyle, clearPostDraft, router]);
+
+  useEffect(() => {
+    if (prefillIdeaContent) {
+      setFormData((prev) => ({ ...prev, contentIdea: prefillIdeaContent }));
+      setStep(2);
+    }
+  }, [prefillIdeaContent]);
 
   useEffect(() => {
     if (prefillFromTryStyle) return;
@@ -791,6 +802,29 @@ export function CreatePostForm({
           <label className="block text-sm font-medium text-zinc-400 mb-2">
             Describe the post you want to create * (max 500 chars for faster generation)
           </label>
+          {postIdeas.length > 0 && (
+            <div className="mb-2">
+              <span className="text-xs text-zinc-500 mr-2">Choose from Idea Bank:</span>
+              <select
+                className="px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                value=""
+                onChange={(e) => {
+                  const opt = e.target.value;
+                  if (opt) {
+                    const idea = postIdeas.find((i) => i.id === opt);
+                    if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content.slice(0, 500) }));
+                  }
+                }}
+              >
+                <option value="">— Select an idea —</option>
+                {postIdeas.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.content.slice(0, 60)}{i.content.length > 60 ? "…" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <textarea
             required
             maxLength={500}

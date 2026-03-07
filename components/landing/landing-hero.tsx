@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { LANDING_STYLES } from "@/lib/landing-styles";
-import { TryStyleModal } from "./try-style-modal";
+import { SaveStyleModal } from "./save-style-modal";
 
 interface LandingHeroProps {
   isAuthenticated?: boolean;
@@ -111,7 +111,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
                   {/* Desktop: hover overlay. Mobile: always show tap hint */}
                   <div className="absolute inset-0 bg-black/40 sm:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <span className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold text-sm shadow-lg sm:group-hover:scale-105 transition-all duration-200">
-                      ✨ Use this Style
+                      ✨ Save this Style
                     </span>
                   </div>
                 </div>
@@ -128,7 +128,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
       </section>
 
       {selectedStyle && (
-        <TryStyleModal
+        <SaveStyleModal
           item={selectedStyle}
           onClose={() => setSelectedStyle(null)}
           isAuthenticated={isAuthenticated}

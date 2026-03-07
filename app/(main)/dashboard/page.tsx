@@ -31,6 +31,12 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
+  const { data: brandbooks } = await supabase
+    .from("brandbooks")
+    .select("brand_space_id")
+    .in("brand_space_id", brandSpaces?.map((b) => b.id) ?? []);
+
+  const hasBrandbook = (brandbooks?.length ?? 0) > 0;
   const brandSpaceCount = brandSpaces?.length || 0;
   const brandSpaceLimit = userProfile
     ? PLAN_LIMITS[userProfile.plan_tier as PlanTier].brand_spaces
@@ -38,6 +44,16 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {!hasBrandbook && brandSpaces && brandSpaces.length > 0 && (
+        <Link
+          href={`/brand-spaces/${brandSpaces[0].id}/brandbook`}
+          className="block p-6 rounded-2xl bg-gradient-to-r from-violet-500/20 via-cyan-500/20 to-pink-500/20 border-2 border-violet-500/40 hover:border-violet-500/60 transition-all"
+        >
+          <p className="text-xl font-bold text-white">Create your brandbook</p>
+          <p className="text-zinc-400 mt-1">Define your brand style for consistent, on-brand posts</p>
+        </Link>
+      )}
+
       {/* Bento box - Quick actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link

@@ -5,7 +5,7 @@ import { CreatePostForm } from "@/components/posts/create-post-form";
 export default async function CreatePostPage({
   searchParams,
 }: {
-  searchParams: { edit?: string; styleId?: string; contentIdea?: string };
+  searchParams: { edit?: string; styleId?: string; contentIdea?: string; ideaId?: string };
 }) {
   const supabase = await createClient();
   const {
@@ -56,6 +56,12 @@ export default async function CreatePostPage({
     }
   }
 
+  const { data: postIdeas } = await supabase
+    .from("user_post_ideas")
+    .select("id, content")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
   const { data: libraryPosts } = await supabase
     .from("generated_posts")
     .select("id, visual_url, carousel_urls, content_idea")
@@ -68,6 +74,17 @@ export default async function CreatePostPage({
     searchParams.styleId && searchParams.contentIdea
       ? { styleId: searchParams.styleId, contentIdea: searchParams.contentIdea }
       : undefined;
+
+  let prefillIdeaContent: string | undefined;
+  if (searchParams.ideaId) {
+    const { data: idea } = await supabase
+      .from("user_post_ideas")
+      .select("content")
+      .eq("id", searchParams.ideaId)
+      .eq("user_id", user.id)
+      .single();
+    if (idea) prefillIdeaContent = idea.content;
+  }
 
   if ((!brandSpaces || brandSpaces.length === 0) && !prefillFromTryStyle) {
     return (
@@ -98,6 +115,8 @@ export default async function CreatePostPage({
         editPost={editPost}
         libraryPosts={libraryPosts ?? []}
         prefillFromTryStyle={prefillFromTryStyle}
+        prefillIdeaContent={prefillIdeaContent}
+        postIdeas={postIdeas ?? []}
       />
     </div>
   );
