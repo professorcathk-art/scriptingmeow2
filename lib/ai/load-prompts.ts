@@ -211,7 +211,7 @@ Return valid JSON only. Include postAim: one sentence summarizing the post's aim
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
 
-Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image (plain text). visualAdvice = scene for image gen, aspect {{aspectNote}}. igCaption = max 400 chars, max 3 hashtags.`;
+Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image (plain text). visualAdvice = scene for image gen, aspect {{aspectNote}}. igCaption = WRITE A FULL ENGAGING CAPTION - do NOT just repeat the content idea or title. Create an original, scroll-stopping caption that hooks the reader. Max 400 chars, max 3 hashtags.`;
 
 const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Keep it concise.
 
@@ -231,7 +231,7 @@ Return valid JSON only. Include postAim: one sentence for the post's aim (e.g. "
   "igCaption": "Caption (max 400 chars, max 3 hashtags)."
 }
 
-postAim = overall aim for image gen. header = main headline (not "Step 1"). visualAdvice = scene for image gen.`;
+postAim = overall aim for image gen. header = main headline (not "Step 1"). visualAdvice = scene for image gen. igCaption = WRITE A FULL ENGAGING CAPTION - do NOT just repeat the content idea or title. Create an original caption. Max 400 chars, max 3 hashtags.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;

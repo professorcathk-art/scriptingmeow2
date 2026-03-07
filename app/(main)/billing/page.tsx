@@ -160,14 +160,6 @@ export default async function BillingPage() {
         </div>
       </div>
 
-      <div className="bg-zinc-900/50 rounded-2xl border border-red-500/20 p-6">
-        <h2 className="text-xl font-semibold text-zinc-100 mb-2">Danger zone</h2>
-        <p className="text-sm text-zinc-400 mb-4">
-          Permanently delete your account and all data. This cannot be undone.
-        </p>
-        <DeleteAccountButton />
-      </div>
-
       <div>
         <h2 className="text-xl font-semibold text-zinc-100 mb-6">
           Available Plans
@@ -267,6 +259,14 @@ export default async function BillingPage() {
             Example: Generating 3 variations of a square post uses 3 credits.
           </p>
         </div>
+      </div>
+
+      <div className="bg-zinc-900/50 rounded-2xl border border-red-500/20 p-6">
+        <h2 className="text-xl font-semibold text-zinc-100 mb-2">Danger zone</h2>
+        <p className="text-sm text-zinc-400 mb-4">
+          Permanently delete your account and all data. This cannot be undone.
+        </p>
+        <DeleteAccountButton />
       </div>
     </div>
   );

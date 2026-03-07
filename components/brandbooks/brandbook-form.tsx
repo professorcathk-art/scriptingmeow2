@@ -152,6 +152,10 @@ export function BrandbookForm({
   };
 
   const handleGenerateBrandbook = async () => {
+    if (logoUrl && (logoPlacement === null || logoPlacement === undefined)) {
+      alert("Please choose logo placement before generating. Logo placement is required when you have a logo.");
+      return;
+    }
     setGenerating(true);
     try {
       // Get brand details from sessionStorage if available
@@ -250,8 +254,9 @@ export function BrandbookForm({
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Logo placement in generated images
+              Logo placement in generated images *
             </label>
+            <p className="text-xs text-zinc-500 mb-2">Required: choose where your logo appears on generated posts.</p>
             <select
               value={logoPlacement ?? "none"}
               onChange={(e) => handleLogoPlacementChange(e.target.value as LogoPlacement)}
@@ -331,6 +336,11 @@ export function BrandbookForm({
           </div>
         </div>
         <div className="text-center">
+          {generating && (
+            <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
+              Please stay on this page. Do not leave or refresh while AI is generating. This may take a minute.
+            </div>
+          )}
           <p className="text-zinc-400 mb-4">
             Generate your brandbook. AI will analyze your brand info{referenceImages.length > 0 ? " and sample images" : ""}.
           </p>
@@ -372,6 +382,11 @@ export function BrandbookForm({
         </div>
       </div>
       <div className="bg-zinc-900/50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10">
+        {generating && (
+          <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
+            Please stay on this page. Do not leave or refresh while AI is generating.
+          </div>
+        )}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-zinc-100">Brandbook</h2>
           <button
@@ -405,50 +420,59 @@ export function BrandbookForm({
               <div>
                 <label className={labelClass}>Color Palette (up to 5 colors)</label>
                 <p className="text-xs text-zinc-500 mb-2">Choose or enter hex codes. Used for consistent IG post generation.</p>
-                <div className="flex flex-wrap gap-3">
-                  {[0, 1, 2, 3, 4].map((i) => {
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                  {[
+                    { i: 0, label: "Primary background" },
+                    { i: 1, label: "Secondary background" },
+                    { i: 2, label: "Primary text" },
+                    { i: 3, label: "Secondary text" },
+                    { i: 4, label: "Backup color" },
+                  ].map(({ i, label }) => {
                     const colors = Array.isArray(brandbook.visual_style?.colors) ? [...brandbook.visual_style.colors] : [];
                     const padded = [...colors];
                     while (padded.length < 5) padded.push("");
                     const hex = (padded[i] ?? "").trim();
                     const normalizedHex = hex.startsWith("#") ? hex : hex ? `#${hex}` : "#808080";
                     return (
-                      <div key={i} className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={normalizedHex}
-                          onChange={(e) => {
-                            const next = [...padded];
-                            next[i] = e.target.value;
-                            setBrandbook({
-                              ...brandbook,
-                              visual_style: {
-                                ...brandbook.visual_style,
-                                colors: next.filter((c) => c && String(c).trim()),
-                              },
-                            });
-                          }}
-                          className="w-12 h-12 rounded-xl cursor-pointer border-2 border-white/20 bg-transparent"
-                          title={`Color ${i + 1}`}
-                        />
-                        <input
-                          type="text"
-                          value={hex}
-                          onChange={(e) => {
-                            const val = e.target.value.trim();
-                            const next = [...padded];
-                            next[i] = val ? (val.startsWith("#") ? val : `#${val}`) : "";
-                            setBrandbook({
-                              ...brandbook,
-                              visual_style: {
-                                ...brandbook.visual_style,
-                                colors: next.filter((c) => c && String(c).trim()),
-                              },
-                            });
-                          }}
-                          placeholder="#hex"
-                          className="w-24 px-2 py-1.5 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                        />
+                      <div key={i} className="flex flex-col gap-2">
+                        <span className="text-xs text-zinc-400">{label}</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={normalizedHex}
+                            onChange={(e) => {
+                              const next = [...padded];
+                              next[i] = e.target.value;
+                              setBrandbook({
+                                ...brandbook,
+                                visual_style: {
+                                  ...brandbook.visual_style,
+                                  colors: next.slice(0, 5).map((c) => (c && String(c).trim()) || ""),
+                                },
+                              });
+                            }}
+                            className="w-12 h-12 rounded-xl cursor-pointer border-2 border-white/20 bg-transparent"
+                            title={label}
+                          />
+                          <input
+                            type="text"
+                            value={hex}
+                            onChange={(e) => {
+                              const val = e.target.value.trim();
+                              const next = [...padded];
+                              next[i] = val ? (val.startsWith("#") ? val : `#${val}`) : "";
+                              setBrandbook({
+                                ...brandbook,
+                                visual_style: {
+                                  ...brandbook.visual_style,
+                                  colors: next.slice(0, 5).map((c) => (c && String(c).trim()) || ""),
+                                },
+                              });
+                            }}
+                            placeholder="#hex"
+                            className="flex-1 min-w-0 px-2 py-1.5 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+                          />
+                        </div>
                       </div>
                     );
                   })}

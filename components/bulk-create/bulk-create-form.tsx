@@ -98,7 +98,11 @@ export function BulkCreateForm({
       if (typeof data.credits_remaining === "number") {
         creditsCtx?.setCredits(data.credits_remaining);
       }
-      router.refresh();
+      if (data.created?.length > 0) {
+        router.push("/library");
+      } else {
+        router.refresh();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Bulk generate failed");
     } finally {
@@ -214,6 +218,12 @@ export function BulkCreateForm({
               View in Library →
             </a>
           )}
+        </div>
+      )}
+
+      {loading && (
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
+          Please stay on this page. Do not leave or refresh while AI is generating. This may take several minutes.
         </div>
       )}
 

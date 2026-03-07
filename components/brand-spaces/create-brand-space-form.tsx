@@ -324,7 +324,7 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
 
         <div>
           <label htmlFor="valueProposition" className="flex items-center gap-2 text-sm font-medium text-zinc-400 mb-2">
-            What makes your brand unique and valuable? *
+            What value do you bring to target audiences? *
             <TipIcon fieldKey="valueProposition" />
           </label>
           <textarea
@@ -334,7 +334,7 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
             onChange={(e) => setFormData({ ...formData, valueProposition: e.target.value })}
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50"
             rows={4}
-            placeholder="Describe what makes your brand unique and valuable in your own words..."
+            placeholder="Describe what value you bring to your target audiences..."
           />
           <button
             type="button"

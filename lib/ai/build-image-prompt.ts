@@ -96,7 +96,7 @@ export function buildImagePrompt(options: {
   const colors = vs?.primaryColor
     ? [vs.primaryColor, vs.secondaryColor1, vs.secondaryColor2].filter(Boolean).join(", ")
     : Array.isArray(vs?.colors)
-      ? vs.colors.slice(0, 5).join(", ")
+      ? vs.colors.filter((c) => c && String(c).trim()).slice(0, 5).join(", ")
       : "";
   const imageStyle = vs?.imageStyle || vs?.image_style || "professional";
   const colorDescriptionDetailed = (vs as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed || "";
@@ -122,7 +122,7 @@ export function buildImagePrompt(options: {
     if (!colorDescriptionDetailed && colors) brandContextParts.push(`Colors (use these): ${colors}`);
   }
   const logoPlacement = options.logoPlacement;
-  const showLogo = options.logoUrl && logoPlacement !== "none";
+  const showLogo = options.logoUrl && logoPlacement && logoPlacement !== "none";
   if (showLogo) {
     const placementMap: Record<string, string> = {
       "top-left": "top-left corner",
@@ -132,8 +132,8 @@ export function buildImagePrompt(options: {
       "bottom-center": "bottom center",
       "bottom-right": "bottom-right corner",
     };
-    const placement = placementMap[logoPlacement ?? ""] ?? "top-right corner";
-    brandContextParts.push(`Include logo integration seamlessly in the ${placement} of the composition.`);
+    const placement = placementMap[logoPlacement] ?? "top-right corner";
+    brandContextParts.push(`CRITICAL - LOGO: You MUST include the user's uploaded logo (provided as reference image) in the ${placement} of the composition. The logo is the user's actual branding - use it exactly as shown. Sample posts and reference images are for style/color reference ONLY - do NOT copy logos or branding from them. Always use the user's uploaded logo.`);
   }
   const brandContext = brandContextParts.length > 0
     ? `CORE VISUAL IDENTITY (MANDATORY):\n${brandContextParts.join("\n")}`

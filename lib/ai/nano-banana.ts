@@ -49,7 +49,7 @@ async function generateWithModel(
 
   const styleInstruction =
     parts.length > 0
-      ? "The following reference images show the desired style. Generate an image that matches this style and the prompt below.\n\n"
+      ? "Reference images: The FIRST image may be the user's logo (if the prompt mentions logo) - use it exactly. Other images are for style/color reference only. Do NOT copy logos or branding from sample posts; use ONLY the user's uploaded logo when instructed. Generate an image matching the prompt below.\n\n"
       : "";
   parts.push({ text: styleInstruction + prompt });
 

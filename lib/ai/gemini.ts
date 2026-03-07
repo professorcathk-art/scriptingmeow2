@@ -388,7 +388,13 @@ export async function generateBrandbook(
           brandPersonality: brandbook.brandPersonality || "",
           toneOfVoice: brandbook.toneOfVoice || "",
           visualStyle: {
-            colors: Array.isArray(vs.colors) ? vs.colors.slice(0, 5) : [],
+            colors: Array.isArray(vs.colors)
+              ? (() => {
+                  const arr = vs.colors.slice(0, 5).map((c: unknown) => (c && String(c).trim()) || "");
+                  while (arr.length < 5) arr.push("");
+                  return arr;
+                })()
+              : ["", "", "", "", ""],
             primaryColor: vs.primaryColor || (Array.isArray(vs.colors) ? vs.colors[0] : ""),
             secondaryColor1: vs.secondaryColor1 || (Array.isArray(vs.colors) ? vs.colors[1] : ""),
             secondaryColor2: vs.secondaryColor2 || (Array.isArray(vs.colors) ? vs.colors[2] : ""),
@@ -656,7 +662,7 @@ export async function generatePost(
     } | null;
     const colors = vs?.primaryColor
       ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
-      : Array.isArray(vs?.colors) ? vs.colors.slice(0, 3).join(", ") : "";
+      : Array.isArray(vs?.colors) ? vs.colors.filter((c) => c && String(c).trim()).slice(0, 5).join(", ") : "";
     const style = vs?.imageStyle || vs?.image_style || "professional";
     const personality = truncate(brandbook.brandPersonality, 200);
     const tone = truncate(brandbook.toneOfVoice, 150);
@@ -739,7 +745,7 @@ export async function generatePost(
   } | null;
   const colors = vs?.primaryColor
     ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
-    : Array.isArray(vs?.colors) ? vs.colors.slice(0, 3).join(", ") : "";
+    : Array.isArray(vs?.colors) ? vs.colors.filter((c) => c && String(c).trim()).slice(0, 5).join(", ") : "";
   const style = vs?.imageStyle || vs?.image_style || "professional";
   const typography = truncate(vs?.typographySpec || "", 150);
   const layoutDetail = truncate(vs?.layoutStyleDetail || "", 150);

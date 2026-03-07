@@ -114,6 +114,7 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
   const carouselUrls = post.carousel_urls ?? [];
   const hasCarousel = carouselUrls.length > 0;
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [fullScreenImage, setFullScreenImage] = useState<{ url: string; alt: string } | null>(null);
 
   const postWithCustom = post as { custom_width?: number; custom_height?: number };
   const customAspect =
@@ -146,8 +147,9 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
               {carouselUrls.map((url, index) => (
                 <div
                   key={index}
-                  className="relative group bg-white/5 rounded-xl overflow-hidden"
+                  className="relative group bg-white/5 rounded-xl overflow-hidden cursor-zoom-in"
                   style={{ aspectRatio: customAspect }}
+                  onClick={() => setFullScreenImage({ url, alt: `Carousel page ${index + 1}` })}
                 >
                   <img
                     src={url}
@@ -179,8 +181,9 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
                 )}
               </div>
               <div
-                className="bg-white/5 rounded-xl flex items-center justify-center overflow-hidden"
+                className="bg-white/5 rounded-xl flex items-center justify-center overflow-hidden cursor-zoom-in"
                 style={{ aspectRatio: customAspect }}
+                onClick={() => post.visual_url && !imageError && setFullScreenImage({ url: post.visual_url, alt: "Post visual" })}
               >
                 {post.visual_url && !imageError ? (
                   <img
@@ -309,6 +312,27 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
           onClose={() => setShowSaveTemplate(false)}
           onSaved={() => router.refresh()}
         />
+      )}
+
+      {fullScreenImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setFullScreenImage(null)}
+        >
+          <img
+            src={fullScreenImage.url}
+            alt={fullScreenImage.alt}
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            onClick={() => setFullScreenImage(null)}
+            className="absolute top-4 right-4 px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20"
+          >
+            Close
+          </button>
+        </div>
       )}
     </div>
   );

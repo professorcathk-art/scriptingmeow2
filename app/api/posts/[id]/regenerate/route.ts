@@ -120,7 +120,13 @@ export async function POST(
 
     const aspectRatio =
       post.format === "portrait" ? "4:5" : post.format === "story" || post.format === "reel-cover" ? "9:16" : "1:1";
-    const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, { aspectRatio });
+    const logoUrlForRef = brandSpace?.logo_url && brandSpace?.logo_placement && brandSpace.logo_placement !== "none"
+      ? [brandSpace.logo_url]
+      : [];
+    const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
+      aspectRatio,
+      referenceImageUrls: logoUrlForRef,
+    });
 
     let visualUrl: string;
     if (imageBuffer) {

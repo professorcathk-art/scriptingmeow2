@@ -44,8 +44,11 @@ Do not write generic advice. Each field must be hyper-specific, highly conceptua
 
 **colorDescriptionDetailed** – Create a highly conceptual, mood-driven color palette. Structure using Markdown:
 - **Overall Vibe:** Describe the texture and emotional impact (e.g., "Watercolor-on-paper texture, low saturation, high brightness, non-fatiguing").
-- **Primary Colors:** Give them thematic names, hex codes, and psychological purpose (e.g., "Text Dark Brown #3E332A - softer than black for approachability", "Paper Cream #F9F7F2").
-- **Secondary Colors:** Assign emotional/functional meaning to each (e.g., "Healing Green #8FB995 for correct answers", "Alert Coral #E68A81 for misconceptions"). Include hex + purpose. 200–500 chars.
+- **Primary background:** Main background color (hex + purpose, e.g., "Paper Cream #F9F7F2 - soft, non-fatiguing base").
+- **Secondary background:** Alternate/section backgrounds (hex + purpose).
+- **Primary text:** Main headline/body text color (hex + purpose, e.g., "Text Dark Brown #3E332A - softer than black for approachability").
+- **Secondary text:** Subheadings, captions (hex + purpose).
+- **Backup color:** Accent, highlights, CTAs (hex + purpose, e.g., "Healing Green #8FB995 for correct answers").
 
 **visualAura** – Define the emotional impact of the layout and spatial design. Specify whitespace philosophy (e.g., "High whitespace, 40% empty space for a calming, breathable reading experience. Do not cram information"). Markdown allowed.
 
@@ -58,7 +61,7 @@ Do not write generic advice. Each field must be hyper-specific, highly conceptua
 
 **layoutStyleDetail** – Define a highly structured content flow. Detail a specific narrative structure (e.g., "Three-Act Structure: Cover features massive pain-point headline + emotional illustration. Content features Objective description + Empathy vs Reality breakdown"). Mention the use of visual anchors like Emojis or color blocks. Markdown allowed.
 
-**colors** – Array of 3–5 hex codes ONLY (e.g., ["#3E332A", "#F9F7F2", "#8FB995", "#E68A81"]). Extract exactly from colorDescriptionDetailed. Order: primary first, then secondary.
+**colors** – Array of exactly 5 hex codes in this order: [primary_background, secondary_background, primary_text, secondary_text, backup_color]. Use empty string "" for any slot you omit (e.g., 3 colors = ["#F9F7F2", "#F5F3EE", "#3E332A", "", "#8FB995"]). Extract from colorDescriptionDetailed. Max 5.
 
 **imageGenerationPrompt** – A highly descriptive, synthesized prompt engineered directly for an AI image generator (like Midjourney). Must synthesize the exact art style, character details, emotional vibe, lighting, and textures into 3-4 sentences. Example: "A Japanese healing-style digital watercolor illustration of a cute, anthropomorphic black-and-white tuxedo cat. The cat wears round glasses and a black backpack, looking gentle and empathetic. Clean, smooth lines, soft muted pastel colors, minimal shading, resembling a premium children's book cover. Cozy, reassuring atmosphere on textured cream paper." This is the most important field for visual output.
 

@@ -934,9 +934,9 @@ export function CreatePostForm({
           <label className="block text-sm font-medium text-zinc-400 mb-2">
             Describe the post you want to create *
           </label>
-          {postIdeas.length > 0 && (
-            <div className="mb-2">
-              <span className="text-xs text-zinc-500 mr-2">Choose from Idea Bank:</span>
+          <div className="mb-2">
+            <span className="text-xs text-zinc-500 mr-2">Choose from Idea Bank:</span>
+            {postIdeas.length > 0 ? (
               <select
                 className="px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                 value=""
@@ -955,8 +955,15 @@ export function CreatePostForm({
                   </option>
                 ))}
               </select>
-            </div>
-          )}
+            ) : (
+              <span className="text-xs text-zinc-500">
+                No ideas yet.{" "}
+                <a href="/library" className="text-violet-400 hover:text-violet-300">
+                  Add ideas in Library
+                </a>
+              </span>
+            )}
+          </div>
           <textarea
             required
             maxLength={3000}
@@ -1107,6 +1114,11 @@ export function CreatePostForm({
     return (
       <div className={cardClass}>
         <Stepper />
+        {loading && (
+          <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
+            Please stay on this page. Do not leave or refresh while AI is generating the draft.
+          </div>
+        )}
         <h2 className="text-xl font-semibold text-zinc-100">
           Step 3: Generate Draft (Caption + 視覺建議)
         </h2>
@@ -1177,6 +1189,11 @@ export function CreatePostForm({
     return (
       <div className={cardClass}>
         <Stepper />
+        {loading && (
+          <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
+            Please stay on this page. Do not leave or refresh while the image is being generated.
+          </div>
+        )}
         <h2 className="text-xl font-semibold text-zinc-100">
           Step 4: Confirm & Generate Image
         </h2>

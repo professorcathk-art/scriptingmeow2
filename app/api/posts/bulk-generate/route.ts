@@ -225,9 +225,12 @@ export async function POST(request: Request) {
             otherBrandType: brandDetails?.brand_details?.otherBrandType,
             contentFramework,
           });
+          const logoUrlForRef = brandSpace?.logo_url && (brandSpace as { logo_placement?: string | null })?.logo_placement && (brandSpace as { logo_placement?: string }).logo_placement !== "none"
+            ? [brandSpace.logo_url]
+            : [];
           const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
             aspectRatio,
-            referenceImageUrls: [],
+            referenceImageUrls: logoUrlForRef,
           });
           const pageUrl = imageBuffer
             ? await uploadPostImage(imageBuffer, post.id, user.id, page.pageIndex)
@@ -255,9 +258,12 @@ export async function POST(request: Request) {
           otherBrandType: brandDetails?.brand_details?.otherBrandType,
           contentFramework,
         });
+        const logoUrlForRef = brandSpace?.logo_url && (brandSpace as { logo_placement?: string | null })?.logo_placement && (brandSpace as { logo_placement?: string }).logo_placement !== "none"
+          ? [brandSpace.logo_url]
+          : [];
         const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
           aspectRatio,
-          referenceImageUrls: [],
+          referenceImageUrls: logoUrlForRef,
         });
         visualUrl = imageBuffer
           ? await uploadPostImage(imageBuffer, post.id, user.id)

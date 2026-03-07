@@ -256,7 +256,11 @@ export async function POST(request: Request) {
           : format === "story" || format === "reel-cover"
             ? "9:16"
             : "1:1";
+    const logoUrlForRef = brandSpace?.logo_url && (brandSpace as { logo_placement?: string | null })?.logo_placement && (brandSpace as { logo_placement?: string }).logo_placement !== "none"
+      ? [brandSpace.logo_url]
+      : [];
     const sampleUrls = [
+      ...logoUrlForRef,
       ...(Array.isArray(referenceImageUrls)
         ? referenceImageUrls.slice(0, 3).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
         : []),
