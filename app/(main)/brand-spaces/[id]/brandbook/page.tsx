@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { BrandbookForm } from "@/components/brandbooks/brandbook-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function BrandbookPage({
   params,
 }: {

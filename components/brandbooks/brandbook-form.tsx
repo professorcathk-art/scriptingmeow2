@@ -441,15 +441,20 @@ export function BrandbookForm({
                             type="color"
                             value={normalizedHex}
                             onChange={(e) => {
+                              setHasEdited(true);
                               const next = [...padded];
                               next[i] = e.target.value;
-                              setBrandbook({
-                                ...brandbook,
-                                visual_style: {
-                                  ...brandbook.visual_style,
-                                  colors: next.slice(0, 5).map((c) => (c && String(c).trim()) || ""),
-                                },
-                              });
+                              setBrandbook((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      visual_style: {
+                                        ...prev.visual_style,
+                                        colors: next.slice(0, 5).map((c) => (c && String(c).trim()) || ""),
+                                      },
+                                    }
+                                  : prev
+                              );
                             }}
                             className="w-12 h-12 rounded-xl cursor-pointer border-2 border-white/20 bg-transparent"
                             title={label}
@@ -458,16 +463,21 @@ export function BrandbookForm({
                             type="text"
                             value={hex}
                             onChange={(e) => {
+                              setHasEdited(true);
                               const val = e.target.value.trim();
                               const next = [...padded];
                               next[i] = val ? (val.startsWith("#") ? val : `#${val}`) : "";
-                              setBrandbook({
-                                ...brandbook,
-                                visual_style: {
-                                  ...brandbook.visual_style,
-                                  colors: next.slice(0, 5).map((c) => (c && String(c).trim()) || ""),
-                                },
-                              });
+                              setBrandbook((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      visual_style: {
+                                        ...prev.visual_style,
+                                        colors: next.slice(0, 5).map((c) => (c && String(c).trim()) || ""),
+                                      },
+                                    }
+                                  : prev
+                              );
                             }}
                             placeholder="#hex"
                             className="flex-1 min-w-0 px-2 py-1.5 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
