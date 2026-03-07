@@ -4,9 +4,10 @@ import { useState } from "react";
 
 interface InstagramHandleFormProps {
   initialHandle: string;
+  onSaved?: () => void;
 }
 
-export function InstagramHandleForm({ initialHandle }: InstagramHandleFormProps) {
+export function InstagramHandleForm({ initialHandle, onSaved }: InstagramHandleFormProps) {
   const [handle, setHandle] = useState(initialHandle.replace(/^@/, ""));
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -24,6 +25,7 @@ export function InstagramHandleForm({ initialHandle }: InstagramHandleFormProps)
       if (!res.ok) throw new Error("Failed to save");
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      onSaved?.();
     } catch {
       alert("Failed to save Instagram handle.");
     } finally {

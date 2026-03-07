@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { GeneratedPost, DraftData } from "@/types/database";
 import { SaveTemplateModal } from "./save-template-modal";
+import { InstagramHandleForm } from "@/components/billing/instagram-handle-form";
 import { useCredits } from "@/components/credits/credits-provider";
 
 interface RefinementVersion {
@@ -51,7 +52,6 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
   const creditsCtx = useCredits();
   const userCredits = creditsCtx?.creditsRemaining ?? initialCredits;
 
-  const [loading, setLoading] = useState(false);
   const [post, setPost] = useState(initialPost);
   const [caption, setCaption] = useState(initialPost.caption);
   const [imageError, setImageError] = useState(false);
@@ -94,33 +94,26 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
     fetchRefinementHistory();
   }, [fetchRefinementHistory]);
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const payload: { caption: CaptionShape; status: string; draft_data?: DraftData; is_public_gallery?: boolean } = {
-        caption,
-        status: "saved",
-        is_public_gallery: isPublicGallery,
-      };
-      if (draftData) payload.draft_data = draftData;
-      const response = await fetch(`/api/posts/${post.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+  const savePost = useCallback(async () => {
+    const payload: { caption: CaptionShape; status: string; draft_data?: DraftData; is_public_gallery?: boolean } = {
+      caption,
+      status: "saved",
+      is_public_gallery: isPublicGallery,
+    };
+    if (draftData) payload.draft_data = draftData;
+    const response = await fetch(`/api/posts/${post.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error("Failed to save post");
+  }, [post.id, caption, isPublicGallery, draftData]);
 
-      if (!response.ok) {
-        throw new Error("Failed to save post");
-      }
+  useEffect(() => {
+    const t = setTimeout(() => savePost().catch(() => {}), 800);
+    return () => clearTimeout(t);
+  }, [caption, isPublicGallery, savePost]);
 
-      router.push("/library");
-    } catch (error) {
-      console.error("Error saving post:", error);
-      alert("Failed to save post. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCopyCaption = async () => {
     const text = captionToParagraph(caption);
@@ -364,110 +357,137 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
         <div className="glass-elevated p-6 rounded-2xl space-y-4">
           <h2 className="text-xl font-semibold text-white">Version history</h2>
           <p className="text-sm text-zinc-400">All versions of this post</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <div className="space-y-6">
             {refinementHistory.length === 0 && (
-              <div
-                className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in border-2 border-violet-500/50"
-                style={{ aspectRatio: customAspect }}
-                onClick={() =>
-                  hasCarousel && carouselUrls[0]
-                    ? setFullScreenImage({ url: carouselUrls[0], alt: "Current" })
-                    : post.visual_url && setFullScreenImage({ url: post.visual_url, alt: "Current" })
-                }
-              >
-                {hasCarousel ? (
-                  <img src={carouselUrls[0]} alt="Current" className="w-full h-full object-cover" />
-                ) : (
-                  post.visual_url && (
-                    <img src={post.visual_url} alt="Current" className="w-full h-full object-cover" />
-                  )
-                )}
-                <div className="absolute bottom-0 left-0 right-0 bg-violet-500/80 px-2 py-1 text-xs text-white font-medium">
-                  Current
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-zinc-300">Current</p>
+                <div className={`flex gap-2 ${hasCarousel ? "flex-wrap" : ""}`}>
+                  {hasCarousel ? (
+                    carouselUrls.map((url, idx) => (
+                      <div
+                        key={idx}
+                        className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in border-2 border-violet-500/50 flex-shrink-0"
+                        style={{ aspectRatio: customAspect, width: hasCarousel ? 120 : "auto", minWidth: 80 }}
+                        onClick={() => setFullScreenImage({ url, alt: `Current page ${idx + 1}` })}
+                      >
+                        <img src={url} alt={`Page ${idx + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute bottom-0 left-0 right-0 bg-violet-500/80 px-2 py-1 text-xs text-white font-medium">
+                          Page {idx + 1}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    post.visual_url && (
+                      <div
+                        className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in border-2 border-violet-500/50"
+                        style={{ aspectRatio: customAspect, width: 120 }}
+                        onClick={() => setFullScreenImage({ url: post.visual_url!, alt: "Current" })}
+                      >
+                        <img src={post.visual_url} alt="Current" className="w-full h-full object-cover" />
+                        <div className="absolute bottom-0 left-0 right-0 bg-violet-500/80 px-2 py-1 text-xs text-white font-medium">
+                          Current
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             )}
             {refinementHistory.length > 0 && (
               <>
                 {!hasCarousel && refinementHistory[0]?.previous_visual_url && (
-                  <div
-                    className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in"
-                    style={{ aspectRatio: customAspect }}
-                    onClick={() =>
-                      setFullScreenImage({
-                        url: refinementHistory[0].previous_visual_url!,
-                        alt: "Original",
-                      })
-                    }
-                  >
-                    <img
-                      src={refinementHistory[0].previous_visual_url}
-                      alt="Original"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-xs text-white">
-                      Original
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-zinc-300">Original</p>
+                    <div
+                      className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in w-[120px]"
+                      style={{ aspectRatio: customAspect }}
+                      onClick={() =>
+                        setFullScreenImage({ url: refinementHistory[0].previous_visual_url!, alt: "Original" })
+                      }
+                    >
+                      <img src={refinementHistory[0].previous_visual_url} alt="Original" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
                 {hasCarousel && refinementHistory[0]?.previous_carousel_urls && refinementHistory[0].previous_carousel_urls.length > 0 && (
-                  <div
-                    className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in"
-                    style={{ aspectRatio: customAspect }}
-                    onClick={() =>
-                      setFullScreenImage({
-                        url: refinementHistory[0].previous_carousel_urls![refinementHistory[0].refined_page_index ?? 0] ?? refinementHistory[0].previous_carousel_urls![0],
-                        alt: "Original",
-                      })
-                    }
-                  >
-                    <img
-                      src={refinementHistory[0].previous_carousel_urls[refinementHistory[0].refined_page_index ?? 0] ?? refinementHistory[0].previous_carousel_urls[0]}
-                      alt="Original"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-xs text-white">
-                      Original
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-zinc-300">Original</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {refinementHistory[0].previous_carousel_urls.map((url, idx) => (
+                        <div
+                          key={idx}
+                          className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in flex-shrink-0"
+                          style={{ aspectRatio: customAspect, width: 120 }}
+                          onClick={() => setFullScreenImage({ url, alt: `Original page ${idx + 1}` })}
+                        >
+                          <img src={url} alt={`Page ${idx + 1}`} className="w-full h-full object-cover" />
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-xs text-white">
+                            Page {idx + 1}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
                 {refinementHistory.map((v, i) => {
-                  const url = hasCarousel
-                    ? v.carousel_urls?.[v.refined_page_index ?? 0] ?? v.carousel_urls?.[0]
-                    : v.visual_url;
-                  if (!url) return null;
+                  const urls = hasCarousel ? (v.carousel_urls ?? []) : (v.visual_url ? [v.visual_url] : []);
+                  if (urls.length === 0) return null;
                   return (
-                    <div
-                      key={v.id}
-                      className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in"
-                      style={{ aspectRatio: customAspect }}
-                      onClick={() => setFullScreenImage({ url, alt: `Version ${i + 1}` })}
-                    >
-                      <img src={url} alt={`Version ${i + 1}`} className="w-full h-full object-cover" />
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-xs text-white truncate">
-                        v{i + 1}: {v.comment?.slice(0, 30) ?? "Refined"}
+                    <div key={v.id} className="space-y-2">
+                      <p className="text-sm font-medium text-zinc-300">
+                        v{i + 1}: {v.comment?.slice(0, 40) ?? "Refined"}
+                      </p>
+                      <div className={`flex gap-2 ${urls.length > 1 ? "flex-wrap" : ""}`}>
+                        {urls.map((url, idx) => (
+                          <div
+                            key={idx}
+                            className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in flex-shrink-0"
+                            style={{ aspectRatio: customAspect, width: urls.length > 1 ? 120 : 120 }}
+                            onClick={() => setFullScreenImage({ url, alt: `Version ${i + 1} page ${idx + 1}` })}
+                          >
+                            <img src={url} alt={`v${i + 1} page ${idx + 1}`} className="w-full h-full object-cover" />
+                            {urls.length > 1 && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-xs text-white">
+                                Page {idx + 1}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );
                 })}
-                <div
-                  className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in border-2 border-violet-500/50"
-                  style={{ aspectRatio: customAspect }}
-                  onClick={() =>
-                    hasCarousel && carouselUrls[0]
-                      ? setFullScreenImage({ url: carouselUrls[0], alt: "Current" })
-                      : post.visual_url && setFullScreenImage({ url: post.visual_url, alt: "Current" })
-                  }
-                >
-                  {hasCarousel ? (
-                    <img src={carouselUrls[0]} alt="Current" className="w-full h-full object-cover" />
-                  ) : (
-                    post.visual_url && (
-                      <img src={post.visual_url} alt="Current" className="w-full h-full object-cover" />
-                    )
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 bg-violet-500/80 px-2 py-1 text-xs text-white font-medium">
-                    Current
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-zinc-300">Current</p>
+                  <div className={`flex gap-2 ${hasCarousel ? "flex-wrap" : ""}`}>
+                    {hasCarousel ? (
+                      carouselUrls.map((url, idx) => (
+                        <div
+                          key={idx}
+                          className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in border-2 border-violet-500/50 flex-shrink-0"
+                          style={{ aspectRatio: customAspect, width: 120 }}
+                          onClick={() => setFullScreenImage({ url, alt: `Current page ${idx + 1}` })}
+                        >
+                          <img src={url} alt={`Page ${idx + 1}`} className="w-full h-full object-cover" />
+                          <div className="absolute bottom-0 left-0 right-0 bg-violet-500/80 px-2 py-1 text-xs text-white font-medium">
+                            Page {idx + 1}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      post.visual_url && (
+                        <div
+                          className="relative bg-white/5 rounded-xl overflow-hidden cursor-zoom-in border-2 border-violet-500/50"
+                          style={{ aspectRatio: customAspect, width: 120 }}
+                          onClick={() => setFullScreenImage({ url: post.visual_url!, alt: "Current" })}
+                        >
+                          <img src={post.visual_url} alt="Current" className="w-full h-full object-cover" />
+                          <div className="absolute bottom-0 left-0 right-0 bg-violet-500/80 px-2 py-1 text-xs text-white font-medium">
+                            Current
+                          </div>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               </>
@@ -528,24 +548,23 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
             id="public-gallery"
             checked={isPublicGallery}
             onChange={(e) => setIsPublicGallery(e.target.checked)}
-            className="mt-1 w-4 h-4 rounded border-white/20 bg-white/5 text-violet-500 focus:ring-violet-500/50"
+            className="mt-1.5 w-5 h-5 rounded border-white/20 bg-white/5 text-violet-500 focus:ring-violet-500/50 cursor-pointer"
           />
-          <div>
-            <label htmlFor="public-gallery" className="block text-sm font-medium text-zinc-100 cursor-pointer">
+          <div className="flex-1">
+            <label htmlFor="public-gallery" className="block text-base font-medium text-zinc-100 cursor-pointer">
               Publish to public Discover Gallery
             </label>
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-sm text-zinc-400 mt-1">
               Share this design to inspire others. We&apos;ll link directly to your Instagram{" "}
               {instagramHandle ? (
-                <span className="text-violet-400">{instagramHandle}</span>
+                <span className="text-violet-400">@{instagramHandle}</span>
               ) : (
-                <Link href="/billing" className="text-violet-400 hover:text-violet-300 underline">
-                  Set your handle
-                </Link>
+                <span className="text-zinc-500">— set your handle below</span>
               )}
             </p>
           </div>
         </div>
+        <InstagramHandleForm initialHandle={instagramHandle ?? ""} onSaved={() => router.refresh()} />
       </div>
 
       <div className="flex flex-wrap gap-4">
@@ -561,13 +580,6 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
           className="px-4 py-2 border border-violet-500/30 rounded-xl text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 transition-colors"
         >
           Save as Template
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="flex-1 min-w-[120px] px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-        >
-          {loading ? "Saving..." : "Save to Library"}
         </button>
       </div>
 

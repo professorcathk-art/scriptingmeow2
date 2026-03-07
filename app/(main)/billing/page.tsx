@@ -8,7 +8,6 @@ import { BillingPortalButton } from "@/components/billing/billing-portal-button"
 import { BillingReturnHandler } from "@/components/billing/billing-return-handler";
 import { DeleteAccountButton } from "@/components/billing/delete-account-button";
 import { SignOutButton } from "./sign-out-button";
-import { InstagramHandleForm } from "@/components/billing/instagram-handle-form";
 
 function CheckIcon() {
   return (
@@ -243,15 +242,6 @@ export default async function BillingPage() {
             );
           })}
         </div>
-      </div>
-
-      <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-6">
-        <h2 className="text-xl font-semibold text-zinc-100 mb-4">
-          Profile
-        </h2>
-        <InstagramHandleForm
-          initialHandle={(userProfile as { instagram_handle?: string | null }).instagram_handle ?? ""}
-        />
       </div>
 
       <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-6">

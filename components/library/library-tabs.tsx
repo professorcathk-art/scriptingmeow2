@@ -74,12 +74,12 @@ export function LibraryTabs({
 }: LibraryTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState(initialTab || "posts");
+  const [tab, setTab] = useState(initialTab || "all");
   const [ideas, setIdeas] = useState(postIdeas);
   const [showAddIdea, setShowAddIdea] = useState(false);
 
   useEffect(() => {
-    setTab(initialTab || "posts");
+    setTab(initialTab || "all");
   }, [initialTab]);
 
   useEffect(() => {
@@ -89,18 +89,50 @@ export function LibraryTabs({
   const handleTabChange = (id: string) => {
     setTab(id);
     const params = new URLSearchParams(searchParams.toString());
-    if (id !== "posts") params.set("tab", id);
+    if (id !== "all") params.set("tab", id);
     else params.delete("tab");
     router.push(`/library?${params.toString()}`);
   };
 
   const tabs = [
+    { id: "all", label: "All" },
     { id: "posts", label: "My Posts" },
     { id: "my-design", label: "My design" },
     { id: "references", label: "References" },
     { id: "ideas", label: "Idea Bank" },
     ...(planTier !== "free" ? [{ id: "rss", label: "RSS Autofeed" }] : []),
   ];
+
+  type AllItem =
+    | { type: "post"; id: string; imageUrl: string; created_at: string; label?: string; href: string }
+    | { type: "design"; id: string; imageUrl: string; created_at: string; label: string; href: string }
+    | { type: "reference"; id: string; imageUrl: string; created_at: string; label: string; href?: string };
+  const allItems: AllItem[] = [
+    ...posts.map((p) => ({
+      type: "post" as const,
+      id: p.id,
+      imageUrl: p.visual_url ?? "",
+      created_at: p.created_at,
+      label: p.brand_spaces?.name,
+      href: `/posts/${p.id}/review`,
+    })),
+    ...myDesignItems.map((d) => ({
+      type: "design" as const,
+      id: d.id,
+      imageUrl: d.image_url,
+      created_at: d.created_at,
+      label: "Design Playground",
+      href: d.source_id ? `/design-playground?thread=${d.source_id}` : "/design-playground",
+    })),
+    ...references.map((r) => ({
+      type: "reference" as const,
+      id: r.id,
+      imageUrl: r.image_url,
+      created_at: r.created_at,
+      label: r.source,
+      href: undefined as string | undefined,
+    })),
+  ].filter((i) => i.imageUrl).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const handleAddIdea = (idea: PostIdea) => {
     setIdeas((prev) => [idea, ...prev]);
@@ -132,6 +164,54 @@ export function LibraryTabs({
           </button>
         ))}
       </div>
+
+      {tab === "all" && (
+        <>
+          {allItems.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              {allItems.map((item) => {
+                const cardContent = (
+                  <>
+                    <div className="aspect-square bg-zinc-800/50 relative overflow-hidden">
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.label ?? "Asset"}
+                        fill
+                        className="object-cover"
+                        unoptimized={item.imageUrl.startsWith("data:")}
+                      />
+                    </div>
+                    <div className="p-2 sm:p-4">
+                      <p className="text-xs sm:text-sm font-medium text-zinc-100 mb-0.5 truncate">
+                        {item.label ?? "Unknown"}
+                      </p>
+                      <span className="text-[10px] text-zinc-500">{formatDate(item.created_at)}</span>
+                    </div>
+                  </>
+                );
+                const cardClass = "block bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden hover:border-violet-500/30 transition-all";
+                return item.href ? (
+                  <Link key={`${item.type}-${item.id}`} href={item.href} className={cardClass}>
+                    {cardContent}
+                  </Link>
+                ) : (
+                  <div key={`${item.type}-${item.id}`} className={cardClass}>
+                    {cardContent}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-24 rounded-2xl border-2 border-dashed border-white/10">
+              <FolderIcon />
+              <p className="text-zinc-400 mt-4 mb-2">Your posts, designs, and references will appear here</p>
+              <Link href="/create-post" className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90">
+                Create Your First Post
+              </Link>
+            </div>
+          )}
+        </>
+      )}
 
       {tab === "posts" && (
         <>

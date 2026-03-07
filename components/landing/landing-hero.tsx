@@ -73,7 +73,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: Lan
       {/* Hero Section */}
       <section className="text-center max-w-3xl mx-auto mb-16">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-tight">
-          Turn your brand into viral{" "}
+          Designer-quality Instagram posts{" "}
           <span
             className="bg-clip-text text-transparent"
             style={{
@@ -81,29 +81,26 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: Lan
                 "linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f472b6 100%)",
             }}
           >
-            Instagram posts
+            in seconds.
           </span>
-          .
         </h1>
         <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
-          Don&apos;t know where to start? Enter your brand name above, or steal a
-          winning aesthetic from our gallery below and let AI do the rest.
+          Skip the blank canvas. Tell us your brand name below or steal a winning
+          aesthetic from our gallery, and let AI generate your first complete post
+          instantly.
         </p>
       </section>
 
-      {/* Fallback CTA - before Steal a Style */}
+      {/* CTA - before Steal a Style */}
       <section className="max-w-2xl mx-auto w-full mb-16">
         <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
-          <p className="text-zinc-300 font-medium mb-4 text-center">
-            Tell us your brand name to get started
-          </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               value={scratchInput}
               onChange={(e) => setScratchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleStartFromScratch()}
-              placeholder="Enter your brand name..."
+              placeholder="e.g. Acme Coffee, Luna Skincare..."
               className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-violet-500/50 transition-all shadow-inner"
             />
             <button
@@ -111,7 +108,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [] }: Lan
               onClick={handleStartFromScratch}
               className="px-6 py-3 rounded-xl gradient-ai text-white font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
             >
-              Create my brand
+              Generate my first post ✨
             </button>
           </div>
         </div>

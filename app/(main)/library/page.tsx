@@ -18,7 +18,7 @@ function FolderIcon() {
 export default async function LibraryPage({
   searchParams,
 }: {
-  searchParams: { brand?: string; tag?: string; tab?: string };
+  searchParams: { brand?: string; tab?: string };
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -50,7 +50,6 @@ export default async function LibraryPage({
     .order("created_at", { ascending: false });
 
   if (searchParams.brand) query = query.eq("brand_space_id", searchParams.brand);
-  if (searchParams.tag) query = query.contains("tags", [searchParams.tag]);
 
   const { data: posts } = await query;
 
@@ -90,11 +89,6 @@ export default async function LibraryPage({
         .eq("folder_id", myDesignFolder.id)
         .order("created_at", { ascending: false })
     : { data: [] };
-
-  const allTags = new Set<string>();
-  posts?.forEach((post: { tags?: string[] }) => {
-    if (Array.isArray(post.tags)) post.tags.forEach((t: string) => allTags.add(t));
-  });
 
   const references = [
     ...(referenceImages ?? []).map((r: { id: string; image_url: string; uploaded_at: string; brand_space_id: string }) => ({
@@ -151,14 +145,12 @@ export default async function LibraryPage({
       <Suspense fallback={<div className="bg-zinc-900/50 p-4 rounded-2xl border border-white/10"><p className="text-zinc-400">Loading...</p></div>}>
         <LibraryFilters
           brandSpaces={brandSpaces || []}
-          tags={Array.from(allTags)}
           currentBrand={searchParams.brand}
-          currentTag={searchParams.tag}
         />
       </Suspense>
 
       <LibraryTabs
-        activeTab={typeof searchParams.tab === "string" ? searchParams.tab : "posts"}
+        activeTab={typeof searchParams.tab === "string" ? searchParams.tab : "all"}
         posts={serializablePosts}
         references={serializableReferences}
         postIdeas={serializablePostIdeas}

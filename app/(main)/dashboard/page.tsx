@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { BrandbookCta } from "@/components/brandbook-cta";
+import { InstagramHandleForm } from "@/components/billing/instagram-handle-form";
 import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 
 export default async function DashboardPage() {
@@ -21,9 +22,11 @@ export default async function DashboardPage() {
 
   const { data: userProfile } = await supabase
     .from("users")
-    .select("*")
+    .select("*, instagram_handle")
     .eq("id", user.id)
     .single();
+
+  const instagramHandle = (userProfile as { instagram_handle?: string | null })?.instagram_handle ?? "";
 
   const { data: recentPosts } = await supabase
     .from("generated_posts")
@@ -70,6 +73,11 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-6">
+        <h2 className="text-xl font-semibold text-zinc-100 mb-4">Profile</h2>
+        <InstagramHandleForm initialHandle={instagramHandle} />
+      </div>
+
       {!hasBrandbook && (
         <BrandbookCta
           href={brandSpaces?.length ? `/brand-spaces/${brandSpaces[0].id}/brandbook` : "/brand-spaces/new"}

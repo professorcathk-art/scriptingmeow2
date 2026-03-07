@@ -99,7 +99,7 @@ export function BulkCreateForm({
         creditsCtx?.setCredits(data.credits_remaining);
       }
       if (data.created?.length > 0) {
-        router.push("/library");
+        router.push(`/posts/${data.created[0]}/review`);
       } else {
         router.refresh();
       }
@@ -119,7 +119,7 @@ export function BulkCreateForm({
             <button
               type="button"
               onClick={() => setShowCreateTemplate(true)}
-              className="text-xs text-violet-400 hover:text-violet-300"
+              className="px-4 py-2.5 rounded-xl border-2 border-violet-500/50 text-violet-300 hover:bg-violet-500/20 hover:border-violet-500/70 transition-colors text-sm font-medium"
             >
               + Create template
             </button>
