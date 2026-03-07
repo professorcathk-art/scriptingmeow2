@@ -39,11 +39,11 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
     <div className="min-h-screen flex flex-col px-4 pt-20 pb-24">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-20 glass border-b border-white/5">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
           <span className="text-xl font-bold tracking-tight text-white">
             designermeow
           </span>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {isAuthenticated ? (
               <Link
                 href="/dashboard"
@@ -73,7 +73,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
 
       {/* Hero Section */}
       <section className="text-center max-w-4xl mx-auto mb-16">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-tight">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight leading-tight">
           Designer-quality Instagram posts{" "}
           <span
             className="bg-clip-text text-transparent"
@@ -93,7 +93,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
       </section>
 
       {/* CTA - before Steal a Style */}
-      <section className="max-w-3xl mx-auto w-full mb-16">
+      <section className="max-w-3xl mx-auto w-full mb-16 px-4 md:px-0">
         <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
           <div className="flex flex-col sm:flex-row gap-3">
             <input
@@ -102,12 +102,12 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
               onChange={(e) => setScratchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleStartFromScratch()}
               placeholder="Type your brandname to get started"
-              className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-violet-500/50 transition-all shadow-inner"
+              className="w-full flex-1 px-4 md:px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-violet-500/50 transition-all shadow-inner"
             />
             <button
               type="button"
               onClick={handleStartFromScratch}
-              className="px-6 py-3 rounded-xl gradient-ai text-white font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl gradient-ai text-white font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
             >
               Generate my first post ✨
             </button>
@@ -120,15 +120,9 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
         <h2 className="text-xl font-semibold text-zinc-300 mb-6 text-center sm:text-left">
           Steal a Style from below AI generated posts
         </h2>
-        <div
-          className="columns-2 sm:columns-3 gap-4 space-y-4"
-          style={{ columnFill: "balance" }}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {LANDING_STYLES.map((item) => (
-            <div
-              key={item.id}
-              className="break-inside-avoid mb-4 group"
-            >
+            <div key={item.id} className="group">
               <button
                 type="button"
                 onClick={() => setSelectedStyle(item)}
@@ -145,7 +139,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
                   />
                   {/* Desktop: hover overlay. Mobile: always show tap hint */}
                   <div className="absolute inset-0 bg-black/40 sm:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <span className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold text-sm shadow-lg sm:group-hover:scale-105 transition-all duration-200">
+                    <span className="py-2 px-4 text-sm md:py-3 md:px-6 md:text-base rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold shadow-lg sm:group-hover:scale-105 transition-all duration-200">
                       ✨ Save this Style
                     </span>
                   </div>
@@ -160,11 +154,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
             </div>
           ))}
           {publicDesigns.map((design) => (
-            <Link
-              key={design.id}
-              href={`/discover/${design.id}`}
-              className="group block break-inside-avoid mb-4"
-            >
+            <Link key={design.id} href={`/discover/${design.id}`} className="group block">
               <div className="w-full text-left glass-elevated rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all duration-300">
                 <div className="relative aspect-[4/5] overflow-hidden">
                   <Image
@@ -176,7 +166,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
                     unoptimized={design.image_url.startsWith("data:")}
                   />
                   <div className="absolute inset-0 bg-black/40 sm:bg-black/60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <span className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold text-sm shadow-lg">
+                    <span className="py-2 px-4 text-sm md:py-3 md:px-6 md:text-base rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-white font-semibold shadow-lg">
                       View design
                     </span>
                   </div>

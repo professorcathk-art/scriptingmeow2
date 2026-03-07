@@ -171,7 +171,7 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
 
   if (step === 1) {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); saveDraftAndSetStep(2); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
+      <form onSubmit={(e) => { e.preventDefault(); saveDraftAndSetStep(2); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 md:p-8 rounded-xl sm:rounded-2xl">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-zinc-400 mb-2">
             What is your brand name? *
@@ -245,7 +245,7 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
 
   if (step === 2) {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); saveDraftAndSetStep(3); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
+      <form onSubmit={(e) => { e.preventDefault(); saveDraftAndSetStep(3); }} className="space-y-4 sm:space-y-6 glass-elevated p-4 md:p-8 rounded-xl sm:rounded-2xl">
         <div>
           <h2 className="text-xl font-semibold text-zinc-100 mb-4">Tell us about your brand</h2>
         </div>
@@ -462,7 +462,7 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
   };
 
   return (
-    <form onSubmit={handleSubmitWithImages} className="space-y-4 sm:space-y-6 glass-elevated p-4 sm:p-6 rounded-xl sm:rounded-2xl">
+    <form onSubmit={handleSubmitWithImages} className="space-y-4 sm:space-y-6 glass-elevated p-4 md:p-8 rounded-xl sm:rounded-2xl">
       <div>
         <h2 className="text-xl font-semibold mb-2">Upload Logo (Optional)</h2>
         <p className="text-sm text-zinc-400 mb-3">
@@ -525,7 +525,7 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
           </div>
         )}
         <div
-          className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center transition-colors hover:border-violet-500/30"
+          className="border-2 border-dashed border-white/10 rounded-xl p-4 md:p-8 text-center transition-colors hover:border-violet-500/30"
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();

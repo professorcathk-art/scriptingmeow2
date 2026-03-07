@@ -73,7 +73,7 @@ export function EditBrandSpaceForm({
     "w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 bg-zinc-900/50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 bg-zinc-900/50 p-4 md:p-8 rounded-xl sm:rounded-2xl border border-white/10">
       <h2 className="text-xl font-semibold text-zinc-100">Edit Brand Basic Info</h2>
 
       <div>

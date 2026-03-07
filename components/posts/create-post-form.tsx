@@ -607,11 +607,11 @@ export function CreatePostForm({
   };
 
   const cardClass =
-    "bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6 space-y-4 sm:space-y-6 backdrop-blur-sm";
+    "bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 p-4 md:p-8 space-y-4 sm:space-y-6 backdrop-blur-sm";
 
   if (tryStyleSetupLoading) {
     return (
-      <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-12 text-center">
+      <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-4 md:p-8 text-center">
         <div className="inline-block w-10 h-10 border-2 border-violet-500/50 border-t-violet-500 rounded-full animate-spin mb-4" />
         <h2 className="text-lg font-semibold text-white mb-2">Setting up your style...</h2>
         <p className="text-zinc-400 text-sm">Creating your brand and customizing the visual style. This may take a moment.</p>

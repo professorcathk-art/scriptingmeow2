@@ -142,7 +142,7 @@ export default async function CreatePostPage({
 
   if ((!brandSpaces || brandSpaces.length === 0) && !prefillFromTryStyle) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-12">
+      <div className="max-w-2xl mx-auto text-center py-12 p-4 md:p-8">
         <h1 className="text-3xl font-bold text-zinc-100 mb-4">
           Create Your First Brand Space
         </h1>
@@ -160,7 +160,7 @@ export default async function CreatePostPage({
   }
 
   return (
-    <div className="max-w-4xl mx-auto w-full">
+    <div className="max-w-4xl mx-auto w-full p-4 md:p-8">
       <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100 mb-4 sm:mb-6">Create Instagram Post</h1>
       <CreatePostForm
         brandSpaces={brandSpaces ?? []}
