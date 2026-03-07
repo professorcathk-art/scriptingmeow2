@@ -126,6 +126,7 @@ export function buildImagePrompt(options: {
   imageTextOnImage?: string;
   postStyle?: string;
   pageIndex?: number;
+  carouselPageCount?: number;
   logoUrl?: string | null;
   logoPlacement?: string | null;
   brandType?: string;
@@ -135,8 +136,6 @@ export function buildImagePrompt(options: {
 }): string {
   const vs = options.brandbook?.visual_style as BrandbookVisualStyle;
   const pageIndex = options.pageIndex ?? 1;
-  const isInnerPage = pageIndex > 1;
-  const carouselInnerStyle = (vs as { carouselInnerStyle?: string })?.carouselInnerStyle?.trim();
 
   const imageGenPrompt = vs?.imageGenerationPrompt?.trim();
   const colors = vs?.primaryColor
@@ -145,7 +144,18 @@ export function buildImagePrompt(options: {
       ? vs.colors.filter((c) => c && String(c).trim()).slice(0, 5).join(", ")
       : "";
   const imageStyle = vs?.imageStyle || vs?.image_style || "professional";
-  const colorDescriptionDetailed = (vs as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed || "";
+  const colorArray = Array.isArray(vs?.colors) ? vs.colors.filter((c) => c && String(c).trim()) : [];
+  const colorLabels = ["Primary background", "Secondary background", "Primary text", "Secondary text", "Backup"];
+  const colorDescriptionFromPalette =
+    colorArray.length > 0
+      ? colorArray
+          .slice(0, 5)
+          .map((c, i) => (c ? `${colorLabels[i] ?? `Color ${i + 1}`}: ${c}` : ""))
+          .filter(Boolean)
+          .join(". ")
+      : "";
+  const colorDescriptionDetailed =
+    colorDescriptionFromPalette || (vs as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed?.trim() || "";
   const visualAura = (vs as { visualAura?: string })?.visualAura || "";
   const lineStyle = (vs as { lineStyle?: string })?.lineStyle || "";
   const layoutTendencies = vs?.layoutTendencies || "";
@@ -154,20 +164,17 @@ export function buildImagePrompt(options: {
   const layoutStyleDetail = vs?.layoutStyleDetail || "";
 
   const brandContextParts: string[] = [];
-  if (isInnerPage && carouselInnerStyle) {
-    const innerParts: string[] = [
-      `CORE VISUAL IDENTITY (INNER PAGE): You are generating an inner carousel slide. The text is the hero. STRICTLY follow the inner page style: ${carouselInnerStyle}.`,
-      `Arrange text like a designer: generous whitespace (40–60% of frame), clear typographic hierarchy, no cramped blocks. Scene directive: ${options.visualAdvice.trim() || "Clean, minimal background."}`,
-    ];
-    if (colorDescriptionDetailed) innerParts.push(`Color palette: ${colorDescriptionDetailed}`);
-    else if (colors) innerParts.push(`Colors (reference only—prioritize harmony): ${colors}`);
-    if (layoutStyle) innerParts.push(`Layout: ${layoutStyle}`);
-    if (typographySpec) innerParts.push(`Typography: ${typographySpec}`);
-    brandContextParts.push(innerParts.join("\n"));
-  } else if (imageGenPrompt) {
-    brandContextParts.push(`CORE VISUAL IDENTITY (COVER PAGE): Brand image generation prompt (use as primary style): ${imageGenPrompt}`);
+  const totalPages = options.carouselPageCount ?? 1;
+  if (totalPages > 1) {
+    const pageLabel = pageIndex === 1
+      ? `This is page 1 (cover) of ${totalPages} in an Instagram carousel.`
+      : `This is page ${pageIndex} of ${totalPages} in an Instagram carousel. Maintain visual consistency with previous pages. Use a layout that looks like a typical Instagram carousel inner slide.`;
+    brandContextParts.push(`CAROUSEL CONTEXT: ${pageLabel}`);
+  }
+  if (imageGenPrompt) {
+    brandContextParts.push(`CORE VISUAL IDENTITY: Brand image generation prompt (use as primary style): ${imageGenPrompt}`);
   } else {
-    brandContextParts.push(`CORE VISUAL IDENTITY (COVER PAGE): Use brand visual style: ${imageStyle}`);
+    brandContextParts.push(`CORE VISUAL IDENTITY: Use brand visual style: ${imageStyle}`);
     if (colorDescriptionDetailed) brandContextParts.push(`Color palette & lighting: ${colorDescriptionDetailed}`);
     if (visualAura) brandContextParts.push(`Visual aura & whitespace rules: ${visualAura}`);
     if (lineStyle) brandContextParts.push(`Line/stroke characteristics: ${lineStyle}`);
@@ -215,7 +222,7 @@ export function buildImagePrompt(options: {
     parts.push(brandContext);
   }
 
-  if (options.visualAdvice?.trim() && !(isInnerPage && carouselInnerStyle)) {
+  if (options.visualAdvice?.trim()) {
     parts.push(`SCENE & SUBJECT ACTION (CRITICAL): ${options.visualAdvice.trim()}\n*Instruction: Merge this specific scene description seamlessly into the Core Visual Identity defined above. Do not alter the brand's art style to fit the scene; force the scene to match the brand's aesthetic medium and colors exactly.*`);
   }
 

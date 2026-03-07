@@ -40,7 +40,7 @@ Formulate the guidelines specifically for a `{{brandTypeContext}}`. Return valid
 
 **`imageStyle`** – The core Visual DNA. Define the exact artistic medium (e.g., Digital Watercolor, High-end Editorial Photography, Flat Vector). Specify lighting, texture, and shading rules. *Crucial:* Translate specific subjects from reference images into universal visual principles. Describe *HOW* things are presented (e.g., "3D objects must use dramatic side lighting"; "Characters must have clean, approachable geometry"). Define the Image-to-Text ratio (e.g., Cover: 40% Image / 60% Text). Do not specify aspect ratios. Markdown allowed.
 
-**`carouselInnerStyle`** – Visual rules strictly for inner reading slides (Pages 2 to N). Define the shift in information architecture: mandate a high text-to-image ratio (e.g., 80% text / 20% image). Specify the use of increased whitespace, subtle background textures, or miniaturized supporting motifs rather than full-bleed imagery to eliminate cognitive overload. Markdown allowed.
+**`carouselInnerStyle`** – Optional guidance for inner carousel slides (Pages 2 to N). Light suggestions only—e.g., "Consider more whitespace for readability" or "Subtle motifs can support the narrative." Do NOT mandate strict ratios or restrict layout. The image generator will adapt inner pages based on context. Markdown allowed.
 
 **`colorDescriptionDetailed`** – A highly conceptual, semantic color palette. Use Markdown to structure:
 - **Overall Vibe:** The emotional impact and visual texture (e.g., "Low saturation, high brightness, non-fatiguing").

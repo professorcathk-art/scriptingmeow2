@@ -479,29 +479,6 @@ export function BrandbookForm({
                 </div>
               </div>
               <div>
-                <label className={labelClass}>Color Description (Detailed)</label>
-                <textarea
-                  value={(brandbook.visual_style as { colorDescriptionDetailed?: string })?.colorDescriptionDetailed ?? ""}
-                  onChange={(e) => {
-                    setHasEdited(true);
-                    setBrandbook((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            visual_style: {
-                              ...prev.visual_style,
-                              colorDescriptionDetailed: e.target.value,
-                            },
-                          }
-                        : prev
-                    );
-                  }}
-                  className={inputClass}
-                  rows={4}
-                  placeholder="Overall tone, primary colors with hex + purpose, secondary colors with hex + purpose. Markdown allowed."
-                />
-              </div>
-              <div>
                 <label className={labelClass}>Visual Aura</label>
                 <textarea
                   value={(brandbook.visual_style as { visualAura?: string })?.visualAura ?? ""}

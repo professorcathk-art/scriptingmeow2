@@ -278,6 +278,7 @@ export async function POST(request: Request) {
     let carouselUrls: string[] = [];
 
     if (isCarousel && carouselPages) {
+      const totalPages = carouselPages.length;
       for (let i = 0; i < carouselPages.length; i++) {
         const page = carouselPages[i];
         const header = (page.header ?? "").trim();
@@ -285,12 +286,24 @@ export async function POST(request: Request) {
         const combinedText = header
           ? (imageText ? `${header}\n${imageText}` : header)
           : imageText || undefined;
+        const previousPageUrls = carouselUrls.slice(0, i);
+        const styleRefsWithContext = [
+          ...previousPageUrls,
+          ...logoUrlForRef,
+          ...(Array.isArray(referenceImageUrls)
+            ? referenceImageUrls.slice(0, 3).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
+            : []),
+          ...(Array.isArray(selectedSampleImageUrls)
+            ? selectedSampleImageUrls.slice(0, 5).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")))
+            : []),
+        ].slice(0, 5);
         const fullImagePrompt = buildImagePrompt({
           brandbook,
           visualAdvice: page.visualAdvice?.trim() || `Carousel page ${page.pageIndex}. ${contentIdea || ""}`,
           imageTextOnImage: combinedText,
           postStyle: postStyle || "text-heavy",
           pageIndex: page.pageIndex,
+          carouselPageCount: totalPages,
           logoUrl: brandSpace?.logo_url ?? null,
           logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
           brandType: brandSpace?.brand_type,
@@ -300,8 +313,9 @@ export async function POST(request: Request) {
         });
         const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
           aspectRatio,
-          styleReferenceUrls: styleRefUrls,
+          styleReferenceUrls: styleRefsWithContext,
           importantAssetUrls: importantUrls,
+          previousCarouselPageCount: previousPageUrls.length,
         });
         const pageUrl =
           imageBuffer

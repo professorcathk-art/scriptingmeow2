@@ -18,6 +18,8 @@ export interface GenerateImageOptions {
   importantAssetUrls?: string[];
   /** @deprecated Use styleReferenceUrls + importantAssetUrls */
   referenceImageUrls?: string[];
+  /** When set, the first N styleReferenceUrls are previous carousel pages—maintain visual consistency. */
+  previousCarouselPageCount?: number;
 }
 
 async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
@@ -41,7 +43,8 @@ async function generateWithModel(
   aspectRatio: string,
   apiKey: string,
   styleRefUrls: string[] = [],
-  importantUrls: string[] = []
+  importantUrls: string[] = [],
+  previousCarouselPageCount = 0
 ): Promise<Buffer | null> {
   const url = `${API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
@@ -59,10 +62,13 @@ async function generateWithModel(
       "Reference images and brandbook are for inspiration only. Priority is a harmonious, professional design that looks good.",
     ];
     if (styleRefUrls.length > 0) {
-      instrParts.push(`Style references (first ${styleRefUrls.length}): Use for composition, mood, and aesthetic. Derive a cohesive palette—if colors clash, choose harmony over literal matching.`);
+      if (previousCarouselPageCount > 0) {
+        instrParts.push(`The first ${previousCarouselPageCount} image(s) are the previous pages of this carousel. Maintain visual consistency with them.`);
+      }
+      instrParts.push(`Style references: Use for composition, mood, and aesthetic. Derive a cohesive palette—if colors clash, choose harmony over literal matching.`);
     }
     if (importantUrls.length > 0) {
-      instrParts.push(`Important assets (last ${importantUrls.length}): These MUST appear in the output (portraits, products, logos). Incorporate them; adjust surrounding colors for visual harmony.`);
+      instrParts.push(`Important assets (last ${importantUrls.length}): Use these when they fit the scene (portraits, products, logos). No need to use on every page—incorporate them when useful. Adjust surrounding colors for visual harmony.`);
     }
     instruction = `${instrParts.join(" ")}\n\n`;
   }
@@ -122,11 +128,12 @@ export async function generateImageWithNanoBanana(
   const aspectRatio = options.aspectRatio ?? "1:1";
   const styleRefUrls = options.styleReferenceUrls ?? options.referenceImageUrls ?? [];
   const importantUrls = options.importantAssetUrls ?? [];
+  const previousCarouselPageCount = options.previousCarouselPageCount ?? 0;
 
-  const buffer = await generateWithModel(MODEL_PRO, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls);
+  const buffer = await generateWithModel(MODEL_PRO, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls, previousCarouselPageCount);
   if (buffer) return buffer;
 
-  const fallback = await generateWithModel(MODEL_FLASH, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls);
+  const fallback = await generateWithModel(MODEL_FLASH, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls, previousCarouselPageCount);
   if (fallback) return fallback;
 
   console.warn("[nano-banana] Both models failed");
