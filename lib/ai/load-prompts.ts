@@ -203,10 +203,15 @@ Content idea: {{idea}}
 Language: {{language}}. Format: {{format}}. Layout: {{layout}}.
 Content goal: {{contentFrameworkDesc}}
 
+## Enrichment (CRITICAL)
+- If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
+- ENRICH the idea: add scroll-stopping hooks, curiosity gaps, emotional angles, or counter-intuitive twists. Expand key points.
+- Create value-driven, shareable content—not a dry summary. Hook the reader in the first line.
+
 ## Output
-Return valid JSON only. Include postAim: one sentence summarizing the post's aim/goal (e.g. "Educate users on X", "Build trust by sharing Y").
+Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sentences, max 500 chars). E.g. "Brand: [brief background]. This post aims to educate on X, build trust by Y."
 {
-  "postAim": "One sentence: what this post aims to achieve",
+  "postAim": "Brief brand context and post aim (max 500 chars)",
   "variation1": {"imageTextOnImage":"","visualAdvice":"","igCaption":""},
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
@@ -220,10 +225,14 @@ const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Ke
 Language: {{language}}. Format: {{format}}. Aspect: {{aspectNote}}.
 Content goal: {{contentFrameworkDesc}}
 
+## Enrichment (CRITICAL)
+- If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
+- ENRICH the idea: add scroll-stopping hooks, curiosity gaps, emotional angles. Expand key points. Create value-driven, shareable content.
+
 ## Output
-Return valid JSON only. Include postAim: one sentence for the post's aim (e.g. "Educate on X", "Build trust by Y").
+Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sentences, max 500 chars).
 {
-  "postAim": "One sentence: post aim",
+  "postAim": "Brief brand context and post aim (max 500 chars)",
   "pages": [
     { "pageIndex": 1, "header": "Headline", "imageTextOnImage": "Text (use \\n)", "visualAdvice": "Scene" },
     ...

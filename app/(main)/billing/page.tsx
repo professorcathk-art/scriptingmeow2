@@ -54,6 +54,7 @@ export default async function BillingPage() {
         `${PLAN_LIMITS.free.brand_spaces} Brand Space${PLAN_LIMITS.free.brand_spaces > 1 ? "s" : ""}`,
         `${PLAN_LIMITS.free.monthly_credits} credits/month`,
         "AI post generation",
+        "No RSS feeds",
         "Basic support",
       ],
     },
@@ -65,6 +66,7 @@ export default async function BillingPage() {
       features: [
         `${PLAN_LIMITS.basic.brand_spaces} Brand Spaces`,
         `${PLAN_LIMITS.basic.monthly_credits} credits/month`,
+        `Up to ${PLAN_LIMITS.basic.rss_feeds} RSS feed${PLAN_LIMITS.basic.rss_feeds > 1 ? "s" : ""}`,
         "AI post generation",
         "Priority support",
         "Export options",
@@ -78,6 +80,7 @@ export default async function BillingPage() {
       features: [
         `${PLAN_LIMITS.pro.brand_spaces} Brand Spaces`,
         `${PLAN_LIMITS.pro.monthly_credits} credits/month`,
+        `Up to ${PLAN_LIMITS.pro.rss_feeds} RSS feeds`,
         "AI post generation",
         "Priority support",
         "Batch generation",

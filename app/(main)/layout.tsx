@@ -30,9 +30,9 @@ export default async function MainLayout({
       initialResetDate={userProfile?.credits_reset_date ?? new Date().toISOString()}
       initialPlanTier={userProfile?.plan_tier ?? "free"}
     >
-      <div className="min-h-screen bg-zinc-950 flex">
+      <div className="min-h-screen bg-zinc-950 flex overflow-x-hidden">
         <DashboardSidebar />
-        <main className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
           <header className="glass border-b border-white/5 sticky top-0 z-10">
             <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
               <div>
@@ -46,7 +46,7 @@ export default async function MainLayout({
               <CreditRing />
             </div>
           </header>
-          <div className="flex-1 p-4 sm:p-6 overflow-auto">
+          <div className="flex-1 p-4 sm:p-6 overflow-auto min-w-0 w-full">
             {children}
           </div>
         </main>

@@ -62,6 +62,15 @@ export default async function CreatePostPage({
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const isPaid = userProfile?.plan_tier !== "free";
+  const { data: rssIdeas } = isPaid
+    ? await supabase
+        .from("user_rss_ideas")
+        .select("id, content, title")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+
   const { data: templates } = await supabase
     .from("post_templates")
     .select("id, name, brand_space_id, content_framework, post_style, post_type, format, custom_width, custom_height, carousel_page_count, carousel_pages")
@@ -100,6 +109,8 @@ export default async function CreatePostPage({
       .single();
     if (rssIdea) prefillIdeaContent = rssIdea.content;
   }
+
+  const rssIdeasForForm = rssIdeas ?? [];
 
   let prefillTemplate: {
     brandSpaceId: string;
@@ -161,6 +172,7 @@ export default async function CreatePostPage({
         prefillIdeaContent={prefillIdeaContent}
         prefillTemplate={prefillTemplate}
         postIdeas={postIdeas ?? []}
+        rssIdeas={rssIdeasForForm}
         templates={templates ?? []}
         skipDraftRestore={!editPost && !prefillFromTryStyle}
       />

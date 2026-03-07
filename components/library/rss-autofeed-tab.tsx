@@ -35,6 +35,7 @@ export function RssAutofeedTab() {
   const [adding, setAdding] = useState(false);
   const [rssUrl, setRssUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [rssLimit, setRssLimit] = useState(2);
 
   const fetchData = async () => {
     setLoading(true);
@@ -46,12 +47,14 @@ export function RssAutofeedTab() {
         setError(data.error || "RSS Autofeed is for paid plans only");
         setFeeds([]);
         setIdeas([]);
+        setRssLimit(0);
         return;
       }
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setFeeds(data.feeds ?? []);
       setIdeas(data.ideas ?? []);
+      setRssLimit(data.rssLimit ?? 2);
     } catch {
       setError("Failed to load RSS data");
     } finally {
@@ -144,10 +147,10 @@ export function RssAutofeedTab() {
         <button
           type="button"
           onClick={handleAddFeed}
-          disabled={adding}
+          disabled={adding || (rssLimit > 0 && feeds.length >= rssLimit)}
           className="px-4 py-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 disabled:opacity-50 transition-colors text-sm"
         >
-          {adding ? "Adding..." : "+ Add RSS Feed"}
+          {adding ? "Adding..." : feeds.length >= rssLimit ? `Limit reached (${rssLimit})` : "+ Add RSS Feed"}
         </button>
       </div>
       {error && (
@@ -156,7 +159,9 @@ export function RssAutofeedTab() {
 
       {feeds.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-zinc-400">Your RSS Feeds</h3>
+          <h3 className="text-sm font-medium text-zinc-400">
+            Your RSS Feeds ({feeds.length}/{rssLimit})
+          </h3>
           <div className="space-y-2">
             {feeds.map((feed) => (
               <div

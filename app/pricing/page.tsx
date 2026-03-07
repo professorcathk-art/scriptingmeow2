@@ -19,6 +19,7 @@ const plans: Array<{
       `${PLAN_LIMITS.free.monthly_credits} credits/month`,
       "AI post generation",
       "Single image & carousel",
+      "No RSS feeds",
       "Style gallery access",
       "Basic support",
     ],
@@ -30,6 +31,7 @@ const plans: Array<{
     features: [
       `${PLAN_LIMITS.basic.brand_spaces} Brand Spaces`,
       `${PLAN_LIMITS.basic.monthly_credits} credits/month`,
+      `Up to ${PLAN_LIMITS.basic.rss_feeds} RSS feed${PLAN_LIMITS.basic.rss_feeds > 1 ? "s" : ""}`,
       "AI post generation",
       "All formats (square, portrait, story)",
       "Logo integration",
@@ -44,6 +46,7 @@ const plans: Array<{
     features: [
       `${PLAN_LIMITS.pro.brand_spaces} Brand Spaces`,
       `${PLAN_LIMITS.pro.monthly_credits} credits/month`,
+      `Up to ${PLAN_LIMITS.pro.rss_feeds} RSS feeds`,
       "Everything in Basic",
       "Batch generation",
       "Library & export",

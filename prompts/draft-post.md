@@ -50,6 +50,8 @@ You are a Master Instagram Content Strategist and Elite Art Director. Your task 
 {{idea}}
 Lang: {{language}}. Format: {{format}}.
 
+**Enrichment:** If the idea includes "Source: [URL]" (RSS/news), use the full content and URL for context. Do NOT just repeat the title. Add scroll-stopping hooks, curiosity gaps, and emotional angles. Expand key points.
+
 ## Output Format
 Return valid JSON only with 2 variations. Make them meaningfully different in angle (e.g., emotional hook vs. logical breakdown):
 {
@@ -87,6 +89,8 @@ You are an expert Instagram Art Director and Editorial Designer. Create a highly
 {{idea}}
 
 Format: {{format}}. Aspect ratio: {{aspectNote}}.
+
+**Enrichment:** If the idea includes "Source: [URL]" (RSS/news), use the full content and URL for context. Do NOT just repeat the title. Add scroll-stopping hooks and expand key points.
 
 ## Carousel Structure & Pacing Logic (Strictly follow based on {{pageCount}})
 

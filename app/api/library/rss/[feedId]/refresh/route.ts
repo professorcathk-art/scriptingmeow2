@@ -43,10 +43,11 @@ export async function POST(
 
     const items = (parsed.items || []).slice(0, 50);
     for (const item of items) {
-      const content = [item.title, item.contentSnippet || item.content]
+      const baseContent = [item.title, item.contentSnippet || item.content]
         .filter(Boolean)
-        .join("\n\n")
-        .slice(0, 2000);
+        .join("\n\n");
+      const sourceLine = item.link ? `\n\nSource: ${item.link}` : "";
+      const content = (baseContent + sourceLine).slice(0, 2500);
       if (!content.trim()) continue;
 
       await supabase.from("user_rss_ideas").insert({

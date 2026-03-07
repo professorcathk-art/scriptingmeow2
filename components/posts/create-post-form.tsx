@@ -61,6 +61,7 @@ interface CreatePostFormProps {
   prefillFromTryStyle?: { styleId: string; contentIdea: string };
   prefillIdeaContent?: string;
   postIdeas?: { id: string; content: string }[];
+  rssIdeas?: { id: string; content: string; title?: string | null }[];
 }
 
 const STEPS = [
@@ -96,6 +97,7 @@ export function CreatePostForm({
   prefillIdeaContent,
   prefillTemplate,
   postIdeas = [],
+  rssIdeas = [],
   templates = [],
   skipDraftRestore = false,
 }: CreatePostFormProps) {
@@ -934,35 +936,57 @@ export function CreatePostForm({
           <label className="block text-sm font-medium text-zinc-400 mb-2">
             Describe the post you want to create *
           </label>
-          <div className="mb-2">
-            <span className="text-xs text-zinc-500 mr-2">Choose from Idea Bank:</span>
-            {postIdeas.length > 0 ? (
-              <select
-                className="px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-                value=""
-                onChange={(e) => {
-                  const opt = e.target.value;
-                  if (opt) {
-                    const idea = postIdeas.find((i) => i.id === opt);
-                    if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
-                  }
-                }}
-              >
-                <option value="">— Select an idea —</option>
-                {postIdeas.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.content.slice(0, 60)}{i.content.length > 60 ? "…" : ""}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className="text-xs text-zinc-500">
-                No ideas yet.{" "}
-                <a href="/library" className="text-violet-400 hover:text-violet-300">
-                  Add ideas in Library
-                </a>
-              </span>
-            )}
+          <div className="mb-2 space-y-2">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
+              <span className="text-xs text-zinc-500 shrink-0">Idea Bank:</span>
+              {postIdeas.length > 0 ? (
+                <select
+                  className="px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                  value=""
+                  onChange={(e) => {
+                    const opt = e.target.value;
+                    if (opt) {
+                      const idea = postIdeas.find((i) => i.id === opt);
+                      if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
+                    }
+                  }}
+                >
+                  <option value="">— Select —</option>
+                  {postIdeas.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.content.slice(0, 60)}{i.content.length > 60 ? "…" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs text-zinc-500">
+                  No ideas. <a href="/library" className="text-violet-400 hover:text-violet-300">Add in Library</a>
+                </span>
+              )}
+              {rssIdeas.length > 0 && (
+                <>
+                  <span className="text-xs text-zinc-500 shrink-0">RSS:</span>
+                  <select
+                    className="px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                    value=""
+                    onChange={(e) => {
+                      const opt = e.target.value;
+                      if (opt) {
+                        const idea = rssIdeas.find((i) => i.id === opt);
+                        if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
+                      }
+                    }}
+                  >
+                    <option value="">— Select —</option>
+                    {rssIdeas.map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {(i.title || i.content).slice(0, 60)}{(i.title || i.content).length > 60 ? "…" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
           </div>
           <textarea
             required
@@ -1207,15 +1231,19 @@ export function CreatePostForm({
               Post Aim (for image generation)
             </label>
             <p className="text-xs text-zinc-500 mb-1">
-              One sentence describing what this post aims to achieve. Passed to the image AI for better context.
+              Brief brand context and what this post aims to achieve. Passed to the image AI for better context. Can include background, audience, or intent.
             </p>
-            <input
-              type="text"
+            <textarea
               value={(draft as { postAim?: string }).postAim ?? ""}
               onChange={(e) => setDraftField("postAim", e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-              placeholder="e.g. Educate users on X, Build trust by sharing Y"
+              maxLength={500}
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm resize-y"
+              placeholder="e.g. Brand: [brief background]. This post aims to educate our audience on X, build trust by sharing Y, and drive engagement."
             />
+            <p className="text-xs text-zinc-500 mt-1">
+              {((draft as { postAim?: string }).postAim ?? "").length}/500
+            </p>
           </div>
 
           {!isCarouselDraft && draftVariations.length >= 2 && (

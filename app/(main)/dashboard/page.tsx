@@ -19,6 +19,12 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
   const { data: recentPosts } = await supabase
     .from("generated_posts")
     .select("*, brand_spaces(name)")
@@ -26,11 +32,30 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const { data: userProfile } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  const { data: postIdeas } = await supabase
+    .from("user_post_ideas")
+    .select("id, content")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const isPaid = userProfile?.plan_tier !== "free";
+  const { data: rssFeeds } = isPaid
+    ? await supabase
+        .from("user_rss_feeds")
+        .select("id, title, rss_url, last_fetched_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  const feedIds = rssFeeds?.map((f) => f.id) ?? [];
+  const { data: rssIdeas } = isPaid && feedIds.length > 0
+    ? await supabase
+        .from("user_rss_ideas")
+        .select("id, title, content, link")
+        .in("rss_feed_id", feedIds)
+        .order("created_at", { ascending: false })
+        .limit(5)
+    : { data: [] };
 
   const { data: brandbooks } = await supabase
     .from("brandbooks")
@@ -110,19 +135,74 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h2 className="text-lg font-semibold text-white mb-3 flex items-center justify-between">
+            Idea Bank
+            <Link href="/library" className="text-sm text-violet-400 hover:text-violet-300 font-normal">
+              View all →
+            </Link>
+          </h2>
+          {postIdeas && postIdeas.length > 0 ? (
+            <ul className="space-y-2">
+              {postIdeas.map((idea) => (
+                <li key={idea.id}>
+                  <Link
+                    href={`/create-post?ideaId=${idea.id}`}
+                    className="block p-3 rounded-xl bg-zinc-900/50 border border-white/5 hover:border-violet-500/30 text-sm text-zinc-300 line-clamp-2"
+                  >
+                    {idea.content}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-zinc-500 text-sm py-4">No ideas yet. Add ideas in Library.</p>
+          )}
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-white mb-3 flex items-center justify-between">
+            RSS Updates
+            {isPaid && (
+              <Link href="/library" className="text-sm text-violet-400 hover:text-violet-300 font-normal">
+                Manage →
+              </Link>
+            )}
+          </h2>
+          {isPaid && rssIdeas && rssIdeas.length > 0 ? (
+            <ul className="space-y-2">
+              {rssIdeas.map((idea) => (
+                <li key={idea.id}>
+                  <Link
+                    href={`/create-post?rssIdeaId=${idea.id}`}
+                    className="block p-3 rounded-xl bg-zinc-900/50 border border-white/5 hover:border-violet-500/30 text-sm text-zinc-300 line-clamp-2"
+                  >
+                    {idea.title || idea.content}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : isPaid ? (
+            <p className="text-zinc-500 text-sm py-4">No RSS ideas. Add feeds in Library.</p>
+          ) : (
+            <p className="text-zinc-500 text-sm py-4">RSS Autofeed is for paid plans. Upgrade to add feeds.</p>
+          )}
+        </div>
+      </div>
+
       {recentPosts && recentPosts.length > 0 && (
         <div>
           <h2 className="text-xl font-semibold text-white mb-4">
             Recent Posts
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentPosts.map((post: any) => (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3">
+            {recentPosts.map((post: { id: string; visual_url?: string; content_idea?: string; brand_spaces?: { name?: string } }) => (
               <Link
                 key={post.id}
                 href={`/posts/${post.id}/review`}
-                className="group block p-4 rounded-xl glass border border-white/5 hover:border-white/10 transition-all"
+                className="group block p-2 rounded-xl glass border border-white/5 hover:border-white/10 transition-all"
               >
-                <div className="aspect-square bg-white/5 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                <div className="aspect-square bg-white/5 rounded-lg mb-2 flex items-center justify-center overflow-hidden">
                   {post.visual_url ? (
                     <img
                       src={post.visual_url}
@@ -130,10 +210,10 @@ export default async function DashboardPage() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <span className="text-zinc-500 text-sm">No visual</span>
+                    <span className="text-zinc-500 text-xs">No visual</span>
                   )}
                 </div>
-                <p className="text-sm font-medium text-white mb-1">
+                <p className="text-xs font-medium text-white mb-0.5 truncate">
                   {post.brand_spaces?.name || "Unknown Brand"}
                 </p>
                 <p className="text-xs text-zinc-500 truncate">

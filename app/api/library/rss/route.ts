@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import Parser from "rss-parser";
+import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +50,13 @@ export async function GET() {
             .order("created_at", { ascending: false })
         : { data: [] };
 
+    const planTier = (userProfile?.plan_tier ?? "basic") as PlanTier;
+    const rssLimit = PLAN_LIMITS[planTier].rss_feeds;
+
     return NextResponse.json({
       feeds: feeds ?? [],
       ideas: ideas ?? [],
+      rssLimit,
     });
   } catch (error) {
     console.error("Error fetching RSS:", error);
@@ -85,6 +90,19 @@ export async function POST(request: Request) {
     if (userProfile?.plan_tier === "free") {
       return NextResponse.json(
         { error: "RSS Autofeed is available for paid plans only" },
+        { status: 403 }
+      );
+    }
+
+    const planTier = (userProfile?.plan_tier ?? "basic") as PlanTier;
+    const rssLimit = PLAN_LIMITS[planTier].rss_feeds;
+    const { count } = await supabase
+      .from("user_rss_feeds")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    if ((count ?? 0) >= rssLimit) {
+      return NextResponse.json(
+        { error: `RSS feed limit reached (${rssLimit} for ${planTier} plan). Upgrade for more.` },
         { status: 403 }
       );
     }
@@ -129,10 +147,11 @@ export async function POST(request: Request) {
 
     const items = (feed.items || []).slice(0, 50);
     for (const item of items) {
-      const content = [item.title, item.contentSnippet || item.content]
+      const baseContent = [item.title, item.contentSnippet || item.content]
         .filter(Boolean)
-        .join("\n\n")
-        .slice(0, 2000);
+        .join("\n\n");
+      const sourceLine = item.link ? `\n\nSource: ${item.link}` : "";
+      const content = (baseContent + sourceLine).slice(0, 2500);
       if (!content.trim()) continue;
 
       await supabase.from("user_rss_ideas").insert({
