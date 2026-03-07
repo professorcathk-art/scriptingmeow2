@@ -196,7 +196,7 @@ Return valid JSON only:
 }`;
 
 /** Lightweight draft prompts - no brandbook needed. Used for fast draft generation. */
-const DRAFT_SINGLE_LIGHT = `Create 2 DISTINCT Instagram post draft variations. Keep it concise.
+const DRAFT_SINGLE_LIGHT = `Create 2 DISTINCT Instagram post draft variations. Be DETAILED—imageTextOnImage and visualAdvice must be substantive, not minimal.
 
 ## Brief
 Content idea: {{idea}}
@@ -216,9 +216,9 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
 
-Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image (plain text). visualAdvice = scene for image gen, aspect {{aspectNote}}. igCaption = WRITE A FULL ENGAGING CAPTION - do NOT just repeat the content idea or title. Create an original, scroll-stopping caption that hooks the reader. Max 400 chars, max 3 hashtags.`;
+Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). visualAdvice = DETAILED scene for image gen (2–4 sentences: composition, lighting, text placement, style), aspect {{aspectNote}}. igCaption = WRITE A FULL ENGAGING CAPTION - do NOT just repeat the content idea or title. Create an original, scroll-stopping caption that hooks the reader. Max 400 chars, max 3 hashtags.`;
 
-const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Keep it concise.
+const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Be DETAILED—header, imageTextOnImage (up to 250 chars/slide), and visualAdvice (2–4 sentences per page) must be substantive.
 
 ## Brief
 {{idea}}
@@ -240,7 +240,7 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
   "igCaption": "Caption (max 400 chars, max 3 hashtags)."
 }
 
-postAim = overall aim for image gen. header = main headline (not "Step 1"). visualAdvice = scene for image gen. igCaption = WRITE A FULL ENGAGING CAPTION - do NOT just repeat the content idea or title. Create an original caption. Max 400 chars, max 3 hashtags.`;
+postAim = overall aim for image gen. header = main headline (not "Step 1"). imageTextOnImage = 2–5 lines, up to 250 chars per slide. visualAdvice = DETAILED scene (2–4 sentences per page). igCaption = WRITE A FULL ENGAGING CAPTION - do NOT just repeat the content idea or title. Create an original caption. Max 400 chars, max 3 hashtags.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;

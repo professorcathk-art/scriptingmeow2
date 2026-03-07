@@ -440,10 +440,10 @@ function truncate(s: string, max: number): string {
 
 const LAYOUT_TEXT_GUIDE: Record<string, string> = {
   "immersive-photo": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
-  editorial: "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown (#, ##, ###, **). Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography.",
-  "text-heavy": "Text-Heavy / Carousel: Bold typography center stage. imageTextOnImage: 2–4 lines (main headline 主標題 + subheadline + body). Each line adds value. Max ~125 chars per slide for mobile. Plain text only, no markdown.",
-  "tweet-card": "Tweet / Quote Card: Stylized quote or social post. imageTextOnImage: the key quote, plain text only, no markdown. Attractive background.",
-  "split-screen": "Split Screen / Collage: Dynamic mix. imageTextOnImage: Line 1 = main headline, Line 2+ = body. Side-by-side or collage layout with text areas.",
+  editorial: "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown (#, ##, ###, **). Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography. Be substantive—2–4 lines of real content.",
+  "text-heavy": "Text-Heavy / Carousel: Bold typography center stage. imageTextOnImage: 2–5 lines (main headline 主標題 + subheadline + body). Each line adds value. Up to 250 chars per slide for text-heavy—be substantive, not minimal. Plain text only, no markdown.",
+  "tweet-card": "Tweet / Quote Card: Stylized quote or social post. imageTextOnImage: the key quote (can be 2–3 lines), plain text only, no markdown. Attractive background.",
+  "split-screen": "Split Screen / Collage: Dynamic mix. imageTextOnImage: Line 1 = main headline, Line 2+ = body. Be substantive. Side-by-side or collage layout with text areas.",
 };
 
 /** Single post (單頁圖表): impress target audience. Carousel (複頁教學貼文): save value. */
@@ -514,7 +514,7 @@ export async function generatePostLight(
         if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 0.8,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 4096,
             thinkingLevel: "low",
             safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
           });
@@ -522,7 +522,7 @@ export async function generatePostLight(
         } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
             safetySettings: [...DEFAULT_SAFETY],
           });
           const result = await model.generateContent(prompt);
@@ -561,9 +561,9 @@ export async function generatePostLight(
     try {
       let text: string | null;
       if (isV1BetaModel(modelName)) {
-        const response = await generateContentV1Beta(modelName, parts, {
+          const response = await generateContentV1Beta(modelName, parts, {
           temperature: 0.9,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048,
           thinkingLevel: "low",
           safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
         });
@@ -571,7 +571,7 @@ export async function generatePostLight(
       } else {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.8, maxOutputTokens: 1024 },
+          generationConfig: { temperature: 0.8, maxOutputTokens: 2048 },
           safetySettings: [...DEFAULT_SAFETY],
         });
         const result = await model.generateContent(prompt);
@@ -698,7 +698,7 @@ export async function generatePost(
           if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 0.8,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096,
             thinkingLevel: "low",
               safetySettings: safetyToV1Beta(safetySettings),
             });
@@ -706,7 +706,7 @@ export async function generatePost(
           } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(carouselPrompt);

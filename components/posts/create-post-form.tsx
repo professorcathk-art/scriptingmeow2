@@ -1310,8 +1310,8 @@ export function CreatePostForm({
                         setCarouselPageField(page.pageIndex, "imageTextOnImage", e.target.value)
                       }
                       className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                      rows={2}
-                      placeholder="Text to render on this page"
+                      rows={4}
+                      placeholder="Text to render on this page (2–5 lines, up to 250 chars)"
                     />
                   </div>
                   <div>
@@ -1324,8 +1324,8 @@ export function CreatePostForm({
                         setCarouselPageField(page.pageIndex, "visualAdvice", e.target.value)
                       }
                       className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                      rows={3}
-                      placeholder="Visual description for this page"
+                      rows={5}
+                      placeholder="Detailed visual description (2–4 sentences: composition, lighting, text placement)"
                     />
                   </div>
                 </div>
@@ -1349,8 +1349,8 @@ export function CreatePostForm({
                 setDraftField("imageTextOnImage", e.target.value)
               }
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-              rows={4}
-              placeholder={formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "Headline\nSubheadline\nBody text..."}
+              rows={5}
+              placeholder={formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "Headline\nSubheadline\nBody text... (2–4 lines for text-heavy)"}
             />
           </div>
           )}
@@ -1366,8 +1366,8 @@ export function CreatePostForm({
                 setDraftField("visualAdvice", e.target.value)
               }
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-              rows={5}
-              placeholder="AI-generated visual description for the image..."
+              rows={6}
+              placeholder="Detailed visual description (2–4 sentences: composition, lighting, text placement, style)"
             />
           </div>
           )}
