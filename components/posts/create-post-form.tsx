@@ -105,8 +105,8 @@ export function CreatePostForm({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [loading, setLoading] = useState(false);
   const [tryStyleSetupLoading, setTryStyleSetupLoading] = useState(!!prefillFromTryStyle);
-  type SingleDraft = { imageTextOnImage: string; visualAdvice: string; igCaption: string };
-  type CarouselDraftItem = { pages: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]; igCaption: string };
+  type SingleDraft = { imageTextOnImage: string; visualAdvice: string; igCaption: string; postAim?: string };
+  type CarouselDraftItem = { pages: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]; igCaption: string; postAim?: string };
   const [draftVariations, setDraftVariations] = useState<(SingleDraft | CarouselDraftItem)[] | null>(null);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState<0 | 1>(0);
   const [formData, setFormData] = useState({
@@ -447,6 +447,7 @@ export function CreatePostForm({
               imageTextOnImage: data.imageTextOnImage ?? "",
               visualAdvice: data.visualAdvice ?? "",
               igCaption: data.igCaption ?? "",
+              postAim: data.postAim ?? "",
             };
             setDraftVariations([single, single]);
             setSelectedDraftIndex(0);
@@ -473,7 +474,7 @@ export function CreatePostForm({
         lastError?.message?.includes("ERR_CONNECTION") ||
         lastError?.message === "The operation was aborted." ||
         lastError?.name === "AbortError"
-          ? "Request timed out or connection failed. Try a shorter description (under 400 chars) and try again."
+          ? "Request timed out or connection failed. Try a shorter description and try again."
           : lastError?.message || "Failed to generate draft. Please try again.";
       alert(msg);
     } finally {
@@ -509,6 +510,7 @@ export function CreatePostForm({
           confirmedImageTextOnImage: isCarousel ? undefined : (draft as { imageTextOnImage?: string }).imageTextOnImage,
           confirmedVisualAdvice: isCarousel ? undefined : (draft as { visualAdvice?: string }).visualAdvice,
           confirmedIgCaption: draft.igCaption,
+          postAim: (draft as { postAim?: string }).postAim,
           carouselPages:
             formData.postType === "carousel"
               ? carouselPages.length > 0
@@ -930,7 +932,7 @@ export function CreatePostForm({
 
         <div>
           <label className="block text-sm font-medium text-zinc-400 mb-2">
-            Describe the post you want to create * (max 500 chars for faster generation)
+            Describe the post you want to create *
           </label>
           {postIdeas.length > 0 && (
             <div className="mb-2">
@@ -942,7 +944,7 @@ export function CreatePostForm({
                   const opt = e.target.value;
                   if (opt) {
                     const idea = postIdeas.find((i) => i.id === opt);
-                    if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content.slice(0, 500) }));
+                    if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
                   }
                 }}
               >
@@ -957,17 +959,17 @@ export function CreatePostForm({
           )}
           <textarea
             required
-            maxLength={500}
+            maxLength={3000}
             value={formData.contentIdea}
             onChange={(e) =>
               setFormData({ ...formData, contentIdea: e.target.value })
             }
             className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            rows={5}
+            rows={6}
             placeholder="e.g., Announce our new product launch, share a customer testimonial..."
           />
           <p className="text-xs text-zinc-500 mt-1">
-            {formData.contentIdea.length}/500
+            {formData.contentIdea.length}/3000
           </p>
         </div>
 
@@ -1153,7 +1155,7 @@ export function CreatePostForm({
     const draft = draftVariations[selectedDraftIndex];
     const isCarouselDraft = "pages" in draft;
     const carouselDraft = isCarouselDraft ? (draft as CarouselDraftItem) : null;
-    const setDraftField = (field: "imageTextOnImage" | "visualAdvice" | "igCaption", value: string) => {
+    const setDraftField = (field: "imageTextOnImage" | "visualAdvice" | "igCaption" | "postAim", value: string) => {
       setDraftVariations((prev) => {
         if (!prev) return prev;
         const next = [...prev];
@@ -1183,6 +1185,22 @@ export function CreatePostForm({
         </p>
 
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Post Aim (for image generation)
+            </label>
+            <p className="text-xs text-zinc-500 mb-1">
+              One sentence describing what this post aims to achieve. Passed to the image AI for better context.
+            </p>
+            <input
+              type="text"
+              value={(draft as { postAim?: string }).postAim ?? ""}
+              onChange={(e) => setDraftField("postAim", e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
+              placeholder="e.g. Educate users on X, Build trust by sharing Y"
+            />
+          </div>
+
           {!isCarouselDraft && draftVariations.length >= 2 && (
             <div>
               <label className="block text-sm font-medium text-zinc-400 mb-2">

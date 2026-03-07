@@ -18,7 +18,11 @@ const POLISH_FIELD_LABELS: Record<PolishField, string> = {
   valueProposition: "Value Proposition",
 };
 
-export function CreateBrandSpaceForm() {
+interface CreateBrandSpaceFormProps {
+  initialName?: string;
+}
+
+export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps = {}) {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
@@ -49,11 +53,13 @@ export function CreateBrandSpaceForm() {
           setFormData((prev) => ({ ...prev, ...fd }));
           setStep(s as 1 | 2 | 3);
         }
+      } else if (initialName?.trim()) {
+        setFormData((prev) => ({ ...prev, name: initialName.trim() }));
       }
     } catch {
       // ignore
     }
-  }, []);
+  }, [initialName]);
 
   useEffect(() => {
     if (step === 3) {

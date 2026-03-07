@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCredits } from "@/components/credits/credits-provider";
+import { CreateTemplateModal } from "./create-template-modal";
 
 type BrandSpace = { id: string; name: string };
 type Template = {
@@ -45,6 +46,7 @@ export function BulkCreateForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ created: string[]; failed: number } | null>(null);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
 
   const selectedTemplate = templates.find((t) => t.id === templateId);
   const brandSpaceId = selectedTemplate?.brand_space_id ?? "";
@@ -108,7 +110,16 @@ export function BulkCreateForm({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-zinc-400 mb-2">1. Template (includes brand)</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-zinc-400">1. Template (includes brand)</label>
+            <button
+              type="button"
+              onClick={() => setShowCreateTemplate(true)}
+              className="text-xs text-violet-400 hover:text-violet-300"
+            >
+              + Create template
+            </button>
+          </div>
           <select
             value={templateId}
             onChange={(e) => setTemplateId(e.target.value)}
@@ -214,6 +225,17 @@ export function BulkCreateForm({
       >
         {loading ? "Generating..." : `Generate ${totalIdeas} Post(s)`}
       </button>
+
+      {showCreateTemplate && (
+        <CreateTemplateModal
+          brandSpaces={brandSpaces}
+          onClose={() => setShowCreateTemplate(false)}
+          onCreated={() => {
+            router.refresh();
+            setShowCreateTemplate(false);
+          }}
+        />
+      )}
     </div>
   );
 }

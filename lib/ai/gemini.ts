@@ -105,6 +105,7 @@ export type DraftOutput = {
   imageTextOnImage: string;
   visualAdvice: string;
   igCaption: string;
+  postAim?: string;
 };
 
 export type CarouselPageDraft = {
@@ -117,6 +118,7 @@ export type CarouselPageDraft = {
 export type CarouselDraftOutput = {
   pages: CarouselPageDraft[];
   igCaption: string;
+  postAim?: string;
 };
 
 /** Strip markdown formatting so it never appears on the image. */
@@ -132,12 +134,13 @@ function stripMarkdownFromText(s: string): string {
 }
 
 /** Parse single draft from JSON. */
-function parseSingleDraft(post: Record<string, unknown>): DraftOutput {
+function parseSingleDraft(post: Record<string, unknown>, postAim?: string): DraftOutput {
   const raw = String(post.imageTextOnImage ?? post.imageText ?? "").trim();
   return {
     imageTextOnImage: stripMarkdownFromText(raw),
     visualAdvice: String(post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
     igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, 400),
+    postAim: postAim || (typeof post.postAim === "string" ? post.postAim : undefined),
   };
 }
 
@@ -152,10 +155,11 @@ function parsePostJson(text: string): DraftOutput | null {
   );
   try {
     const parsed = JSON.parse(jsonStr);
+    const postAim = typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined;
     if (parsed.variation1 && parsed.variation2) {
-      return parseSingleDraft(parsed.variation1);
+      return parseSingleDraft(parsed.variation1, postAim);
     }
-    return parseSingleDraft(parsed);
+    return parseSingleDraft(parsed, postAim);
   } catch {
     return null;
   }
@@ -172,13 +176,14 @@ function parsePostJsonVariations(text: string): DraftOutput[] | null {
   );
   try {
     const parsed = JSON.parse(jsonStr);
+    const postAim = typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined;
     if (parsed.variation1 && parsed.variation2) {
       return [
-        parseSingleDraft(parsed.variation1),
-        parseSingleDraft(parsed.variation2),
+        parseSingleDraft(parsed.variation1, postAim),
+        parseSingleDraft(parsed.variation2, postAim),
       ];
     }
-    const single = parseSingleDraft(parsed);
+    const single = parseSingleDraft(parsed, postAim);
     return [single, { ...single }];
   } catch {
     return null;
@@ -475,7 +480,7 @@ export async function generatePostLight(
   contentFramework?: string,
   carouselPageCount?: number
 ): Promise<DraftOutput[] | CarouselDraftOutput> {
-  const idea = truncate(contentIdea, 400);
+  const idea = truncate(contentIdea, 1000);
   const contentFrameworkDesc =
     CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] ||
     CONTENT_FRAMEWORK_GUIDE["educational-value"];
@@ -534,7 +539,7 @@ export async function generatePostLight(
         visualAdvice: `Professional Instagram carousel page ${i + 1}. ${idea}.`,
       });
     }
-    return { pages: fallbackPages, igCaption: `${idea.slice(0, 200)}...\n\n#instagram` };
+    return { pages: fallbackPages, igCaption: `${idea.slice(0, 200)}...\n\n#instagram`, postAim: idea.slice(0, 100) };
   }
 
   const prompt = getSingleImageDraftPromptLight({
@@ -580,6 +585,7 @@ export async function generatePostLight(
     imageTextOnImage: "",
     visualAdvice: `Professional Instagram post. ${idea}. Clean, modern. Aspect ${aspectNote}.`,
     igCaption: `${idea.slice(0, 200)}...\n\n#instagram`,
+    postAim: idea.slice(0, 100),
   };
   return [fallback, { ...fallback }];
 }
@@ -609,6 +615,7 @@ function parseCarouselJson(text: string, pageCount: number): CarouselDraftOutput
     return {
       pages,
       igCaption: String(parsed.igCaption ?? parsed.caption ?? "").trim().slice(0, 400),
+      postAim: typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined,
     };
   } catch {
     return null;
@@ -633,7 +640,7 @@ export async function generatePost(
   contentFramework?: string,
   carouselPageCount?: number
 ): Promise<DraftOutput[] | CarouselDraftOutput> {
-  const idea = truncate(contentIdea, 400);
+  const idea = truncate(contentIdea, 1000);
   const isCarouselPost = postType === "carousel" && typeof carouselPageCount === "number" && carouselPageCount >= 1 && carouselPageCount <= 9;
 
   if (isCarouselPost) {

@@ -48,7 +48,29 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { postId, name } = body as { postId?: string; name?: string };
+    const {
+      postId,
+      name,
+      brandSpaceId,
+      contentFramework,
+      postStyle,
+      postType,
+      format,
+      customWidth,
+      customHeight,
+      carouselPageCount,
+    } = body as {
+      postId?: string;
+      name?: string;
+      brandSpaceId?: string;
+      contentFramework?: string;
+      postStyle?: string;
+      postType?: string;
+      format?: string;
+      customWidth?: number;
+      customHeight?: number;
+      carouselPageCount?: number;
+    };
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return NextResponse.json(
@@ -109,8 +131,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ template });
     }
 
+    if (brandSpaceId && typeof brandSpaceId === "string") {
+      const { data: brandSpace } = await supabase
+        .from("brand_spaces")
+        .select("id")
+        .eq("id", brandSpaceId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (!brandSpace) {
+        return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
+      }
+
+      const { data: template, error } = await supabase
+        .from("post_templates")
+        .insert({
+          user_id: user.id,
+          name: name.trim(),
+          brand_space_id: brandSpaceId,
+          content_framework: contentFramework ?? "educational-value",
+          post_style: postStyle ?? "immersive-photo",
+          post_type: postType ?? "single-image",
+          format: format ?? "square",
+          custom_width: typeof customWidth === "number" ? customWidth : null,
+          custom_height: typeof customHeight === "number" ? customHeight : null,
+          carousel_page_count: postType === "carousel" && typeof carouselPageCount === "number" ? carouselPageCount : 3,
+          carousel_pages: null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ template });
+    }
+
     return NextResponse.json(
-      { error: "postId is required to create template from post" },
+      { error: "Provide postId (from post) or brandSpaceId (from scratch)" },
       { status: 400 }
     );
   } catch (error) {

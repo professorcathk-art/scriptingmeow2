@@ -85,6 +85,7 @@ export function buildImagePrompt(options: {
   brandType?: string;
   otherBrandType?: string;
   contentFramework?: string;
+  postAim?: string;
 }): string {
   const vs = options.brandbook?.visual_style as BrandbookVisualStyle;
   const pageIndex = options.pageIndex ?? 1;
@@ -139,6 +140,10 @@ export function buildImagePrompt(options: {
     : "";
 
   const parts: string[] = [BASE_PROMPT];
+
+  if (options.postAim?.trim()) {
+    parts.push(`POST AIM & CONTEXT: This post aims to: ${options.postAim.trim()}. The visual should support this intent.`);
+  }
 
   if (options.brandType || options.contentFramework) {
     const brandTypeNote = options.brandType

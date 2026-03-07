@@ -46,6 +46,7 @@ export async function POST(request: Request) {
     confirmedVisualAdvice,
     confirmedIgCaption,
     confirmedCaption,
+    postAim,
     selectedSampleImageUrls,
     referenceImageUrls,
   } = body as {
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
     confirmedVisualAdvice?: string;
     confirmedIgCaption?: string;
     confirmedCaption?: { hook: string; body: string; cta: string; hashtags: string[] };
+    postAim?: string;
     selectedSampleImageUrls?: string[];
     referenceImageUrls?: string[];
   };
@@ -213,8 +215,8 @@ export async function POST(request: Request) {
     }
 
     const draftData = isCarousel && carouselPages
-      ? { carouselPages }
-      : { visualAdvice: imagePrompt, imageTextOnImage };
+      ? { carouselPages, postAim: postAim?.trim() || undefined }
+      : { visualAdvice: imagePrompt, imageTextOnImage, postAim: postAim?.trim() || undefined };
 
     const insertPayload: Record<string, unknown> = {
       brand_space_id: brandSpaceId,
@@ -285,6 +287,7 @@ export async function POST(request: Request) {
           brandType: brandSpace?.brand_type,
           otherBrandType: brandDetails?.brand_details?.otherBrandType,
           contentFramework: contentFramework as string | undefined,
+          postAim: postAim?.trim(),
         });
         const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
           aspectRatio,
@@ -316,6 +319,7 @@ export async function POST(request: Request) {
         brandType: brandSpace?.brand_type,
         otherBrandType: brandDetails?.brand_details?.otherBrandType,
         contentFramework: contentFramework as string | undefined,
+        postAim: postAim?.trim(),
       });
       const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
         aspectRatio,

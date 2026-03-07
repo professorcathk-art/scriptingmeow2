@@ -204,13 +204,14 @@ Language: {{language}}. Format: {{format}}. Layout: {{layout}}.
 Content goal: {{contentFrameworkDesc}}
 
 ## Output
-Return valid JSON only:
+Return valid JSON only. Include postAim: one sentence summarizing the post's aim/goal (e.g. "Educate users on X", "Build trust by sharing Y").
 {
+  "postAim": "One sentence: what this post aims to achieve",
   "variation1": {"imageTextOnImage":"","visualAdvice":"","igCaption":""},
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
 
-Rules: imageTextOnImage = text to render on image (plain text, no markdown). visualAdvice = scene description for image gen, aspect {{aspectNote}}. igCaption = max 400 chars, max 3 hashtags.`;
+Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image (plain text). visualAdvice = scene for image gen, aspect {{aspectNote}}. igCaption = max 400 chars, max 3 hashtags.`;
 
 const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Keep it concise.
 
@@ -220,8 +221,9 @@ Language: {{language}}. Format: {{format}}. Aspect: {{aspectNote}}.
 Content goal: {{contentFrameworkDesc}}
 
 ## Output
-Return valid JSON only:
+Return valid JSON only. Include postAim: one sentence for the post's aim (e.g. "Educate on X", "Build trust by Y").
 {
+  "postAim": "One sentence: post aim",
   "pages": [
     { "pageIndex": 1, "header": "Headline", "imageTextOnImage": "Text (use \\n)", "visualAdvice": "Scene" },
     ...
@@ -229,7 +231,7 @@ Return valid JSON only:
   "igCaption": "Caption (max 400 chars, max 3 hashtags)."
 }
 
-header = main headline on slide (not "Step 1"). visualAdvice = scene for image gen.`;
+postAim = overall aim for image gen. header = main headline (not "Step 1"). visualAdvice = scene for image gen.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;

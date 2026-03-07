@@ -54,7 +54,7 @@ export async function POST(
     }
 
     const postStyle = (post as { post_style?: string }).post_style;
-    const storedDraft = post.draft_data as { visualAdvice?: string; imageTextOnImage?: string } | null | undefined;
+    const storedDraft = post.draft_data as { visualAdvice?: string; imageTextOnImage?: string; postAim?: string } | null | undefined;
     const draftData = body.draft_data ?? storedDraft;
 
     let visualAdvice: string;
@@ -107,6 +107,7 @@ export async function POST(
         return `Professional Instagram post. Style: ${style}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
       })();
 
+    const postAim = (draftData && "postAim" in draftData && draftData.postAim) ? String(draftData.postAim).trim() : undefined;
     const fullImagePrompt = buildImagePrompt({
       brandbook,
       visualAdvice: visualAdviceResolved,
@@ -114,6 +115,7 @@ export async function POST(
       postStyle: postStyle || undefined,
       logoUrl: brandSpace?.logo_url ?? null,
       logoPlacement: brandSpace?.logo_placement ?? null,
+      postAim,
     });
 
     const aspectRatio =

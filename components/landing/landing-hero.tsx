@@ -15,11 +15,13 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
   const [selectedStyle, setSelectedStyle] = useState<typeof LANDING_STYLES[0] | null>(null);
 
   const handleStartFromScratch = () => {
+    const brandName = scratchInput.trim();
     if (isAuthenticated) {
-      const brand = scratchInput.trim();
-      window.location.href = brand ? `/create-post?brand=${encodeURIComponent(brand)}` : "/create-post";
-    } else if (scratchInput.trim()) {
-      window.location.href = `/auth/signup?brand=${encodeURIComponent(scratchInput.trim())}`;
+      window.location.href = brandName
+        ? `/brand-spaces/new?name=${encodeURIComponent(brandName)}`
+        : "/brand-spaces/new";
+    } else if (brandName) {
+      window.location.href = `/auth/signup?redirect=${encodeURIComponent(`/brand-spaces/new?name=${encodeURIComponent(brandName)}`)}`;
     } else {
       window.location.href = "/auth/signup";
     }
@@ -77,8 +79,8 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
           .
         </h1>
         <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
-          Don&apos;t know where to start? Steal a winning aesthetic from our
-          gallery below, tell us your brand name, and let AI do the rest.
+          Don&apos;t know where to start? Enter your brand name above, or steal a
+          winning aesthetic from our gallery below and let AI do the rest.
         </p>
       </section>
 
@@ -86,7 +88,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
       <section className="max-w-2xl mx-auto w-full mb-16">
         <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
           <p className="text-zinc-300 font-medium mb-4 text-center">
-            Already know exactly what you want?
+            Tell us your brand name to get started
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <input
@@ -94,7 +96,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
               value={scratchInput}
               onChange={(e) => setScratchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleStartFromScratch()}
-              placeholder="Describe your brand to get started..."
+              placeholder="Enter your brand name..."
               className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
             />
             <button
@@ -102,7 +104,7 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
               onClick={handleStartFromScratch}
               className="px-6 py-3 rounded-xl gradient-ai text-white font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
             >
-              Create first post
+              Create my brand
             </button>
           </div>
         </div>

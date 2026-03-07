@@ -72,8 +72,8 @@ export async function POST(request: Request) {
     }
 
     const enrichedIdea = referenceText.trim()
-      ? `${contentIdea}\n\n--- Reference materials (extract key ideas for the post) ---\n${referenceText.trim().slice(0, 15000)}`
-      : contentIdea;
+      ? `${contentIdea.trim().slice(0, 1200)}\n\n--- Reference (extract key ideas) ---\n${referenceText.trim().slice(0, 3000)}`
+      : contentIdea.trim().slice(0, 1200);
 
     const result = await generatePostLight(
       enrichedIdea,
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     if ("pages" in result) {
       const carousel = result as CarouselDraftOutput;
       return NextResponse.json({
-        variations: [{ pages: carousel.pages, igCaption: carousel.igCaption }],
+        variations: [{ pages: carousel.pages, igCaption: carousel.igCaption, postAim: carousel.postAim }],
       });
     }
 
@@ -97,6 +97,7 @@ export async function POST(request: Request) {
         imageTextOnImage: v.imageTextOnImage ?? "",
         visualAdvice: v.visualAdvice ?? "",
         igCaption: v.igCaption ?? "",
+        postAim: v.postAim ?? "",
       })),
     });
   } catch (error) {
