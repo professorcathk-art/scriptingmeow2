@@ -28,13 +28,20 @@ type PostIdea = {
   created_at: string;
 };
 
+function formatDate(date: string | Date): string {
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 interface LibraryTabsProps {
   activeTab: string;
   posts: Post[];
   references: Reference[];
   postIdeas: PostIdea[];
   brandSpaces: { id: string; name: string }[];
-  formatDate: (date: string) => string;
 }
 
 function FolderIcon() {
@@ -51,7 +58,6 @@ export function LibraryTabs({
   references,
   postIdeas,
   brandSpaces,
-  formatDate,
 }: LibraryTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();

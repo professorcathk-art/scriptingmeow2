@@ -15,8 +15,10 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
   const [selectedStyle, setSelectedStyle] = useState<typeof LANDING_STYLES[0] | null>(null);
 
   const handleStartFromScratch = () => {
-    if (scratchInput.trim()) {
-      // Could navigate to signup with brand description
+    if (isAuthenticated) {
+      const brand = scratchInput.trim();
+      window.location.href = brand ? `/create-post?brand=${encodeURIComponent(brand)}` : "/create-post";
+    } else if (scratchInput.trim()) {
       window.location.href = `/auth/signup?brand=${encodeURIComponent(scratchInput.trim())}`;
     } else {
       window.location.href = "/auth/signup";
@@ -80,6 +82,32 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
         </p>
       </section>
 
+      {/* Fallback CTA - before Steal a Style */}
+      <section className="max-w-2xl mx-auto w-full mb-16">
+        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
+          <p className="text-zinc-300 font-medium mb-4 text-center">
+            Already know exactly what you want?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              value={scratchInput}
+              onChange={(e) => setScratchInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleStartFromScratch()}
+              placeholder="Describe your brand to get started..."
+              className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
+            />
+            <button
+              type="button"
+              onClick={handleStartFromScratch}
+              className="px-6 py-3 rounded-xl gradient-ai text-white font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              Create first post
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Steal a Style Gallery */}
       <section className="max-w-6xl mx-auto w-full mb-20">
         <h2 className="text-xl font-semibold text-zinc-300 mb-6 text-center sm:text-left">
@@ -134,32 +162,6 @@ export function LandingHero({ isAuthenticated = false }: LandingHeroProps) {
           isAuthenticated={isAuthenticated}
         />
       )}
-
-      {/* Fallback CTA */}
-      <section className="max-w-2xl mx-auto w-full">
-        <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
-          <p className="text-zinc-300 font-medium mb-4 text-center">
-            Already know exactly what you want?
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={scratchInput}
-              onChange={(e) => setScratchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleStartFromScratch()}
-              placeholder="Describe your brand..."
-              className="flex-1 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
-            />
-            <button
-              type="button"
-              onClick={handleStartFromScratch}
-              className="px-6 py-3 rounded-xl gradient-ai text-white font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
-            >
-              Start from Scratch
-            </button>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

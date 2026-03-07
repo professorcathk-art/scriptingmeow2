@@ -93,8 +93,39 @@ async function healthCheck() {
     console.log('   Please check your .env.local file');
   }
 
-  // Check 2b: Stripe (for sandbox testing)
-  console.log('\n2b. Checking Stripe configuration...');
+  // Check 2a: Library - ensure formatDate is not passed to client (fixes save-style redirect error)
+  console.log('\n2a. Checking library formatDate fix...');
+  try {
+    const libraryPage = fs.readFileSync(path.join(__dirname, '..', 'app', '(main)', 'library', 'page.tsx'), 'utf8');
+    const libraryTabs = fs.readFileSync(path.join(__dirname, '..', 'components', 'library', 'library-tabs.tsx'), 'utf8');
+    const passesFormatDate = libraryPage.includes('formatDate={formatDate}') || libraryPage.includes('formatDate=');
+    const hasLocalFormatDate = libraryTabs.includes('function formatDate');
+    if (passesFormatDate || !hasLocalFormatDate) {
+      console.log('   ❌ Library may still pass formatDate to client - fix required');
+    } else {
+      console.log('   ✅ Library formatDate fix verified (no function passed to client)');
+    }
+  } catch (e) {
+    console.log('   ⚠️  Could not verify library fix:', e.message);
+  }
+
+  // Check 2b: Billing page – Stripe Customer Portal configured
+  console.log('\n2b. Checking billing setup...');
+  try {
+    const billingPage = fs.readFileSync(path.join(__dirname, '..', 'app', '(main)', 'billing', 'page.tsx'), 'utf8');
+    const hasPortalButton = billingPage.includes('BillingPortalButton') || billingPage.includes('Manage billing');
+    const hasPortalApi = fs.existsSync(path.join(__dirname, '..', 'app', 'api', 'billing', 'portal', 'route.ts'));
+    if (hasPortalButton && hasPortalApi) {
+      console.log('   ✅ Billing page has Customer Portal (manage payment methods, invoices)');
+    } else {
+      console.log('   ⚠️  Billing: add Stripe Customer Portal for full billing management');
+    }
+  } catch (e) {
+    console.log('   ⚠️  Could not verify billing:', e.message);
+  }
+
+  // Check 2c: Stripe (for sandbox testing)
+  console.log('\n2c. Checking Stripe configuration...');
   const stripeVars = ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_BASIC', 'STRIPE_PRICE_PRO', 'STRIPE_WEBHOOK_SECRET'];
   let stripeOk = true;
   stripeVars.forEach((varName) => {

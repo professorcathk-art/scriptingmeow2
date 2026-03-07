@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
 import { BillingCheckoutButton } from "@/components/billing/billing-checkout-button";
+import { BillingPortalButton } from "@/components/billing/billing-portal-button";
 import { SignOutButton } from "./sign-out-button";
 
 function CheckIcon() {
@@ -114,7 +115,7 @@ export default async function BillingPage() {
         <h2 className="text-xl font-semibold text-zinc-100 mb-4">
           Current Plan
         </h2>
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between flex-wrap gap-4">
           <div>
             <p className="text-lg font-medium text-zinc-100">
               {userProfile.plan_tier === "free"
@@ -131,14 +132,21 @@ export default async function BillingPage() {
               {new Date(userProfile.credits_reset_date).toLocaleDateString()}
             </p>
           </div>
-          {userProfile.plan_tier !== "pro" && (
-            <BillingCheckoutButton
+          <div className="flex items-center gap-3">
+            {userProfile.stripe_customer_id && (
+              <BillingPortalButton className="px-4 py-2 rounded-xl border border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 transition-colors text-sm">
+                Manage billing
+              </BillingPortalButton>
+            )}
+            {userProfile.plan_tier !== "pro" && (
+              <BillingCheckoutButton
               plan={userProfile.plan_tier === "free" ? "basic" : "pro"}
               className="px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-70"
             >
               Upgrade
             </BillingCheckoutButton>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

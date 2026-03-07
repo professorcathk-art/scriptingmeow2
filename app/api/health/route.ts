@@ -26,16 +26,14 @@ export async function GET() {
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     checks.environment = supabaseUrl && supabaseKey ? "healthy" : "unhealthy";
 
-    // Check Stripe (sandbox)
+    // Check Stripe (sandbox) – checkout + portal + webhook
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     const stripeBasic = process.env.STRIPE_PRICE_BASIC;
     const stripePro = process.env.STRIPE_PRICE_PRO;
     const stripeWebhook = process.env.STRIPE_WEBHOOK_SECRET;
-    checks.stripe =
-      stripeKey?.startsWith("sk_") && stripeBasic && stripePro && stripeWebhook?.startsWith("whsec_")
-        ? "healthy"
-        : stripeKey ? "degraded"
-        : "unhealthy";
+    const hasStripeKeys =
+      stripeKey?.startsWith("sk_") && stripeBasic && stripePro && stripeWebhook?.startsWith("whsec_");
+    checks.stripe = hasStripeKeys ? "healthy" : stripeKey ? "degraded" : "unhealthy";
 
     // Check prompts load
     try {

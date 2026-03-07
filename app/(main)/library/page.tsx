@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { BrandbookCta } from "@/components/brandbook-cta";
 import { LibraryFilters } from "@/components/library/library-filters";
 import { LibraryTabs } from "@/components/library/library-tabs";
 import { SaveStyleOnLoad } from "@/components/library/save-style-on-load";
@@ -90,6 +90,16 @@ export default async function LibraryPage({
     })),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+  // Ensure all props are JSON-serializable for Client Components (avoids Server Components render errors)
+  type LibPost = { id: string; visual_url?: string; content_idea?: string; created_at: string; tags?: string[]; brand_spaces?: { name?: string } };
+  type LibRef = { id: string; image_url: string; created_at: string; source: string };
+  type LibIdea = { id: string; content: string; created_at: string };
+  type LibBrand = { id: string; name: string };
+  const serializablePosts = JSON.parse(JSON.stringify(posts ?? [])) as LibPost[];
+  const serializableReferences = JSON.parse(JSON.stringify(references)) as LibRef[];
+  const serializablePostIdeas = JSON.parse(JSON.stringify(postIdeas ?? [])) as LibIdea[];
+  const serializableBrandSpaces = JSON.parse(JSON.stringify(brandSpaces ?? [])) as LibBrand[];
+
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       <SaveStyleOnLoad />
@@ -107,13 +117,12 @@ export default async function LibraryPage({
       </div>
 
       {!hasBrandbook && (
-        <Link
+        <BrandbookCta
           href={brandSpaces?.length ? `/brand-spaces/${brandSpaces[0].id}/brandbook` : "/brand-spaces/new"}
-          className="block p-4 rounded-2xl bg-gradient-to-r from-violet-500/20 via-cyan-500/20 to-pink-500/20 border border-violet-500/30 text-center"
-        >
-          <p className="font-semibold text-white">Create your brandbook</p>
-          <p className="text-sm text-zinc-400 mt-1">Define your brand style for consistent posts</p>
-        </Link>
+          title="Create your brandbook first"
+          subtitle="Define your brand style for consistent posts"
+          compact
+        />
       )}
 
       <Suspense fallback={<div className="bg-zinc-900/50 p-4 rounded-2xl border border-white/10"><p className="text-zinc-400">Loading...</p></div>}>
@@ -126,12 +135,11 @@ export default async function LibraryPage({
       </Suspense>
 
       <LibraryTabs
-        activeTab={(searchParams.tab as string) || "posts"}
-        posts={posts ?? []}
-        references={references}
-        postIdeas={postIdeas ?? []}
-        brandSpaces={brandSpaces ?? []}
-        formatDate={formatDate}
+        activeTab={typeof searchParams.tab === "string" ? searchParams.tab : "posts"}
+        posts={serializablePosts}
+        references={serializableReferences}
+        postIdeas={serializablePostIdeas}
+        brandSpaces={serializableBrandSpaces}
       />
     </div>
   );

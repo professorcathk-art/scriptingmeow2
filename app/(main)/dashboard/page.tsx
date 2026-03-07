@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { BrandbookCta } from "@/components/brandbook-cta";
 import { PLAN_LIMITS, type PlanTier } from "@/types/database";
 
 export default async function DashboardPage() {
@@ -44,14 +45,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {!hasBrandbook && brandSpaces && brandSpaces.length > 0 && (
-        <Link
-          href={`/brand-spaces/${brandSpaces[0].id}/brandbook`}
-          className="block p-6 rounded-2xl bg-gradient-to-r from-violet-500/20 via-cyan-500/20 to-pink-500/20 border-2 border-violet-500/40 hover:border-violet-500/60 transition-all"
-        >
-          <p className="text-xl font-bold text-white">Create your brandbook</p>
-          <p className="text-zinc-400 mt-1">Define your brand style for consistent, on-brand posts</p>
-        </Link>
+      {!hasBrandbook && (
+        <BrandbookCta
+          href={brandSpaces?.length ? `/brand-spaces/${brandSpaces[0].id}/brandbook` : "/brand-spaces/new"}
+          title="Create your brandbook first"
+          subtitle={brandSpaces?.length ? "Define your brand style for consistent, on-brand posts" : "Create your first brand space, then add a brandbook for consistent posts"}
+        />
       )}
 
       {/* Bento box - Quick actions */}
