@@ -115,6 +115,16 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
   const hasCarousel = carouselUrls.length > 0;
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
 
+  const postWithCustom = post as { custom_width?: number; custom_height?: number };
+  const customAspect =
+    post.format === "custom" && postWithCustom.custom_width && postWithCustom.custom_height
+      ? `${postWithCustom.custom_width} / ${postWithCustom.custom_height}`
+      : post.format === "portrait"
+        ? "4/5"
+        : post.format === "story" || post.format === "reel-cover"
+          ? "9/16"
+          : "1/1";
+
   return (
     <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
       <div>
@@ -137,18 +147,7 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
                 <div
                   key={index}
                   className="relative group bg-white/5 rounded-xl overflow-hidden"
-                  style={{
-                    aspectRatio:
-                      post.format === "custom" &&
-                      (post as { custom_width?: number }).custom_width &&
-                      (post as { custom_height?: number }).custom_height
-                        ? `${(post as { custom_width: number }).custom_width} / ${(post as { custom_height: number }).custom_height}`
-                        : post.format === "portrait"
-                          ? "4/5"
-                          : post.format === "story" || post.format === "reel-cover"
-                            ? "9/16"
-                            : "1/1",
-                  }}
+                  style={{ aspectRatio: customAspect }}
                 >
                   <img
                     src={url}
@@ -181,18 +180,7 @@ export function PostReview({ post: initialPost }: PostReviewProps) {
               </div>
               <div
                 className="bg-white/5 rounded-xl flex items-center justify-center overflow-hidden"
-                style={{
-                  aspectRatio:
-                    post.format === "custom" &&
-                    (post as { custom_width?: number }).custom_width &&
-                    (post as { custom_height?: number }).custom_height
-                      ? `${(post as { custom_width: number }).custom_width} / ${(post as { custom_height: number }).custom_height}`
-                      : post.format === "portrait"
-                        ? "4/5"
-                        : post.format === "story" || post.format === "reel-cover"
-                          ? "9/16"
-                          : "1/1",
-                }}
+                style={{ aspectRatio: customAspect }}
               >
                 {post.visual_url && !imageError ? (
                   <img
