@@ -72,8 +72,8 @@ export async function POST(request: Request) {
     }
 
     const enrichedIdea = referenceText.trim()
-      ? `${contentIdea.trim().slice(0, 1200)}\n\n--- Reference (extract key ideas) ---\n${referenceText.trim().slice(0, 3000)}`
-      : contentIdea.trim().slice(0, 1200);
+      ? `${contentIdea.trim().slice(0, 1000)}\n\n--- Reference (extract key ideas) ---\n${referenceText.trim().slice(0, 3000)}`
+      : contentIdea.trim().slice(0, 1000);
 
     const result = await generatePostLight(
       enrichedIdea,

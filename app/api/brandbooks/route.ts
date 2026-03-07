@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(request: Request) {
   try {
@@ -39,6 +40,9 @@ export async function POST(request: Request) {
       console.error("Error creating brandbook:", error);
       return NextResponse.json({ error: "Failed to save brandbook" }, { status: 500 });
     }
+
+    revalidatePath(`/brand-spaces/${brandSpaceId}`);
+    revalidatePath(`/brand-spaces/${brandSpaceId}/brandbook`);
 
     return NextResponse.json(data);
   } catch (error) {
@@ -89,6 +93,9 @@ export async function PUT(request: Request) {
       console.error("Error updating brandbook:", error);
       return NextResponse.json({ error: "Failed to update brandbook" }, { status: 500 });
     }
+
+    revalidatePath(`/brand-spaces/${brandSpaceId}`);
+    revalidatePath(`/brand-spaces/${brandSpaceId}/brandbook`);
 
     return NextResponse.json(data);
   } catch (error) {

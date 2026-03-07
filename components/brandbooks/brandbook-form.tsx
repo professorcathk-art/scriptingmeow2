@@ -51,12 +51,15 @@ export function BrandbookForm({
   }, [initialLogoUrl, initialLogoPlacement]);
 
   useEffect(() => {
-    if (initialBrandbook?.id !== initIdRef.current) {
-      initIdRef.current = initialBrandbook?.id;
+    if (!initialBrandbook) return;
+    if (initialBrandbook.id !== initIdRef.current) {
+      initIdRef.current = initialBrandbook.id;
       setBrandbook(initialBrandbook);
       setHasEdited(false);
+    } else if (!hasEdited) {
+      setBrandbook(initialBrandbook);
     }
-  }, [initialBrandbook]);
+  }, [initialBrandbook, hasEdited]);
 
   const [removingImageId, setRemovingImageId] = useState<string | null>(null);
 

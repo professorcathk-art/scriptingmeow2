@@ -1035,7 +1035,7 @@ export function CreatePostForm({
           </div>
           <textarea
             required
-            maxLength={3000}
+            maxLength={1000}
             value={formData.contentIdea}
             onChange={(e) =>
               setFormData({ ...formData, contentIdea: e.target.value })
@@ -1045,7 +1045,7 @@ export function CreatePostForm({
             placeholder="e.g., Announce our new product launch, share a customer testimonial..."
           />
           <p className="text-xs text-zinc-500 mt-1">
-            {formData.contentIdea.length}/3000
+            {formData.contentIdea.length}/1000
           </p>
         </div>
 
