@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { brandSpaceId?: string };
+  let body: { brandSpaceId?: string; postType?: string };
   try {
     body = await request.json();
   } catch {
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   }
 
   const brandSpaceId = body.brandSpaceId;
+  const postType = body.postType === "carousel" ? "carousel" : "single-image";
   if (!brandSpaceId || typeof brandSpaceId !== "string") {
     return NextResponse.json({ error: "brandSpaceId required" }, { status: 400 });
   }
@@ -63,13 +64,20 @@ BRAND INFO (use all fields to inform your idea):
 - Value proposition: ${String(details.valueProposition ?? "").trim() || "—"}
 `.trim();
 
+  const postTypeNote =
+    postType === "carousel"
+      ? "The user chose CAROUSEL (multi-slide post). Generate an idea suited for a carousel—e.g. a step-by-step guide, list, or multi-point breakdown that works across several slides."
+      : "The user chose SINGLE IMAGE post. Generate an idea suited for one image—e.g. a powerful visual, quote, or single-message graphic. Do NOT suggest carousel or multi-slide content.";
+
   const prompt = `You are an Instagram content strategist. Generate ONE Instagram post idea for this brand.
 
 This will be used as the content brief for creating an Instagram post (image + caption). The idea should be specific and actionable.
 
 ${brandContext}
 
-Generate exactly ONE Instagram post idea. Keep it under 1000 characters so it fits our content brief field. It can be 2–4 sentences. Be concrete (e.g. "Share a customer success story showing how X solved Y, with a before/after visual" or "Announce a new product feature with a comparison graphic"). No numbering, no bullets, no JSON, no markdown. Just the idea in plain text.`;
+${postTypeNote}
+
+Generate exactly ONE Instagram post idea. Keep it under 1000 characters so it fits our content brief field. It can be 2–4 sentences. Be concrete. No numbering, no bullets, no JSON, no markdown. Just the idea in plain text.`;
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {

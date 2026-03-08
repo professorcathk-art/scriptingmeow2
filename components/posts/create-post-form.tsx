@@ -427,7 +427,10 @@ export function CreatePostForm({
       const res = await fetch("/api/library/ideas/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brandSpaceId: formData.brandSpaceId }),
+        body: JSON.stringify({
+          brandSpaceId: formData.brandSpaceId,
+          postType: formData.postType,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to generate");
@@ -1114,14 +1117,14 @@ export function CreatePostForm({
 
           {aiGenerateIdeas && aiGenerateIdeas.length > 0 && (
             <div
-              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
               role="dialog"
               aria-modal="true"
               aria-labelledby="ai-ideas-modal-title"
               onClick={() => setAiGenerateIdeas(null)}
             >
               <div
-                className="w-full max-w-lg max-h-[90vh] rounded-t-2xl sm:rounded-xl bg-zinc-900 border border-white/10 border-b-0 sm:border-b shadow-xl flex flex-col"
+                className="w-full max-w-lg max-h-[85vh] rounded-xl bg-zinc-900 border border-white/10 shadow-xl flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="p-4 sm:p-6 flex-shrink-0 border-b border-white/5">
@@ -1129,40 +1132,38 @@ export function CreatePostForm({
                     AI-generated Instagram post idea
                   </h2>
                 </div>
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
-                    <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap break-words">
-                      {aiGenerateIdeas[0]}
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 p-4 sm:p-6 pt-0 space-y-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData((prev) => ({ ...prev, contentIdea: aiGenerateIdeas[0].slice(0, MAX_CAPTION_CHARS) }));
-                          setAiGenerateIdeas(null);
-                        }}
-                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-medium hover:opacity-90"
-                      >
-                        Use this
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => addIdeaToBank(aiGenerateIdeas[0])}
-                        className="px-4 py-2 rounded-xl border border-white/20 text-zinc-300 text-sm hover:bg-white/5"
-                      >
-                        Add to Idea Bank
-                      </button>
-                    </div>
+                <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
+                  <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap break-words mb-4">
+                    {aiGenerateIdeas[0]}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => setAiGenerateIdeas(null)}
-                      className="w-full py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 text-sm"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, contentIdea: aiGenerateIdeas[0].slice(0, MAX_CAPTION_CHARS) }));
+                        setAiGenerateIdeas(null);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-medium hover:opacity-90"
                     >
-                      Close
+                      Use this
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addIdeaToBank(aiGenerateIdeas[0])}
+                      className="px-4 py-2 rounded-xl border border-white/20 text-zinc-300 text-sm hover:bg-white/5"
+                    >
+                      Add to Idea Bank
                     </button>
                   </div>
+                </div>
+                <div className="p-4 sm:p-6 pt-0 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setAiGenerateIdeas(null)}
+                    className="w-full py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 text-sm"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </div>
