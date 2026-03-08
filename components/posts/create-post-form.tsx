@@ -939,6 +939,12 @@ export function CreatePostForm({
     return (
       <div className={cardClass}>
         <Stepper />
+        {loading && (
+          <div className="mb-4 p-4 rounded-xl bg-violet-500/10 border border-violet-500/30 text-violet-200 text-sm flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-violet-500/50 border-t-violet-500 rounded-full animate-spin shrink-0" />
+            <p>AI is generating your draft. Please stay on this page. This may take up to a minute.</p>
+          </div>
+        )}
         <h2 className="text-xl font-semibold text-zinc-100">
           Step 2: Content & Language
         </h2>
