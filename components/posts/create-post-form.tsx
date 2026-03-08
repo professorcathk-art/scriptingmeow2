@@ -157,7 +157,6 @@ export function CreatePostForm({
   const [aiGenerateIdeas, setAiGenerateIdeas] = useState<string[] | null>(null);
   const [aiGenerateLoading, setAiGenerateLoading] = useState(false);
   const [aiGenerateError, setAiGenerateError] = useState<string | null>(null);
-  const [addToBankLoading, setAddToBankLoading] = useState(false);
 
   const saveDraft = useCallback(() => {
     try {
@@ -435,34 +434,21 @@ export function CreatePostForm({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to generate");
-      setAiGenerateIdeas(data.ideas ?? []);
+      const ideas = data.ideas ?? [];
+      setAiGenerateIdeas(ideas);
+      if (ideas[0]) {
+        fetch("/api/library/ideas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: ideas[0] }),
+        })
+          .then(() => router.refresh())
+          .catch(() => {});
+      }
     } catch (e) {
       setAiGenerateError(e instanceof Error ? e.message : "Failed to generate ideas");
     } finally {
       setAiGenerateLoading(false);
-    }
-  };
-
-  const addIdeaToBank = async (e: React.MouseEvent, content: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (addToBankLoading) return;
-    setAddToBankLoading(true);
-    try {
-      const res = await fetch("/api/library/ideas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to add");
-      setAiGenerateIdeas(null);
-      router.refresh();
-      alert("Idea added to library");
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to add to Idea Bank");
-    } finally {
-      setAddToBankLoading(false);
     }
   };
 
@@ -1146,35 +1132,25 @@ export function CreatePostForm({
                   <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap break-words mb-4">
                     {aiGenerateIdeas[0]}
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => {
                         setFormData((prev) => ({ ...prev, contentIdea: aiGenerateIdeas[0].slice(0, MAX_CAPTION_CHARS) }));
                         setAiGenerateIdeas(null);
                       }}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-medium hover:opacity-90"
+                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-medium hover:opacity-90"
                     >
                       Use this
                     </button>
                     <button
                       type="button"
-                      onClick={(e) => addIdeaToBank(e, aiGenerateIdeas[0])}
-                      disabled={addToBankLoading}
-                      className="px-4 py-2 rounded-xl border border-white/20 text-zinc-300 text-sm hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => setAiGenerateIdeas(null)}
+                      className="flex-1 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 text-sm"
                     >
-                      {addToBankLoading ? "Adding…" : "Add to Idea Bank"}
+                      Discard
                     </button>
                   </div>
-                </div>
-                <div className="p-4 sm:p-6 pt-0 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setAiGenerateIdeas(null)}
-                    className="w-full py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 text-sm"
-                  >
-                    Close
-                  </button>
                 </div>
               </div>
             </div>
