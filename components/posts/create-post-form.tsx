@@ -154,6 +154,9 @@ export function CreatePostForm({
     { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]
   >([]);
   const [is4KEnabled, setIs4KEnabled] = useState(false);
+  const [aiGenerateIdeas, setAiGenerateIdeas] = useState<string[] | null>(null);
+  const [aiGenerateLoading, setAiGenerateLoading] = useState(false);
+  const [aiGenerateError, setAiGenerateError] = useState<string | null>(null);
 
   const saveDraft = useCallback(() => {
     try {
@@ -413,6 +416,41 @@ export function CreatePostForm({
 
   const removeReferenceImage = (url: string) => {
     setReferenceImageUrls((prev) => prev.filter((u) => u !== url));
+  };
+
+  const handleAiGenerateIdeas = async () => {
+    if (!formData.brandSpaceId) return;
+    setAiGenerateLoading(true);
+    setAiGenerateError(null);
+    setAiGenerateIdeas(null);
+    try {
+      const res = await fetch("/api/library/ideas/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandSpaceId: formData.brandSpaceId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to generate");
+      setAiGenerateIdeas(data.ideas ?? []);
+    } catch (e) {
+      setAiGenerateError(e instanceof Error ? e.message : "Failed to generate ideas");
+    } finally {
+      setAiGenerateLoading(false);
+    }
+  };
+
+  const addIdeaToBank = async (content: string) => {
+    try {
+      const res = await fetch("/api/library/ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to add");
+      router.refresh();
+    } catch {
+      alert("Failed to add to Idea Bank");
+    }
   };
 
   const LANGUAGE_OPTIONS = [
@@ -982,9 +1020,36 @@ export function CreatePostForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-400 mb-2">
-            Describe the post you want to create *
-          </label>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+            <label className="block text-sm font-medium text-zinc-400">
+              Describe the post you want to create *
+            </label>
+            {formData.brandSpaceId && (
+              <button
+                type="button"
+                onClick={handleAiGenerateIdeas}
+                disabled={aiGenerateLoading}
+                className="shrink-0 px-4 py-2 rounded-xl border border-violet-500/50 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
+              >
+                {aiGenerateLoading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-violet-500/50 border-t-violet-500 rounded-full animate-spin" />
+                    AI generating…
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    AI Generate
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          {aiGenerateError && (
+            <p className="text-sm text-amber-400 mb-2">{aiGenerateError}</p>
+          )}
           <p className="text-sm text-zinc-500 mb-3">
             Import content from Idea Bank or RSS feed, or type below.
           </p>
@@ -1046,6 +1111,64 @@ export function CreatePostForm({
           <p className="text-xs text-zinc-500 mt-1">
             {formData.contentIdea.length}/1000
           </p>
+
+          {aiGenerateIdeas && aiGenerateIdeas.length > 0 && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ai-ideas-modal-title"
+              onClick={() => setAiGenerateIdeas(null)}
+            >
+              <div
+                className="w-full max-w-lg rounded-xl bg-zinc-900 border border-white/10 p-6 shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 id="ai-ideas-modal-title" className="text-lg font-semibold text-white mb-4">
+                  AI-generated post ideas
+                </h2>
+                <p className="text-sm text-zinc-500 mb-4">
+                  Choose one to use or add to Idea Bank.
+                </p>
+                <div className="space-y-4">
+                  {aiGenerateIdeas.map((idea, i) => (
+                    <div
+                      key={i}
+                      className="p-4 rounded-xl bg-zinc-800/50 border border-white/10"
+                    >
+                      <p className="text-sm text-zinc-200 mb-3">{idea}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({ ...prev, contentIdea: idea }));
+                            setAiGenerateIdeas(null);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-medium hover:opacity-90"
+                        >
+                          Use this
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addIdeaToBank(idea)}
+                          className="px-3 py-1.5 rounded-lg border border-white/20 text-zinc-300 text-sm hover:bg-white/5"
+                        >
+                          Add to Idea Bank
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAiGenerateIdeas(null)}
+                  className="mt-4 w-full py-2 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
