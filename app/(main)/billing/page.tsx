@@ -55,7 +55,7 @@ export default async function BillingPage() {
       features: [
         `${PLAN_LIMITS.free.brand_spaces} Brand Space${PLAN_LIMITS.free.brand_spaces > 1 ? "s" : ""}`,
         `${PLAN_LIMITS.free.monthly_credits} credits/month`,
-        `${PLAN_LIMITS.free.four_k_credits} 4K upgrades`,
+        `${PLAN_LIMITS.free.four_k_credits} upgrades to 4K image`,
         `${PLAN_LIMITS.free.storage_mb} MB library storage`,
         "AI post generation",
         "No RSS feeds",
@@ -72,7 +72,7 @@ export default async function BillingPage() {
       features: [
         `${PLAN_LIMITS.starter.brand_spaces} Brand Spaces`,
         `${PLAN_LIMITS.starter.monthly_credits} credits/month`,
-        `${PLAN_LIMITS.starter.four_k_credits} 4K upgrades/month`,
+        `${PLAN_LIMITS.starter.four_k_credits} upgrades to 4K image`,
         `${PLAN_LIMITS.starter.storage_mb} MB library storage`,
         `Up to ${PLAN_LIMITS.starter.rss_feeds} RSS feed${PLAN_LIMITS.starter.rss_feeds > 1 ? "s" : ""}`,
         "AI post generation",
@@ -90,7 +90,7 @@ export default async function BillingPage() {
       features: [
         `${PLAN_LIMITS.creator.brand_spaces} Brand Spaces`,
         `${PLAN_LIMITS.creator.monthly_credits} credits/month`,
-        `${PLAN_LIMITS.creator.four_k_credits} 4K upgrades/month`,
+        `${PLAN_LIMITS.creator.four_k_credits} upgrades to 4K image`,
         `${PLAN_LIMITS.creator.storage_mb} MB library storage`,
         `Up to ${PLAN_LIMITS.creator.rss_feeds} RSS feeds`,
         "AI post generation",
@@ -151,7 +151,7 @@ export default async function BillingPage() {
             <p className="text-sm text-zinc-400">
               {userProfile.credits_remaining} credits remaining
               {(userProfile.four_k_credits ?? 0) > 0 && (
-                <> · {(userProfile as { four_k_credits?: number }).four_k_credits} 4K upgrades</>
+                <> · {(userProfile as { four_k_credits?: number }).four_k_credits} upgrades to 4K image</>
               )}
             </p>
             <p className="text-xs text-zinc-500 mt-1">
