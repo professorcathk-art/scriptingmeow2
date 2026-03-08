@@ -73,7 +73,9 @@ Pain points: ${painPoints}
 Desired outcomes: ${outcomes}
 Value proposition: ${valueProp}
 
-Each idea must be 1–2 sentences, specific and actionable (e.g. "Share a customer success story showing how X solved Y" or "Announce a new product feature with a before/after comparison"). Return valid JSON only:
+Each idea must be 1–2 sentences, specific and actionable (e.g. "Share a customer success story showing how X solved Y" or "Announce a new product feature with a before/after comparison").
+
+Return ONLY a valid JSON object, no markdown or code blocks. Example:
 {"ideas":["idea1","idea2"]}`;
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -89,7 +91,9 @@ Each idea must be 1–2 sentences, specific and actionable (e.g. "Share a custom
 
   try {
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    let text = result.response.text().trim();
+    // Strip markdown code blocks (Gemini often returns ```json\n{...}\n```)
+    text = text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
     const match = text.match(/\{[\s\S]*\}/);
     const jsonStr = match ? match[0] : text;
     const parsed = JSON.parse(jsonStr) as { ideas?: string[] };
