@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 import { getLandingStyleById } from "@/lib/landing-styles";
 import { generateContentV1Beta, isV1BetaModel, safetyToV1Beta } from "@/lib/ai/gemini";
 
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro"] as const;
+const GEMINI_MODELS = ["gemini-2.5-pro", "gemini-2.5-flash"] as const;
 const DEFAULT_SAFETY = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
   { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
