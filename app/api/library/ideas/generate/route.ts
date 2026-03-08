@@ -6,87 +6,16 @@ export const maxDuration = 60;
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL = "gemini-2.5-flash";
 
-/** Response schema for structured JSON output (avoids malformed JSON from unescaped quotes). */
-const RESPONSE_SCHEMA = {
-  type: "object",
-  properties: {
-    ideas: {
-      type: "array",
-      items: { type: "string" },
-      description: "Exactly 2 post idea strings, each 1-2 sentences",
-    },
-  },
-  required: ["ideas"],
-};
-
+/** Parse plain-text ideas: one per line. Handles numbering/bullets if model adds them. */
 function parseIdeasFromText(text: string): string[] {
-  const trimmed = text.trim();
-  // Strip markdown code blocks
-  const stripped = trimmed
-    .replace(/^```(?:json)?\s*\n?/i, "")
-    .replace(/\n?```\s*$/i, "")
-    .trim();
-
-  // Try JSON.parse first
-  const match = stripped.match(/\{[\s\S]*\}/);
-  const jsonStr = match ? match[0] : stripped;
-  try {
-    const parsed = JSON.parse(jsonStr) as { ideas?: unknown };
-    if (Array.isArray(parsed.ideas)) {
-      return parsed.ideas
-        .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
-        .slice(0, 2);
-    }
-  } catch {
-    // Fallback: extract ideas by regex (handles malformed JSON from unescaped quotes)
-    const ideas: string[] = [];
-    const arrayMatch = stripped.match(/"ideas"\s*:\s*\[([\s\S]*)\]/);
-    if (arrayMatch) {
-      const inner = arrayMatch[1];
-      let depth = 0;
-      let current = "";
-      let inString = false;
-      let escape = false;
-      let quoteChar = '"';
-      for (let i = 0; i < inner.length; i++) {
-        const c = inner[i];
-        if (escape) {
-          current += c;
-          escape = false;
-          continue;
-        }
-        if (c === "\\") {
-          escape = true;
-          current += c;
-          continue;
-        }
-        if (!inString) {
-          if (c === '"' || c === "'") {
-            inString = true;
-            quoteChar = c;
-            current = "";
-            continue;
-          }
-          if (c === "," && depth === 0) {
-            current = "";
-            continue;
-          }
-          if (c === "[") depth++;
-          if (c === "]") depth--;
-          continue;
-        }
-        if (c === quoteChar) {
-          inString = false;
-          ideas.push(current.trim());
-          current = "";
-          continue;
-        }
-        current += c;
-      }
-      if (current.trim()) ideas.push(current.trim());
-    }
-    return ideas.filter((s) => s.length > 0).slice(0, 2);
-  }
+  const lines = text
+    .split(/\r?\n/)
+    .map((s) => s.replace(/^\s*[\d\-•*]+\s*[\.\)]\s*/, "").trim())
+    .filter((s) => s.length > 10);
+  if (lines.length >= 1) return lines.slice(0, 2);
+  // Fallback: whole text as single idea if it looks like one sentence
+  const single = text.trim();
+  if (single.length > 20 && single.length < 500) return [single];
   return [];
 }
 
@@ -159,7 +88,9 @@ Pain points: ${painPoints}
 Desired outcomes: ${outcomes}
 Value proposition: ${valueProp}
 
-Each idea must be 1–2 sentences, specific and actionable (e.g. Share a customer success story showing how X solved Y, or Announce a new product feature with a before/after comparison). Avoid using double quotes inside idea text; use single quotes or rephrase if needed.`;
+Each idea must be 1–2 sentences, specific and actionable (e.g. Share a customer success story showing how X solved Y, or Announce a new product feature with a before/after comparison).
+
+OUTPUT FORMAT: Write exactly 2 lines. One idea per line. No numbering, no bullets, no JSON, no markdown. Just the two idea sentences, each on its own line.`;
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -172,8 +103,6 @@ Each idea must be 1–2 sentences, specific and actionable (e.g. Share a custome
     generationConfig: {
       temperature: 0.7,
       maxOutputTokens: 512,
-      responseMimeType: "application/json",
-      responseSchema: RESPONSE_SCHEMA,
     },
   };
 
@@ -193,15 +122,26 @@ Each idea must be 1–2 sentences, specific and actionable (e.g. Share a custome
     }
 
     const data = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+        finishReason?: string;
+      }>;
+      promptFeedback?: { blockReason?: string };
     };
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const candidate = data.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text?.trim();
     if (!text) {
-      return NextResponse.json({ error: "No ideas generated" }, { status: 500 });
+      const reason = data.promptFeedback?.blockReason ?? candidate?.finishReason ?? "empty";
+      console.warn("[ideas/generate] No text in response:", reason);
+      return NextResponse.json(
+        { error: "No ideas generated", details: String(reason) },
+        { status: 500 }
+      );
     }
 
     const ideas = parseIdeasFromText(text);
     if (ideas.length === 0) {
+      console.warn("[ideas/generate] Parse yielded no ideas. Raw text length:", text.length, "preview:", text.slice(0, 200));
       return NextResponse.json({ error: "No ideas generated" }, { status: 500 });
     }
 
