@@ -5,7 +5,7 @@
 | Plan | Product ID | Price ID |
 |------|------------|----------|
 | **Starter** ($12.9/mo) | `prod_U6kTLtW5UKVR7C` | `price_1T8WyiA61RbBP8C2qllK2sKC` |
-| **Creator** ($19.9/mo) | `prod_U6kX8sGs2Lfajq` | `price_1T8X2nA61RbBP8C2cEe9zGTv` |
+| **Creator** ($24.9/mo) | `prod_U6kX8sGs2Lfajq` | `price_1T8X2nA61RbBP8C2cEe9zGTv` |
 
 ---
 
@@ -15,7 +15,7 @@
 
 1. **Verify products & prices**
    - Starter: Product `prod_U6kTLtW5UKVR7C`, Price `price_1T8WyiA61RbBP8C2qllK2sKC` = $12.90/month
-   - Creator: Product `prod_U6kX8sGs2Lfajq`, Price `price_1T8X2nA61RbBP8C2cEe9zGTv` = $19.90/month
+   - Creator: Product `prod_U6kX8sGs2Lfajq`, Price `price_1T8X2nA61RbBP8C2cEe9zGTv` = $24.90/month
 
 2. **Update webhook events** (if not already)
    - `checkout.session.completed`

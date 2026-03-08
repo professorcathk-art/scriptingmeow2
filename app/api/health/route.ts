@@ -29,7 +29,7 @@ export async function GET() {
     // Check Stripe (sandbox) – checkout + portal + webhook
     const stripeKey = process.env.STRIPE_SECRET_KEY;
     const stripeStarter = process.env.STRIPE_PRICE_STARTER;
-    const stripeCreator = process.env.STRIPE_PRICE_CREATOR || process.env.STRIPE_PRICE_PRO;
+    const stripeCreator = process.env.STRIPE_PRICE_CREATOR;
     const stripeWebhook = process.env.STRIPE_WEBHOOK_SECRET;
     const hasStripeKeys =
       stripeKey?.startsWith("sk_") && stripeStarter && stripeCreator && stripeWebhook?.startsWith("whsec_");

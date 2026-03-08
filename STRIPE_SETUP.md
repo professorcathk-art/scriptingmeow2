@@ -6,11 +6,11 @@
 |----------|-------|
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_51PzIjVA61RbBP8C28aI4U99q1D6RMOI2pygya1yTrtyc7mllnUXNtgXxoPlY2cZ2skBIKWBEECY1LfxUxlhaw1iw00CTW6zZZK` |
 | `STRIPE_SECRET_KEY` | Your live secret key (`sk_live_...`) from Stripe Dashboard |
-| `STRIPE_PRICE_BASIC` | `price_1T8Ls6A61RbBP8C2PRbq5rrW` |
-| `STRIPE_PRICE_PRO` | `price_1T8LsVA61RbBP8C2Un0NHOtY` |
+| `STRIPE_PRICE_STARTER` | `price_1T8WyiA61RbBP8C2qllK2sKC` |
+| `STRIPE_PRICE_CREATOR` | `price_1T8X2nA61RbBP8C2cEe9zGTv` |
 | `STRIPE_WEBHOOK_SECRET` | From live webhook (Stripe → Developers → Webhooks) |
 
-Product IDs (reference): Basic `prod_U6Z0fSedU4VJ45`, Pro `prod_U6Z0R0qkarZPcP`
+Product IDs (reference): Starter `prod_U6kTLtW5UKVR7C`, Creator `prod_U6kX8sGs2Lfajq`
 
 ---
 
@@ -36,8 +36,8 @@ Your Stripe keys are in `.env.local`:
 
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` – for client-side (if needed later)
 - `STRIPE_SECRET_KEY` – for server-side API calls
-- `STRIPE_PRICE_BASIC` – empty until you create products
-- `STRIPE_PRICE_PRO` – empty until you create products
+- `STRIPE_PRICE_STARTER` – Starter plan price ID
+- `STRIPE_PRICE_CREATOR` – Creator plan price ID
 - `STRIPE_WEBHOOK_SECRET` – empty until you create a webhook
 
 ---
@@ -49,19 +49,19 @@ Your Stripe keys are in `.env.local`:
 1. Go to **Developers** → **Products** (or **Products** in the dashboard).
 2. Create products and prices:
 
-**Product 1: Basic**
+**Product 1: Starter**
 
-- Name: `Basic`
-- Price: `$9.90/month`
+- Name: `Starter`
+- Price: `$12.90/month`
 - Billing: Recurring, Monthly
-- Copy the **Price ID** (e.g. `price_xxx`) → `STRIPE_PRICE_BASIC` in `.env.local`
+- Copy the **Price ID** (e.g. `price_xxx`) → `STRIPE_PRICE_STARTER` in `.env.local`
 
-**Product 2: Pro**
+**Product 2: Creator**
 
-- Name: `Pro`
-- Price: `$19.99/month`
+- Name: `Creator`
+- Price: `$24.90/month`
 - Billing: Recurring, Monthly
-- Copy the **Price ID** → `STRIPE_PRICE_PRO` in `.env.local`
+- Copy the **Price ID** → `STRIPE_PRICE_CREATOR` in `.env.local`
 
 ### Webhook (required)
 

@@ -10,8 +10,8 @@ The "Stripe is not configured" (503) error means your Vercel deployment is missi
 | Name | Value |
 |------|-------|
 | `STRIPE_SECRET_KEY` | `sk_live_51PzIjV...` (your live secret key from Stripe Dashboard) |
-| `STRIPE_PRICE_BASIC` | `price_1T8Ls6A61RbBP8C2PRbq5rrW` |
-| `STRIPE_PRICE_PRO` | `price_1T8LsVA61RbBP8C2Un0NHOtY` |
+| `STRIPE_PRICE_STARTER` | `price_1T8WyiA61RbBP8C2qllK2sKC` |
+| `STRIPE_PRICE_CREATOR` | `price_1T8X2nA61RbBP8C2cEe9zGTv` |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_xxx` (from live webhook endpoint) |
 | `NEXT_PUBLIC_SITE_URL` | `https://designermeow.com` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_live_51PzIjVA61RbBP8C28aI4U99q1D6RMOI2pygya1yTrtyc7mllnUXNtgXxoPlY2cZ2skBIKWBEECY1LfxUxlhaw1iw00CTW6zZZK` |
@@ -26,4 +26,4 @@ In Stripe Dashboard → Developers → Webhooks (ensure **Live mode** is on), se
 https://designermeow.com/api/stripe/webhook
 ```
 
-Subscribe to: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+Subscribe to: `checkout.session.completed`, `invoice.payment_succeeded`, `customer.subscription.updated`, `customer.subscription.deleted`

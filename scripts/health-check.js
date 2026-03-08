@@ -126,7 +126,7 @@ async function healthCheck() {
 
   // Check 2c: Stripe (for sandbox testing)
   console.log('\n2c. Checking Stripe configuration...');
-  const stripeVars = ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_BASIC', 'STRIPE_PRICE_PRO', 'STRIPE_WEBHOOK_SECRET'];
+  const stripeVars = ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_STARTER', 'STRIPE_PRICE_CREATOR', 'STRIPE_WEBHOOK_SECRET'];
   let stripeOk = true;
   stripeVars.forEach((varName) => {
     const val = process.env[varName];
@@ -142,9 +142,9 @@ async function healthCheck() {
     try {
       const Stripe = require('stripe');
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      const price = await stripe.prices.retrieve(process.env.STRIPE_PRICE_BASIC);
+      const price = await stripe.prices.retrieve(process.env.STRIPE_PRICE_STARTER);
       if (price && price.id) {
-        console.log(`   ✅ Stripe API connected (Basic price: ${price.id})`);
+        console.log(`   ✅ Stripe API connected (Starter price: ${price.id})`);
       }
     } catch (err) {
       console.log(`   ⚠️  Stripe API test failed:`, err.message?.slice(0, 60));

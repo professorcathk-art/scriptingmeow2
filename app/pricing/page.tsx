@@ -27,6 +27,7 @@ const plans: Array<{
       "Style gallery access",
       "Basic support",
     ],
+    footerNote: "Data may be removed after 6 months of inactivity.",
   },
   {
     tier: "starter",
@@ -40,17 +41,17 @@ const plans: Array<{
       `${PLAN_LIMITS.starter.storage_mb} MB library storage`,
       `Up to ${PLAN_LIMITS.starter.rss_feeds} RSS feed${PLAN_LIMITS.starter.rss_feeds > 1 ? "s" : ""}`,
       "AI post generation",
+      "Batch generation",
       "All formats (square, portrait, story)",
       "Logo integration",
       "Reference materials",
       "Priority support",
     ],
-    footerNote: "Data may be removed after 6 months of inactivity.",
   },
   {
     tier: "creator",
     name: "Creator",
-    price: 19.9,
+    price: 24.9,
     badge: "Most popular",
     features: [
       `${PLAN_LIMITS.creator.brand_spaces} Brand Spaces`,
@@ -61,7 +62,7 @@ const plans: Array<{
       "Everything in Starter",
       "Batch generation",
       "Library & export",
-      "Custom branding",
+      "Export options",
       "For pro users",
       "Priority support",
     ],
@@ -80,7 +81,7 @@ function CheckIcon() {
 export default function PricingPage() {
   return (
     <PublicPageLayout>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <Link href="/" className="text-violet-400 hover:text-violet-300 text-sm mb-8 inline-block">
           ← Back to home
         </Link>
@@ -92,11 +93,11 @@ export default function PricingPage() {
           1 credit = 1 generated variation. 4K upgrade = 1 credit + 1 4K slot. Credits reset monthly. No rollover.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-12">
           {plans.map((plan) => (
             <div
               key={plan.tier}
-              className={`relative p-6 rounded-2xl border ${
+              className={`relative p-4 sm:p-6 rounded-2xl border ${
                 plan.popular
                   ? "bg-zinc-900/50 border-violet-500/50"
                   : "bg-zinc-900/50 border-white/10"

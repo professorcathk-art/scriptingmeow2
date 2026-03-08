@@ -61,6 +61,7 @@ export default async function BillingPage() {
         "No RSS feeds",
         "Basic support",
       ],
+      footerNote: "Data may be removed after 6 months of inactivity.",
     },
     {
       tier: "starter",
@@ -75,15 +76,15 @@ export default async function BillingPage() {
         `${PLAN_LIMITS.starter.storage_mb} MB library storage`,
         `Up to ${PLAN_LIMITS.starter.rss_feeds} RSS feed${PLAN_LIMITS.starter.rss_feeds > 1 ? "s" : ""}`,
         "AI post generation",
+        "Batch generation",
         "Priority support",
         "Export options",
       ],
-      footerNote: "Data may be removed after 6 months of inactivity.",
     },
     {
       tier: "creator",
       name: "Creator",
-      price: 19.9,
+      price: 24.9,
       limits: PLAN_LIMITS.creator,
       badge: "Most popular",
       features: [
@@ -93,17 +94,16 @@ export default async function BillingPage() {
         `${PLAN_LIMITS.creator.storage_mb} MB library storage`,
         `Up to ${PLAN_LIMITS.creator.rss_feeds} RSS feeds`,
         "AI post generation",
-        "Priority support",
         "Batch generation",
-        "Advanced analytics",
-        "Custom branding",
+        "Priority support",
+        "Export options",
       ],
       popular: true,
     },
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-6 py-6 sm:py-8">
       <BillingReturnHandler />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -135,7 +135,7 @@ export default async function BillingPage() {
         </div>
       </div>
 
-      <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-6">
+      <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-4 sm:p-6">
         <h2 className="text-xl font-semibold text-zinc-100 mb-4">
           Current Plan
         </h2>
@@ -181,7 +181,7 @@ export default async function BillingPage() {
         <h2 className="text-xl font-semibold text-zinc-100 mb-6">
           Available Plans
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {plans.map((plan) => {
             const isCurrentPlan = plan.tier === userProfile.plan_tier;
             const tierOrder = { free: 0, starter: 1, creator: 2 };
@@ -192,7 +192,7 @@ export default async function BillingPage() {
             return (
               <div
                 key={plan.tier}
-                className={`relative p-6 rounded-2xl border ${
+                className={`relative p-4 sm:p-6 rounded-2xl border ${
                   plan.popular
                     ? "bg-zinc-900/50 border-violet-500/50 shadow-[0_0_40px_-10px_rgba(139,92,246,0.3)]"
                     : "bg-zinc-900/50 border-white/10"
@@ -261,7 +261,7 @@ export default async function BillingPage() {
         </div>
       </div>
 
-      <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-6">
+      <div className="bg-zinc-900/50 rounded-2xl border border-white/10 p-4 sm:p-6">
         <h2 className="text-xl font-semibold text-zinc-100 mb-4">
           Credit System
         </h2>
