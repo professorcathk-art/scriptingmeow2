@@ -120,14 +120,14 @@ export default async function LibraryPage({
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       <SaveStyleOnLoad />
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-zinc-100">Library</h1>
           <p className="text-zinc-400 mt-1 text-sm sm:text-base">Your posts, references, and idea bank</p>
         </div>
         <Link
           href="/create-post"
-          className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity text-center text-sm sm:text-base"
+          className="w-full md:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity text-center text-sm sm:text-base"
         >
           Create New Post
         </Link>

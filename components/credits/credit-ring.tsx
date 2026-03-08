@@ -22,9 +22,9 @@ export function CreditRing({ className }: CreditRingProps = {}) {
   const isCritical = percentage < 10;
 
   return (
-    <div className={cn("flex items-center gap-4", className)}>
-      <div className="relative w-20 h-20">
-        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+    <div className={cn("flex items-center gap-3 sm:gap-4", className)}>
+      <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 80 80">
           <circle
             cx="40"
             cy="40"
@@ -54,10 +54,10 @@ export function CreditRing({ className }: CreditRingProps = {}) {
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-bold text-white">{creditsRemaining}</span>
+          <span className="text-base sm:text-lg font-bold text-white">{creditsRemaining}</span>
         </div>
       </div>
-      <div>
+      <div className="hidden sm:block">
         <p className="text-sm font-medium text-white">
           {planTier === "free" ? "Free" : planTier === "starter" ? "Starter" : "Creator"} Plan
         </p>

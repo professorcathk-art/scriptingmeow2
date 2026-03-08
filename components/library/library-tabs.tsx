@@ -150,13 +150,13 @@ export function LibraryTabs({
 
   return (
     <>
-      <div className="flex gap-2 border-b border-white/10 pb-4">
+      <div className="flex overflow-x-auto whitespace-nowrap gap-2 pb-2 border-b border-white/10 hide-scrollbar -mx-2 px-2">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => handleTabChange(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+            className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
               tab === t.id ? "bg-violet-500/20 text-violet-300 border border-violet-500/30" : "text-zinc-400 hover:text-white"
             }`}
           >

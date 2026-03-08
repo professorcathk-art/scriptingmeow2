@@ -6,6 +6,67 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CreditRing } from "@/components/credits/credit-ring";
 
+function NavIconDashboard({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+    </svg>
+  );
+}
+function NavIconFolder({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+    </svg>
+  );
+}
+function NavIconPen({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+    </svg>
+  );
+}
+function NavIconLayers({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+    </svg>
+  );
+}
+function NavIconLibrary({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+    </svg>
+  );
+}
+function NavIconDiscover({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  );
+}
+function NavIconDefault({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  );
+}
+
+const navIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  "/dashboard": NavIconDashboard,
+  "/discover": NavIconDiscover,
+  "/brand-spaces": NavIconFolder,
+  "/create-post": NavIconPen,
+  "/bulk-create": NavIconLayers,
+  "/design-playground": NavIconLayers,
+  "/library": NavIconLibrary,
+  "/billing": NavIconDefault,
+};
+
 const navItemsBase = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/brand-spaces", label: "Brand Spaces" },
@@ -148,8 +209,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <header className="glass border-b border-white/5 sticky top-0 z-10">
-          <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between w-full gap-2">
+            <div className="flex items-center gap-3 min-w-0 shrink-0">
               <button
                 onClick={() => setMobileOpen(true)}
                 className="p-2 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors md:hidden shrink-0"
@@ -168,7 +229,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 </p>
               </div>
             </div>
-            <CreditRing />
+            <div className="flex items-center gap-3 shrink-0">
+              <CreditRing />
+            </div>
           </div>
         </header>
         <div className="flex-1 p-4 sm:p-6 pb-20 md:pb-6 overflow-auto min-w-0 w-full">
@@ -176,20 +239,26 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile bottom navigation */}
+      {/* Mobile bottom navigation - icons + tiny labels */}
       <nav className="fixed bottom-0 left-0 right-0 w-full flex justify-around items-center bg-black/90 backdrop-blur-sm border-t border-white/5 pb-4 pt-2 z-50 md:hidden">
-        {navItems.slice(0, 5).map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex flex-col items-center gap-0.5 py-2 px-3 min-w-0 flex-1 text-xs font-medium transition-colors",
-              pathname === item.href ? "text-white" : "text-zinc-400"
-            )}
-          >
-            <span className="truncate w-full text-center">{item.label}</span>
-          </Link>
-        ))}
+        {navItems.slice(0, 5).map((item) => {
+          const Icon = navIcons[item.href] ?? NavIconDefault;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center gap-1 py-2 px-2 min-w-0 flex-1 transition-colors",
+                pathname === item.href ? "text-white" : "text-zinc-400"
+              )}
+            >
+              <Icon className="w-5 h-5 shrink-0" />
+              <span className="text-[10px] font-medium truncate w-full text-center max-w-[4rem]">
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

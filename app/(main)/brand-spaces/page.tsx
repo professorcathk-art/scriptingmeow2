@@ -34,24 +34,24 @@ export default async function BrandSpacesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Brand Spaces</h1>
-          <p className="text-zinc-400 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Brand Spaces</h1>
+          <p className="text-zinc-400 mt-1 text-sm sm:text-base">
             {brandSpaceCount} / {brandSpaceLimit} Brand Spaces used
           </p>
         </div>
         {canCreateMore ? (
           <Link
             href="/brand-spaces/new"
-            className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity"
+            className="w-full md:w-auto px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity text-center"
           >
             Create Brand Space
           </Link>
         ) : (
           <Link
             href="/billing"
-            className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity"
+            className="w-full md:w-auto px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity text-center"
           >
             Upgrade to Create More
           </Link>
