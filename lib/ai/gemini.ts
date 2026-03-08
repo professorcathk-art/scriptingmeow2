@@ -684,7 +684,8 @@ export async function generatePost(
   postStyle?: string,
   preferPro?: boolean,
   contentFramework?: string,
-  carouselPageCount?: number
+  carouselPageCount?: number,
+  singleSafety?: boolean
 ): Promise<DraftOutput[] | CarouselDraftOutput> {
   const idea = truncate(contentIdea, 1000);
   const isCarouselPost = postType === "carousel" && typeof carouselPageCount === "number" && carouselPageCount >= 1 && carouselPageCount <= 9;
@@ -735,7 +736,7 @@ export async function generatePost(
     const modelOrder = preferPro
       ? (["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-3-pro-preview"] as const)
       : GEMINI_MODELS;
-    const safetyOrder = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
+    const safetyOrder = singleSafety ? [DEFAULT_SAFETY] as const : [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
     const parts: ContentPart[] = [{ text: carouselPrompt }];
     for (const modelName of modelOrder) {
       for (const safetySettings of safetyOrder) {
@@ -839,7 +840,7 @@ export async function generatePost(
   const modelOrder = preferPro
     ? (["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-3-pro-preview"] as const)
     : GEMINI_MODELS;
-  const safetyOrder = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
+  const safetyOrder = singleSafety ? [DEFAULT_SAFETY] as const : [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
   const parts: ContentPart[] = [{ text: prompt }];
   let lastError: unknown = null;
   for (const modelName of modelOrder) {

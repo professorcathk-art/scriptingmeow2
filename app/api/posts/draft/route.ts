@@ -99,7 +99,8 @@ export async function POST(request: Request) {
           postStyle,
           false,
           contentFramework,
-          carouselPageCount
+          carouselPageCount,
+          true // singleSafety: match brandbook (5 attempts not 10), avoid timeout
         )
       : await generatePostLight(
       enrichedIdea,
