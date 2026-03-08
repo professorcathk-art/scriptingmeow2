@@ -157,6 +157,7 @@ export function CreatePostForm({
   const [aiGenerateIdeas, setAiGenerateIdeas] = useState<string[] | null>(null);
   const [aiGenerateLoading, setAiGenerateLoading] = useState(false);
   const [aiGenerateError, setAiGenerateError] = useState<string | null>(null);
+  const [addToBankLoading, setAddToBankLoading] = useState(false);
 
   const saveDraft = useCallback(() => {
     try {
@@ -442,17 +443,26 @@ export function CreatePostForm({
     }
   };
 
-  const addIdeaToBank = async (content: string) => {
+  const addIdeaToBank = async (e: React.MouseEvent, content: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (addToBankLoading) return;
+    setAddToBankLoading(true);
     try {
       const res = await fetch("/api/library/ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
       });
-      if (!res.ok) throw new Error("Failed to add");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to add");
+      setAiGenerateIdeas(null);
       router.refresh();
-    } catch {
-      alert("Failed to add to Idea Bank");
+      alert("Idea added to library");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to add to Idea Bank");
+    } finally {
+      setAddToBankLoading(false);
     }
   };
 
@@ -1117,14 +1127,14 @@ export function CreatePostForm({
 
           {aiGenerateIdeas && aiGenerateIdeas.length > 0 && (
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+              className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pt-6 sm:pt-4 overflow-y-auto"
               role="dialog"
               aria-modal="true"
               aria-labelledby="ai-ideas-modal-title"
               onClick={() => setAiGenerateIdeas(null)}
             >
               <div
-                className="w-full max-w-lg max-h-[85vh] rounded-xl bg-zinc-900 border border-white/10 shadow-xl flex flex-col overflow-hidden"
+                className="w-full max-w-lg max-h-[55vh] sm:max-h-[85vh] rounded-xl bg-zinc-900 border border-white/10 shadow-xl flex flex-col overflow-hidden flex-shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="p-4 sm:p-6 flex-shrink-0 border-b border-white/5">
@@ -1149,10 +1159,11 @@ export function CreatePostForm({
                     </button>
                     <button
                       type="button"
-                      onClick={() => addIdeaToBank(aiGenerateIdeas[0])}
-                      className="px-4 py-2 rounded-xl border border-white/20 text-zinc-300 text-sm hover:bg-white/5"
+                      onClick={(e) => addIdeaToBank(e, aiGenerateIdeas[0])}
+                      disabled={addToBankLoading}
+                      className="px-4 py-2 rounded-xl border border-white/20 text-zinc-300 text-sm hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Add to Idea Bank
+                      {addToBankLoading ? "Adding…" : "Add to Idea Bank"}
                     </button>
                   </div>
                 </div>
