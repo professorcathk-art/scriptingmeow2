@@ -525,52 +525,6 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
         </div>
       )}
 
-      {!hasCarousel && draftData && "visualAdvice" in draftData && (
-        <div className="glass-elevated p-6 rounded-2xl space-y-4">
-          <h2 className="text-xl font-semibold text-white">Draft for Regeneration</h2>
-          <p className="text-sm text-zinc-400">
-            Edit these fields to change the image when you Regenerate.
-          </p>
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Visual Advice (for image generation)
-            </label>
-            <textarea
-              value={draftData.visualAdvice ?? ""}
-              onChange={(e) =>
-                setDraftData((prev) =>
-                  prev && "visualAdvice" in prev
-                    ? { ...prev, visualAdvice: e.target.value }
-                    : prev
-                )
-              }
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-              rows={3}
-              placeholder="Scene description for image generation..."
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Text on Image (plain text only)
-            </label>
-            <textarea
-              value={draftData.imageTextOnImage ?? ""}
-              onChange={(e) =>
-                setDraftData((prev) =>
-                  prev && "imageTextOnImage" in prev
-                    ? { ...prev, imageTextOnImage: e.target.value }
-                    : prev
-                )
-              }
-              maxLength={200}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
-              rows={2}
-              placeholder="Text to render on the image (up to 200 chars)..."
-            />
-          </div>
-        </div>
-      )}
-
       <div className="glass-elevated p-6 rounded-2xl space-y-4">
         <div className="flex items-start gap-4">
           <input
@@ -597,20 +551,31 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
         <InstagramHandleForm initialHandle={instagramHandle ?? ""} onSaved={() => router.refresh()} />
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <button
-          onClick={() => router.back()}
-          className="flex-1 min-w-[120px] px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowSaveTemplate(true)}
-          className="px-4 py-2 border border-violet-500/30 rounded-xl text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 transition-colors"
-        >
-          Save as Template
-        </button>
+      <div className="space-y-3">
+        <p className="text-sm text-zinc-400">
+          This post has been saved to your library.
+        </p>
+        <div className="flex flex-wrap gap-3 sm:gap-4">
+          <button
+            onClick={() => router.back()}
+            className="flex-1 min-w-[100px] sm:min-w-[120px] px-4 py-2 border border-white/10 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            Back
+          </button>
+          <Link
+            href="/library"
+            className="flex-1 min-w-[100px] sm:min-w-[140px] px-4 py-2 border border-violet-500/30 rounded-xl text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 transition-colors text-center"
+          >
+            View in Library
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowSaveTemplate(true)}
+            className="flex-1 min-w-[100px] sm:min-w-[140px] px-4 py-2 border border-violet-500/30 rounded-xl text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 transition-colors"
+          >
+            Save as Template
+          </button>
+        </div>
       </div>
 
       {showSaveTemplate && (
