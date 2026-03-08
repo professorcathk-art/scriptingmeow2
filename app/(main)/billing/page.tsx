@@ -83,7 +83,7 @@ export default async function BillingPage() {
     {
       tier: "creator",
       name: "Creator",
-      price: 20,
+      price: 19.9,
       limits: PLAN_LIMITS.creator,
       badge: "Most popular",
       features: [

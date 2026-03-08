@@ -176,5 +176,5 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
 
 export const PLAN_PRICES: Record<Exclude<PlanTier, "free">, { monthly_price_cents: number; stripe_price_id?: string }> = {
   starter: { monthly_price_cents: 1290 },
-  creator: { monthly_price_cents: 2000 },
+  creator: { monthly_price_cents: 1990 },
 };

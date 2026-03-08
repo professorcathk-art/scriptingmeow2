@@ -1,7 +1,7 @@
 /**
  * Gemini Nano Banana image generation.
- * Uses Nano Banana Pro (Gemini 3 Pro Image) for best quality and Chinese text.
- * Falls back to gemini-2.5-flash-image if Pro fails.
+ * Uses gemini-3-pro-image-preview by default. Falls back to gemini-2.5-flash-image if Pro fails.
+ * 4K toggle sets imageConfig.imageSize: "4K" (Pro only; Flash fallback does not support 4K).
  * @see https://ai.google.dev/gemini-api/docs/image-generation
  */
 
@@ -119,8 +119,8 @@ async function generateWithModel(
 }
 
 /**
- * Generates an image using Gemini's Nano Banana. Tries Pro model first for better
- * Chinese text rendering, then falls back to Flash.
+ * Generates an image using Gemini. Tries Pro first, falls back to Flash if Pro fails.
+ * When is4K is true, sets imageConfig.imageSize: "4K" (Pro only; Flash does not support 4K).
  */
 export async function generateImageWithNanoBanana(
   prompt: string,
@@ -144,6 +144,6 @@ export async function generateImageWithNanoBanana(
   const fallback = await generateWithModel(MODEL_FLASH, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls, previousCarouselPageCount, false);
   if (fallback) return fallback;
 
-  console.warn("[nano-banana] Both models failed");
+  console.warn("[nano-banana] Both Pro and Flash models failed");
   return null;
 }

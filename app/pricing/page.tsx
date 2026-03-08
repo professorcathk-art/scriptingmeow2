@@ -50,7 +50,7 @@ const plans: Array<{
   {
     tier: "creator",
     name: "Creator",
-    price: 20,
+    price: 19.9,
     badge: "Most popular",
     features: [
       `${PLAN_LIMITS.creator.brand_spaces} Brand Spaces`,
