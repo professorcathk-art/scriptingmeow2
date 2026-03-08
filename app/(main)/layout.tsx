@@ -24,11 +24,12 @@ export default async function MainLayout({
     .single();
 
   return (
-    <CreditsProvider
-      initialCredits={userProfile?.credits_remaining ?? 0}
-      initialResetDate={userProfile?.credits_reset_date ?? new Date().toISOString()}
-      initialPlanTier={userProfile?.plan_tier ?? "free"}
-    >
+      <CreditsProvider
+        initialCredits={userProfile?.credits_remaining ?? 0}
+        initialFourKCredits={userProfile?.four_k_credits ?? 0}
+        initialResetDate={userProfile?.credits_reset_date ?? new Date().toISOString()}
+        initialPlanTier={userProfile?.plan_tier ?? "free"}
+      >
       <DashboardShell>{children}</DashboardShell>
     </CreditsProvider>
   );

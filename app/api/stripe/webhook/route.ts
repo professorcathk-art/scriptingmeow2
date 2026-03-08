@@ -11,14 +11,20 @@ const supabaseAdmin = createClient(
 
 const CREDITS_BY_TIER: Record<string, number> = {
   free: 5,
-  basic: 50,
-  pro: 200,
+  starter: 20,
+  creator: 50,
+};
+
+const FOUR_K_CREDITS_BY_TIER: Record<string, number> = {
+  free: 0,
+  starter: 2,
+  creator: 5,
 };
 
 function priceIdToTier(priceId: string): string {
-  if (priceId === STRIPE_PRICE_IDS.basic) return "basic";
-  if (priceId === STRIPE_PRICE_IDS.pro) return "pro";
-  return "basic";
+  if (priceId === STRIPE_PRICE_IDS.starter) return "starter";
+  if (priceId === STRIPE_PRICE_IDS.creator) return "creator";
+  return "starter";
 }
 
 export async function POST(request: Request) {
@@ -59,12 +65,14 @@ export async function POST(request: Request) {
           break;
         }
         const credits = CREDITS_BY_TIER[planTier] ?? 5;
+        const fourKCredits = FOUR_K_CREDITS_BY_TIER[planTier] ?? 0;
         const priceId = STRIPE_PRICE_IDS[planTier as keyof typeof STRIPE_PRICE_IDS] || null;
         await supabaseAdmin
           .from("users")
           .update({
             plan_tier: planTier,
             credits_remaining: credits,
+            four_k_credits: fourKCredits,
             credits_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
@@ -84,11 +92,13 @@ export async function POST(request: Request) {
           planTier = priceIdToTier(sub.items.data[0].price.id);
         }
         const credits = CREDITS_BY_TIER[planTier] ?? 5;
+        const fourKCredits = FOUR_K_CREDITS_BY_TIER[planTier] ?? 0;
         await supabaseAdmin
           .from("users")
           .update({
             plan_tier: planTier,
             credits_remaining: credits,
+            four_k_credits: fourKCredits,
             stripe_subscription_id:
               event.type === "customer.subscription.deleted" ? null : sub.id,
             stripe_price_id:

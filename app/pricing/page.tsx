@@ -8,6 +8,7 @@ const plans: Array<{
   name: string;
   price: number;
   features: string[];
+  badge?: string;
   popular?: boolean;
   footerNote?: string;
 }> = [
@@ -17,7 +18,8 @@ const plans: Array<{
     price: 0,
     features: [
       `${PLAN_LIMITS.free.brand_spaces} Brand Space${PLAN_LIMITS.free.brand_spaces > 1 ? "s" : ""}`,
-      `${PLAN_LIMITS.free.monthly_credits} credits/month`,
+      `${PLAN_LIMITS.free.monthly_credits} standard credits/month`,
+      `${PLAN_LIMITS.free.four_k_credits} 4K upgrades`,
       `${PLAN_LIMITS.free.storage_mb} MB library storage`,
       "AI post generation",
       "Single image & carousel",
@@ -27,14 +29,16 @@ const plans: Array<{
     ],
   },
   {
-    tier: "basic",
-    name: "Basic",
-    price: 9.9,
+    tier: "starter",
+    name: "Starter",
+    price: 12.9,
+    badge: "Best for hobby",
     features: [
-      `${PLAN_LIMITS.basic.brand_spaces} Brand Spaces`,
-      `${PLAN_LIMITS.basic.monthly_credits} credits/month`,
-      `${PLAN_LIMITS.basic.storage_mb} MB library storage`,
-      `Up to ${PLAN_LIMITS.basic.rss_feeds} RSS feed${PLAN_LIMITS.basic.rss_feeds > 1 ? "s" : ""}`,
+      `${PLAN_LIMITS.starter.brand_spaces} Brand Spaces`,
+      `${PLAN_LIMITS.starter.monthly_credits} standard credits/month`,
+      `${PLAN_LIMITS.starter.four_k_credits} 4K upgrades/month`,
+      `${PLAN_LIMITS.starter.storage_mb} MB library storage`,
+      `Up to ${PLAN_LIMITS.starter.rss_feeds} RSS feed${PLAN_LIMITS.starter.rss_feeds > 1 ? "s" : ""}`,
       "AI post generation",
       "All formats (square, portrait, story)",
       "Logo integration",
@@ -44,18 +48,21 @@ const plans: Array<{
     footerNote: "Data may be removed after 6 months of inactivity.",
   },
   {
-    tier: "pro",
-    name: "Pro",
-    price: 19.99,
+    tier: "creator",
+    name: "Creator",
+    price: 20,
+    badge: "Most popular",
     features: [
-      `${PLAN_LIMITS.pro.brand_spaces} Brand Spaces`,
-      `${PLAN_LIMITS.pro.monthly_credits} credits/month`,
-      `${PLAN_LIMITS.pro.storage_mb} MB library storage`,
-      `Up to ${PLAN_LIMITS.pro.rss_feeds} RSS feeds`,
-      "Everything in Basic",
+      `${PLAN_LIMITS.creator.brand_spaces} Brand Spaces`,
+      `${PLAN_LIMITS.creator.monthly_credits} standard credits/month`,
+      `${PLAN_LIMITS.creator.four_k_credits} 4K upgrades/month`,
+      `${PLAN_LIMITS.creator.storage_mb} MB library storage`,
+      `Up to ${PLAN_LIMITS.creator.rss_feeds} RSS feeds`,
+      "Everything in Starter",
       "Batch generation",
       "Library & export",
       "Custom branding",
+      "For pro users",
       "Priority support",
     ],
     popular: true,
@@ -82,7 +89,7 @@ export default function PricingPage() {
           Simple, transparent pricing. Start free, upgrade when you need more.
         </p>
         <p className="text-zinc-500 text-sm mb-12">
-          1 credit = 1 generated variation. Credits reset monthly. No rollover.
+          1 credit = 1 generated variation. 4K upgrade = 1 credit + 1 4K slot. Credits reset monthly. No rollover.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
@@ -95,9 +102,9 @@ export default function PricingPage() {
                   : "bg-zinc-900/50 border-white/10"
               }`}
             >
-              {plan.popular && (
+              {(plan.popular || plan.badge) && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 text-xs font-semibold text-white">
-                  Most Popular
+                  {plan.badge || "Most Popular"}
                 </div>
               )}
               <h3 className="text-xl font-semibold text-zinc-100 mb-2">{plan.name}</h3>

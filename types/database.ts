@@ -7,7 +7,7 @@ export type BrandType =
   | "community-nonprofit"
   | "other";
 
-export type PlanTier = "free" | "basic" | "pro";
+export type PlanTier = "free" | "starter" | "creator";
 
 export type PostType = "single-image" | "carousel";
 
@@ -117,6 +117,7 @@ export interface User {
   email: string;
   plan_tier: PlanTier;
   credits_remaining: number;
+  four_k_credits: number;
   credits_reset_date: string;
   instagram_handle?: string | null;
   stripe_customer_id?: string | null;
@@ -136,6 +137,7 @@ export interface CreditTransaction {
 export interface PlanLimits {
   brand_spaces: number;
   monthly_credits: number;
+  four_k_credits: number;
   rss_feeds: number;
   storage_mb: number;
   priority_support: boolean;
@@ -146,22 +148,25 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   free: {
     brand_spaces: 2,
     monthly_credits: 5,
+    four_k_credits: 0,
     rss_feeds: 0,
     storage_mb: 20,
     priority_support: false,
     batch_generation: false,
   },
-  basic: {
+  starter: {
     brand_spaces: 5,
-    monthly_credits: 50,
+    monthly_credits: 20,
+    four_k_credits: 2,
     rss_feeds: 2,
     storage_mb: 100,
     priority_support: false,
     batch_generation: false,
   },
-  pro: {
+  creator: {
     brand_spaces: 15,
-    monthly_credits: 200,
+    monthly_credits: 50,
+    four_k_credits: 5,
     rss_feeds: 5,
     storage_mb: 500,
     priority_support: true,
@@ -170,6 +175,6 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
 };
 
 export const PLAN_PRICES: Record<Exclude<PlanTier, "free">, { monthly_price_cents: number; stripe_price_id?: string }> = {
-  basic: { monthly_price_cents: 990 },
-  pro: { monthly_price_cents: 1999 },
+  starter: { monthly_price_cents: 1290 },
+  creator: { monthly_price_cents: 2000 },
 };

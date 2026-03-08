@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     }
 
     const { plan } = (await request.json()) as { plan?: string };
-    const tier = (plan === "basic" || plan === "pro" ? plan : "basic") as "basic" | "pro";
+    const tier = (plan === "starter" || plan === "creator" ? plan : "starter") as "starter" | "creator";
     const newPriceId = STRIPE_PRICE_IDS[tier];
 
     if (!newPriceId) {

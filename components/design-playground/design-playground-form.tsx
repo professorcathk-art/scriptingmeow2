@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useCredits } from "@/components/credits/credits-provider";
+import { FourKToggle } from "@/components/credits/four-k-toggle";
 import { DIMENSION_PRESETS, MAX_DIMENSION_PX, parseWidthHeight } from "@/lib/dimensions";
 
 interface DesignItem {
@@ -38,6 +39,7 @@ export function DesignPlaygroundForm({
 }: DesignPlaygroundFormProps) {
   const creditsCtx = useCredits();
   const userCredits = creditsCtx?.creditsRemaining ?? initialCredits;
+  const fourKCreditsRemaining = creditsCtx?.fourKCreditsRemaining ?? 0;
 
   const buildChatHistoryFromItems = (items: DesignItem[]): ChatItem[] => {
     const out: ChatItem[] = [];
@@ -63,6 +65,7 @@ export function DesignPlaygroundForm({
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(lastImage);
   const [chatHistory, setChatHistory] = useState<ChatItem[]>(() => buildChatHistoryFromItems(initialItems));
   const [refineComment, setRefineComment] = useState("");
+  const [is4KEnabled, setIs4KEnabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [threadId, setThreadId] = useState<string | undefined>(initialThreadId);
   const [savingImage, setSavingImage] = useState(false);
@@ -119,6 +122,10 @@ export function DesignPlaygroundForm({
       setError("Not enough credits");
       return;
     }
+    if (is4KEnabled && fourKCreditsRemaining < 1) {
+      setError("Not enough 4K upgrade credits");
+      return;
+    }
     setGenerating(true);
     setError(null);
     try {
@@ -130,6 +137,7 @@ export function DesignPlaygroundForm({
           brandSpaceId: brandSpaceId || undefined,
           referenceImageUrls: referenceUrls,
           threadId: threadId || undefined,
+          is4KEnabled,
           ...buildDimensionPayload(),
         }),
       });
@@ -143,6 +151,9 @@ export function DesignPlaygroundForm({
       }
       if (typeof data.credits_remaining === "number") {
         creditsCtx?.setCredits(data.credits_remaining);
+      }
+      if (typeof data.four_k_credits === "number") {
+        creditsCtx?.setFourKCredits(data.four_k_credits);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
@@ -361,13 +372,20 @@ export function DesignPlaygroundForm({
             )}
           </div>
 
+          <FourKToggle
+            enabled={is4KEnabled}
+            onChange={setIs4KEnabled}
+            fourKCreditsRemaining={fourKCreditsRemaining}
+            disabled={generating}
+          />
+
           {error && <p className="text-red-400 text-sm">{error}</p>}
 
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={handleGenerate}
-              disabled={generating || userCredits < 1}
+              disabled={generating || userCredits < 1 || (is4KEnabled && fourKCreditsRemaining < 1)}
               className="px-6 py-3 rounded-xl gradient-ai text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {generating ? "Generating…" : "Generate (1 credit)"}

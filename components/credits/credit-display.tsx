@@ -26,7 +26,7 @@ export function CreditDisplay({
       <div className="flex items-center justify-between mb-2">
         <div>
           <p className="text-sm font-medium text-gray-700">
-            {planTier === "free" ? "Free Plan" : planTier === "basic" ? "Basic Plan" : "Pro Plan"}
+            {planTier === "free" ? "Free Plan" : planTier === "starter" ? "Starter Plan" : "Creator Plan"}
           </p>
           <p className="text-xs text-gray-500">
             Resets {new Date(creditsResetDate).toLocaleDateString()}

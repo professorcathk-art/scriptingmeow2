@@ -28,11 +28,11 @@ export async function GET() {
 
     // Check Stripe (sandbox) – checkout + portal + webhook
     const stripeKey = process.env.STRIPE_SECRET_KEY;
-    const stripeBasic = process.env.STRIPE_PRICE_BASIC;
-    const stripePro = process.env.STRIPE_PRICE_PRO;
+    const stripeStarter = process.env.STRIPE_PRICE_STARTER || process.env.STRIPE_PRICE_BASIC;
+    const stripeCreator = process.env.STRIPE_PRICE_CREATOR || process.env.STRIPE_PRICE_PRO;
     const stripeWebhook = process.env.STRIPE_WEBHOOK_SECRET;
     const hasStripeKeys =
-      stripeKey?.startsWith("sk_") && stripeBasic && stripePro && stripeWebhook?.startsWith("whsec_");
+      stripeKey?.startsWith("sk_") && stripeStarter && stripeCreator && stripeWebhook?.startsWith("whsec_");
     checks.stripe = hasStripeKeys ? "healthy" : stripeKey ? "degraded" : "unhealthy";
 
     // Check prompts load

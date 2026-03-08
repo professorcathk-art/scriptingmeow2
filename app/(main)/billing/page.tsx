@@ -41,8 +41,9 @@ export default async function BillingPage() {
     tier: PlanTier;
     name: string;
     price: number;
-    limits: typeof PLAN_LIMITS[PlanTier];
+    limits: (typeof PLAN_LIMITS)[PlanTier];
     features: string[];
+    badge?: string;
     popular?: boolean;
     footerNote?: string;
   }> = [
@@ -54,6 +55,7 @@ export default async function BillingPage() {
       features: [
         `${PLAN_LIMITS.free.brand_spaces} Brand Space${PLAN_LIMITS.free.brand_spaces > 1 ? "s" : ""}`,
         `${PLAN_LIMITS.free.monthly_credits} credits/month`,
+        `${PLAN_LIMITS.free.four_k_credits} 4K upgrades`,
         `${PLAN_LIMITS.free.storage_mb} MB library storage`,
         "AI post generation",
         "No RSS feeds",
@@ -61,15 +63,17 @@ export default async function BillingPage() {
       ],
     },
     {
-      tier: "basic",
-      name: "Basic",
-      price: 9.9,
-      limits: PLAN_LIMITS.basic,
+      tier: "starter",
+      name: "Starter",
+      price: 12.9,
+      limits: PLAN_LIMITS.starter,
+      badge: "Best for hobby",
       features: [
-        `${PLAN_LIMITS.basic.brand_spaces} Brand Spaces`,
-        `${PLAN_LIMITS.basic.monthly_credits} credits/month`,
-        `${PLAN_LIMITS.basic.storage_mb} MB library storage`,
-        `Up to ${PLAN_LIMITS.basic.rss_feeds} RSS feed${PLAN_LIMITS.basic.rss_feeds > 1 ? "s" : ""}`,
+        `${PLAN_LIMITS.starter.brand_spaces} Brand Spaces`,
+        `${PLAN_LIMITS.starter.monthly_credits} credits/month`,
+        `${PLAN_LIMITS.starter.four_k_credits} 4K upgrades/month`,
+        `${PLAN_LIMITS.starter.storage_mb} MB library storage`,
+        `Up to ${PLAN_LIMITS.starter.rss_feeds} RSS feed${PLAN_LIMITS.starter.rss_feeds > 1 ? "s" : ""}`,
         "AI post generation",
         "Priority support",
         "Export options",
@@ -77,15 +81,17 @@ export default async function BillingPage() {
       footerNote: "Data may be removed after 6 months of inactivity.",
     },
     {
-      tier: "pro",
-      name: "Pro",
-      price: 19.99,
-      limits: PLAN_LIMITS.pro,
+      tier: "creator",
+      name: "Creator",
+      price: 20,
+      limits: PLAN_LIMITS.creator,
+      badge: "Most popular",
       features: [
-        `${PLAN_LIMITS.pro.brand_spaces} Brand Spaces`,
-        `${PLAN_LIMITS.pro.monthly_credits} credits/month`,
-        `${PLAN_LIMITS.pro.storage_mb} MB library storage`,
-        `Up to ${PLAN_LIMITS.pro.rss_feeds} RSS feeds`,
+        `${PLAN_LIMITS.creator.brand_spaces} Brand Spaces`,
+        `${PLAN_LIMITS.creator.monthly_credits} credits/month`,
+        `${PLAN_LIMITS.creator.four_k_credits} 4K upgrades/month`,
+        `${PLAN_LIMITS.creator.storage_mb} MB library storage`,
+        `Up to ${PLAN_LIMITS.creator.rss_feeds} RSS feeds`,
         "AI post generation",
         "Priority support",
         "Batch generation",
@@ -138,12 +144,15 @@ export default async function BillingPage() {
             <p className="text-lg font-medium text-zinc-100">
               {userProfile.plan_tier === "free"
                 ? "Free Plan"
-                : userProfile.plan_tier === "basic"
-                ? "Basic Plan"
-                : "Pro Plan"}
+                : userProfile.plan_tier === "starter"
+                ? "Starter Plan"
+                : "Creator Plan"}
             </p>
             <p className="text-sm text-zinc-400">
               {userProfile.credits_remaining} credits remaining
+              {(userProfile.four_k_credits ?? 0) > 0 && (
+                <> · {(userProfile as { four_k_credits?: number }).four_k_credits} 4K upgrades</>
+              )}
             </p>
             <p className="text-xs text-zinc-500 mt-1">
               Credits reset on{" "}
@@ -156,9 +165,9 @@ export default async function BillingPage() {
                 Manage billing
               </BillingPortalButton>
             )}
-            {userProfile.plan_tier !== "pro" && (
+            {userProfile.plan_tier !== "creator" && (
               <BillingCheckoutButton
-              plan={userProfile.plan_tier === "free" ? "basic" : "pro"}
+              plan={userProfile.plan_tier === "free" ? "starter" : "creator"}
               className="px-4 py-2 rounded-xl gradient-ai text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-70"
             >
               Upgrade
@@ -175,7 +184,7 @@ export default async function BillingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((plan) => {
             const isCurrentPlan = plan.tier === userProfile.plan_tier;
-            const tierOrder = { free: 0, basic: 1, pro: 2 };
+            const tierOrder = { free: 0, starter: 1, creator: 2 };
             const isUpgrade =
               !isCurrentPlan &&
               tierOrder[plan.tier as keyof typeof tierOrder] > tierOrder[userProfile.plan_tier as keyof typeof tierOrder];
@@ -189,9 +198,9 @@ export default async function BillingPage() {
                     : "bg-zinc-900/50 border-white/10"
                 } ${isCurrentPlan ? "ring-2 ring-violet-500/50" : ""}`}
               >
-                {plan.popular && (
+                {(plan.popular || plan.badge) && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 text-xs font-semibold text-white">
-                    Most Popular
+                    {plan.badge || "Most Popular"}
                   </div>
                 )}
                 <div className="flex items-center justify-between mb-4">
@@ -233,7 +242,7 @@ export default async function BillingPage() {
                   </button>
                 ) : isUpgrade ? (
                   <BillingCheckoutButton
-                    plan={plan.tier as "basic" | "pro"}
+                    plan={plan.tier as "starter" | "creator"}
                     className="block w-full px-4 py-2.5 rounded-xl gradient-ai text-white font-medium text-center hover:opacity-90 transition-opacity disabled:opacity-70"
                   >
                     Upgrade

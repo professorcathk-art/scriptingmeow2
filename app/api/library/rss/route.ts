@@ -55,7 +55,7 @@ export async function GET() {
             .order("created_at", { ascending: false })
         : { data: [] };
 
-    const planTier = (userProfile?.plan_tier ?? "basic") as PlanTier;
+    const planTier = (userProfile?.plan_tier ?? "starter") as PlanTier;
     const rssLimit = PLAN_LIMITS[planTier].rss_feeds;
 
     return NextResponse.json({
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const planTier = (userProfile?.plan_tier ?? "basic") as PlanTier;
+    const planTier = (userProfile?.plan_tier ?? "starter") as PlanTier;
     const rssLimit = PLAN_LIMITS[planTier].rss_feeds;
     const { count } = await supabase
       .from("user_rss_feeds")

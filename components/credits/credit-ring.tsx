@@ -59,7 +59,7 @@ export function CreditRing({ className }: CreditRingProps = {}) {
       </div>
       <div>
         <p className="text-sm font-medium text-white">
-          {planTier === "free" ? "Free" : planTier === "basic" ? "Basic" : "Pro"} Plan
+          {planTier === "free" ? "Free" : planTier === "starter" ? "Starter" : "Creator"} Plan
         </p>
         <p className="text-xs text-zinc-500">
           Resets {new Date(creditsResetDate).toLocaleDateString()}

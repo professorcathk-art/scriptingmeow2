@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
 
     const { plan } = (await request.json()) as { plan?: string };
-    const tier = (plan === "basic" || plan === "pro" ? plan : "basic") as Exclude<PlanTier, "free">;
+    const tier = (plan === "starter" || plan === "creator" ? plan : "starter") as Exclude<PlanTier, "free">;
 
     const priceId = STRIPE_PRICE_IDS[tier];
     if (!priceId) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useCredits } from "@/components/credits/credits-provider";
+import { FourKToggle } from "@/components/credits/four-k-toggle";
 import { useRouter } from "next/navigation";
 import type { BrandSpace, PostType, PostFormat, PlanTier } from "@/types/database";
 import { PLAN_LIMITS } from "@/types/database";
@@ -119,6 +120,7 @@ export function CreatePostForm({
   const router = useRouter();
   const creditsCtx = useCredits();
   const userCredits = creditsCtx?.creditsRemaining ?? initialCredits;
+  const fourKCreditsRemaining = creditsCtx?.fourKCreditsRemaining ?? 0;
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
   const [tryStyleSetupLoading, setTryStyleSetupLoading] = useState(!!prefillFromTryStyle);
@@ -151,6 +153,7 @@ export function CreatePostForm({
   const [carouselPages, setCarouselPages] = useState<
     { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]
   >([]);
+  const [is4KEnabled, setIs4KEnabled] = useState(false);
 
   const saveDraft = useCallback(() => {
     try {
@@ -437,7 +440,10 @@ export function CreatePostForm({
     formData.postType === "carousel"
       ? formData.carouselPageCount
       : formData.variations;
-  const canGenerate = userCredits >= creditsNeeded;
+  const fourKCreditsNeeded = is4KEnabled ? creditsNeeded : 0;
+  const canGenerate =
+    userCredits >= creditsNeeded &&
+    (fourKCreditsNeeded === 0 || fourKCreditsRemaining >= fourKCreditsNeeded);
 
   const handleGenerateDraft = async () => {
     setLoading(true);
@@ -567,6 +573,7 @@ export function CreatePostForm({
           selectedSampleImageUrls: selectedSampleUrls,
           importantAssetUrls: importantAssetUrls,
           referenceImageUrls,
+          is4KEnabled,
         }),
       });
 
@@ -584,7 +591,7 @@ export function CreatePostForm({
         throw new Error(errMsg);
       }
 
-      let data: { id: string; credits_remaining?: number };
+      let data: { id: string; credits_remaining?: number; four_k_credits?: number };
       try {
         data = await response.json();
       } catch {
@@ -592,6 +599,9 @@ export function CreatePostForm({
       }
       if (typeof data.credits_remaining === "number") {
         creditsCtx?.setCredits(data.credits_remaining);
+      }
+      if (typeof data.four_k_credits === "number") {
+        creditsCtx?.setFourKCredits(data.four_k_credits);
       }
       clearPostDraft();
       router.refresh();
@@ -1563,6 +1573,13 @@ export function CreatePostForm({
           </div>
           )}
 
+          <FourKToggle
+            enabled={is4KEnabled}
+            onChange={setIs4KEnabled}
+            fourKCreditsRemaining={fourKCreditsRemaining}
+            disabled={loading}
+          />
+
           <div className="p-4 rounded-xl bg-zinc-800/30 border border-white/5">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-zinc-400">
@@ -1570,6 +1587,7 @@ export function CreatePostForm({
               </span>
               <span className="text-lg font-bold text-zinc-100">
                 {creditsNeeded} credits
+                {is4KEnabled && " + 1 4K upgrade"}
               </span>
             </div>
             <div className="flex items-center justify-between">

@@ -59,6 +59,7 @@ export async function POST(request: Request) {
   const brandSpaceId = body.brandSpaceId as string | undefined;
   const referenceImageUrls = (body.referenceImageUrls as string[]) ?? [];
   const threadId = body.threadId as string | undefined;
+  const is4KEnabled = Boolean(body.is4KEnabled);
 
   if (!prompt) {
     return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
@@ -83,14 +84,21 @@ export async function POST(request: Request) {
 
   const { data: userProfile } = await supabase
     .from("users")
-    .select("credits_remaining")
+    .select("credits_remaining, four_k_credits")
     .eq("id", user.id)
     .single();
 
   const unlimitedCredits = process.env.UNLIMITED_CREDITS_FOR_TESTING === "true";
+  const userFourK = (userProfile as { four_k_credits?: number } | null)?.four_k_credits ?? 0;
   if (!unlimitedCredits && (userProfile?.credits_remaining ?? 0) < 1) {
     return NextResponse.json(
       { error: "Not enough credits. 1 credit required per generation." },
+      { status: 402 }
+    );
+  }
+  if (!unlimitedCredits && is4KEnabled && userFourK < 1) {
+    return NextResponse.json(
+      { error: "Not enough 4K upgrade credits. Upgrade your plan to generate in 4K." },
       { status: 402 }
     );
   }
@@ -121,6 +129,7 @@ export async function POST(request: Request) {
     const imageBuffer = await generateImageWithNanoBanana(fullPrompt, {
       aspectRatio,
       referenceImageUrls: referenceImageUrls.slice(0, 3),
+      is4K: is4KEnabled,
     });
 
     if (!imageBuffer) {
@@ -211,14 +220,22 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({
+    const newCredits = unlimitedCredits
+      ? userProfile?.credits_remaining
+      : (userProfile?.credits_remaining ?? 0) - 1;
+    const newFourK = unlimitedCredits || !is4KEnabled
+      ? userFourK
+      : userFourK - 1;
+    const responsePayload: Record<string, unknown> = {
       imageUrl,
       id,
       threadId: resolvedThreadId,
-      credits_remaining: unlimitedCredits
-        ? userProfile?.credits_remaining
-        : (userProfile?.credits_remaining ?? 0) - 1,
-    });
+      credits_remaining: newCredits,
+    };
+    if (is4KEnabled) {
+      responsePayload.four_k_credits = newFourK;
+    }
+    return NextResponse.json(responsePayload);
   } catch (error) {
     console.error("[design-playground/generate]", error);
     return NextResponse.json(

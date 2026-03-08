@@ -6,6 +6,6 @@ export const stripe =
     : null;
 
 export const STRIPE_PRICE_IDS = {
-  basic: process.env.STRIPE_PRICE_BASIC || "",
-  pro: process.env.STRIPE_PRICE_PRO || "",
+  starter: process.env.STRIPE_PRICE_STARTER || process.env.STRIPE_PRICE_BASIC || "",
+  creator: process.env.STRIPE_PRICE_CREATOR || process.env.STRIPE_PRICE_PRO || "",
 } as const;

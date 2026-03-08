@@ -20,6 +20,8 @@ export interface GenerateImageOptions {
   referenceImageUrls?: string[];
   /** When set, the first N styleReferenceUrls are previous carousel pages—maintain visual consistency. */
   previousCarouselPageCount?: number;
+  /** Generate in 4K resolution (Gemini 3 Pro Image only). Uses imageSize: "4K". */
+  is4K?: boolean;
 }
 
 async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
@@ -44,7 +46,8 @@ async function generateWithModel(
   apiKey: string,
   styleRefUrls: string[] = [],
   importantUrls: string[] = [],
-  previousCarouselPageCount = 0
+  previousCarouselPageCount = 0,
+  is4K = false
 ): Promise<Buffer | null> {
   const url = `${API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
@@ -74,11 +77,15 @@ async function generateWithModel(
   }
   parts.push({ text: instruction + prompt });
 
+  const imageConfig: Record<string, unknown> = { aspectRatio };
+  if (is4K) {
+    imageConfig.imageSize = "4K";
+  }
   const body: Record<string, unknown> = {
     contents: [{ parts }],
     generationConfig: {
       responseModalities: ["TEXT", "IMAGE"],
-      imageConfig: { aspectRatio },
+      imageConfig,
     },
   };
 
@@ -129,11 +136,12 @@ export async function generateImageWithNanoBanana(
   const styleRefUrls = options.styleReferenceUrls ?? options.referenceImageUrls ?? [];
   const importantUrls = options.importantAssetUrls ?? [];
   const previousCarouselPageCount = options.previousCarouselPageCount ?? 0;
+  const is4K = options.is4K ?? false;
 
-  const buffer = await generateWithModel(MODEL_PRO, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls, previousCarouselPageCount);
+  const buffer = await generateWithModel(MODEL_PRO, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls, previousCarouselPageCount, is4K);
   if (buffer) return buffer;
 
-  const fallback = await generateWithModel(MODEL_FLASH, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls, previousCarouselPageCount);
+  const fallback = await generateWithModel(MODEL_FLASH, prompt, aspectRatio, apiKey, styleRefUrls, importantUrls, previousCarouselPageCount, false);
   if (fallback) return fallback;
 
   console.warn("[nano-banana] Both models failed");

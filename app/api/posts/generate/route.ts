@@ -51,6 +51,7 @@ export async function POST(request: Request) {
     selectedSampleImageUrls,
     importantAssetUrls,
     referenceImageUrls,
+    is4KEnabled,
   } = body as {
     brandSpaceId?: string;
     postType?: string;
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
     selectedSampleImageUrls?: string[];
     importantAssetUrls?: string[];
     referenceImageUrls?: string[];
+    is4KEnabled?: boolean;
   };
 
   if (!brandSpaceId) {
@@ -196,13 +198,17 @@ export async function POST(request: Request) {
     // Check credits
     const { data: userProfile } = await supabase
       .from("users")
-      .select("*")
+      .select("credits_remaining, four_k_credits")
       .eq("id", user.id)
       .single();
 
     if (!userProfile) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    const use4K = Boolean(is4KEnabled);
+    const fourKNeeded = use4K ? creditsNeeded : 0;
+    const userFourK = (userProfile as { four_k_credits?: number }).four_k_credits ?? 0;
 
     const unlimitedCredits = process.env.UNLIMITED_CREDITS_FOR_TESTING === "true";
     if (
@@ -212,6 +218,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: `Not enough credits. You have ${userProfile.credits_remaining} credits, but need ${creditsNeeded}.`,
+        },
+        { status: 403 }
+      );
+    }
+    if (!unlimitedCredits && fourKNeeded > 0 && userFourK < fourKNeeded) {
+      return NextResponse.json(
+        {
+          error: `Not enough 4K upgrade credits. You have ${userFourK} 4K upgrades, but need ${fourKNeeded}.`,
         },
         { status: 403 }
       );
@@ -315,6 +329,7 @@ export async function POST(request: Request) {
           styleReferenceUrls: styleRefsWithContext,
           importantAssetUrls: importantUrls,
           previousCarouselPageCount: previousPageUrls.length,
+          is4K: use4K,
         });
         const pageUrl =
           imageBuffer
@@ -348,6 +363,7 @@ export async function POST(request: Request) {
         aspectRatio,
         styleReferenceUrls: styleRefUrls,
         importantAssetUrls: importantUrls,
+        is4K: use4K,
       });
 
       if (imageBuffer) {
@@ -366,11 +382,17 @@ export async function POST(request: Request) {
     }
 
     let newCreditsRemaining = userProfile.credits_remaining;
+    let newFourKCredits = userFourK;
     if (!unlimitedCredits) {
       newCreditsRemaining = userProfile.credits_remaining - creditsNeeded;
+      const updatePayload: Record<string, number> = { credits_remaining: newCreditsRemaining };
+      if (fourKNeeded > 0) {
+        newFourKCredits = userFourK - fourKNeeded;
+        updatePayload.four_k_credits = newFourKCredits;
+      }
       const { error: creditError } = await supabase
         .from("users")
-        .update({ credits_remaining: newCreditsRemaining })
+        .update(updatePayload)
         .eq("id", user.id);
 
       if (creditError) {
@@ -380,18 +402,22 @@ export async function POST(request: Request) {
       await supabase.from("credit_transactions").insert({
         user_id: user.id,
         amount: -creditsNeeded,
-        description: `Generated ${creditsNeeded} post variation(s)`,
+        description: `Generated ${creditsNeeded} post variation(s)${fourKNeeded > 0 ? ` (${fourKNeeded} 4K)` : ""}`,
       });
     }
 
     revalidatePath("/", "layout");
 
-    return NextResponse.json({
+    const responsePayload: Record<string, unknown> = {
       ...post,
       visual_url: visualUrl,
       carousel_urls: isCarousel ? carouselUrls : undefined,
       credits_remaining: newCreditsRemaining,
-    });
+    };
+    if (fourKNeeded > 0) {
+      responsePayload.four_k_credits = newFourKCredits;
+    }
+    return NextResponse.json(responsePayload);
   } catch (error) {
     console.error("[posts/generate] Error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
