@@ -18,9 +18,6 @@ const V1BETA_MODELS = ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini
 
 const GEMINI_MODELS = ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"] as const;
 
-/** Faster models first for draft - reduces timeout risk on Vercel (60s default). */
-const DRAFT_MODELS = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview", "gemini-3-pro-preview", "gemini-3.1-pro-preview"] as const;
-
 const API_BASE_V1BETA = "https://generativelanguage.googleapis.com/v1beta";
 
 type ContentPart = { text: string } | { inlineData: { mimeType: string; data: string } };
@@ -550,7 +547,7 @@ export async function generatePostLight(
       isTextHeavy,
     });
     const parts: ContentPart[] = [{ text: prompt }];
-    for (const modelName of DRAFT_MODELS) {
+    for (const modelName of GEMINI_MODELS) {
       try {
         let text: string | null;
         if (isV1BetaModel(modelName)) {
@@ -599,7 +596,7 @@ export async function generatePostLight(
     aspectNote,
   });
   const parts: ContentPart[] = [{ text: prompt }];
-  for (const modelName of DRAFT_MODELS) {
+  for (const modelName of GEMINI_MODELS) {
     try {
       let text: string | null;
       if (isV1BetaModel(modelName)) {
@@ -686,8 +683,7 @@ export async function generatePost(
   postStyle?: string,
   preferPro?: boolean,
   contentFramework?: string,
-  carouselPageCount?: number,
-  preferFast?: boolean
+  carouselPageCount?: number
 ): Promise<DraftOutput[] | CarouselDraftOutput> {
   const idea = truncate(contentIdea, 1000);
   const isCarouselPost = postType === "carousel" && typeof carouselPageCount === "number" && carouselPageCount >= 1 && carouselPageCount <= 9;
@@ -735,12 +731,10 @@ export async function generatePost(
       isTextHeavy,
     });
 
-    const modelOrder = preferFast
-      ? DRAFT_MODELS
-      : preferPro
-        ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
-        : GEMINI_MODELS;
-    const safetyOrder = preferFast ? [DEFAULT_SAFETY] as const : [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
+    const modelOrder = preferPro
+      ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
+      : GEMINI_MODELS;
+    const safetyOrder = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
     const parts: ContentPart[] = [{ text: carouselPrompt }];
     for (const modelName of modelOrder) {
       for (const safetySettings of safetyOrder) {
@@ -841,12 +835,10 @@ export async function generatePost(
     aspectNote,
   });
 
-  const modelOrder = preferFast
-    ? DRAFT_MODELS
-    : preferPro
-      ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
-      : GEMINI_MODELS;
-  const safetyOrder = preferFast ? [DEFAULT_SAFETY] as const : [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
+  const modelOrder = preferPro
+    ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
+    : GEMINI_MODELS;
+  const safetyOrder = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
   const parts: ContentPart[] = [{ text: prompt }];
   let lastError: unknown = null;
   for (const modelName of modelOrder) {

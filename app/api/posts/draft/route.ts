@@ -99,8 +99,7 @@ export async function POST(request: Request) {
           postStyle,
           false,
           contentFramework,
-          carouselPageCount,
-          true // preferFast: reduce timeout risk on Vercel
+          carouselPageCount
         )
       : await generatePostLight(
       enrichedIdea,
