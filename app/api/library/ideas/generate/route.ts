@@ -6,17 +6,11 @@ export const maxDuration = 60;
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL = "gemini-2.5-flash";
 
-/** Parse plain-text ideas: one per line. Handles numbering/bullets if model adds them. */
-function parseIdeasFromText(text: string): string[] {
-  const lines = text
-    .split(/\r?\n/)
-    .map((s) => s.replace(/^\s*[\d\-•*]+\s*[\.\)]\s*/, "").trim())
-    .filter((s) => s.length > 10);
-  if (lines.length >= 1) return lines.slice(0, 2);
-  // Fallback: whole text as single idea if it looks like one sentence
-  const single = text.trim();
-  if (single.length > 20 && single.length < 500) return [single];
-  return [];
+/** Parse plain-text idea. Returns single idea (whole text). Gemini is instructed to keep under 1000 chars. */
+function parseIdeaFromText(text: string): string | null {
+  const trimmed = text.trim().replace(/^\s*[\d\-•*]+\s*[\.\)]\s*/, "");
+  if (trimmed.length < 20 || trimmed.length > 1200) return null;
+  return trimmed;
 }
 
 export async function POST(request: Request) {
@@ -52,45 +46,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
   }
 
-  const { data: brandbook } = await supabase
-    .from("brandbooks")
-    .select("brand_personality, tone_of_voice, target_audiences, audience_pain_points, desired_outcomes, value_proposition")
-    .eq("brand_space_id", brandSpaceId)
-    .single();
-
-  const details = (brandSpace as { brand_details?: Record<string, unknown> }).brand_details;
-  const toList = (v: unknown): string[] => {
-    if (Array.isArray(v)) return v.filter((x) => typeof x === "string").slice(0, 5);
-    if (typeof v === "string") return v.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 5);
-    return [];
+  const details = (brandSpace as { brand_details?: Record<string, unknown> }).brand_details ?? {};
+  const toStr = (v: unknown): string => {
+    if (Array.isArray(v)) return v.filter((x) => typeof x === "string").join(", ");
+    if (typeof v === "string") return v.split("\n").map((s) => s.trim()).filter(Boolean).join(", ");
+    return "";
   };
-  const audiences = brandbook?.target_audiences?.length
-    ? brandbook.target_audiences.slice(0, 5).join(", ")
-    : toList(details?.targetAudiences).join(", ") || "general audience";
-  const painPoints = brandbook?.audience_pain_points?.length
-    ? brandbook.audience_pain_points.slice(0, 3).join(", ")
-    : toList(details?.painPoints).join(", ") || "common challenges";
-  const outcomes = brandbook?.desired_outcomes?.length
-    ? brandbook.desired_outcomes.slice(0, 3).join(", ")
-    : toList(details?.desiredOutcomes).join(", ") || "growth";
-  const valueProp = brandbook?.value_proposition || (typeof details?.valueProposition === "string" ? details.valueProposition : "") || "unique value";
-  const personality = (brandbook?.brand_personality ?? "").slice(0, 300) || "professional";
-  const tone = (brandbook?.tone_of_voice ?? "").slice(0, 150) || "friendly";
 
-  const prompt = `You are an Instagram content strategist. Generate exactly 2 distinct, actionable post ideas for this brand.
+  const brandContext = `
+BRAND INFO (use all fields to inform your idea):
+- Brand name: ${brandSpace.name}
+- Brand type: ${brandSpace.brand_type === "other" ? String(details.otherBrandType || "other") : brandSpace.brand_type}
+- Target audiences: ${toStr(details.targetAudiences) || "—"}
+- Audience pain points: ${toStr(details.painPoints) || "—"}
+- Desired outcomes: ${toStr(details.desiredOutcomes) || "—"}
+- Value proposition: ${String(details.valueProposition ?? "").trim() || "—"}
+`.trim();
 
-Brand: ${brandSpace.name}
-Type: ${brandSpace.brand_type}
-Personality: ${personality}
-Tone: ${tone}
-Audiences: ${audiences}
-Pain points: ${painPoints}
-Desired outcomes: ${outcomes}
-Value proposition: ${valueProp}
+  const prompt = `You are an Instagram content strategist. Generate ONE Instagram post idea for this brand.
 
-Each idea must be 1–2 sentences, specific and actionable (e.g. Share a customer success story showing how X solved Y, or Announce a new product feature with a before/after comparison).
+This will be used as the content brief for creating an Instagram post (image + caption). The idea should be specific and actionable.
 
-OUTPUT FORMAT: Write exactly 2 lines. One idea per line. No numbering, no bullets, no JSON, no markdown. Just the two idea sentences, each on its own line.`;
+${brandContext}
+
+Generate exactly ONE Instagram post idea. Keep it under 1000 characters so it fits our content brief field. It can be 2–4 sentences. Be concrete (e.g. "Share a customer success story showing how X solved Y, with a before/after visual" or "Announce a new product feature with a comparison graphic"). No numbering, no bullets, no JSON, no markdown. Just the idea in plain text.`;
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -102,7 +81,7 @@ OUTPUT FORMAT: Write exactly 2 lines. One idea per line. No numbering, no bullet
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 512,
+      maxOutputTokens: 1024,
     },
   };
 
@@ -139,13 +118,13 @@ OUTPUT FORMAT: Write exactly 2 lines. One idea per line. No numbering, no bullet
       );
     }
 
-    const ideas = parseIdeasFromText(text);
-    if (ideas.length === 0) {
-      console.warn("[ideas/generate] Parse yielded no ideas. Raw text length:", text.length, "preview:", text.slice(0, 200));
+    const idea = parseIdeaFromText(text);
+    if (!idea) {
+      console.warn("[ideas/generate] Parse yielded no idea. Raw text length:", text.length, "preview:", text.slice(0, 200));
       return NextResponse.json({ error: "No ideas generated" }, { status: 500 });
     }
 
-    return NextResponse.json({ ideas });
+    return NextResponse.json({ ideas: [idea] });
   } catch (err) {
     console.error("[ideas/generate] Error:", err);
     const msg = err instanceof Error ? err.message : "Unknown error";

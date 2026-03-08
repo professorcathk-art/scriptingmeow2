@@ -59,6 +59,7 @@ Return valid JSON only containing the 2 variations. Include postAim: brief brand
 **Field Generation Rules:**
 0. **`postAim`**: Overall aim of post for image gen context. Brief brand context + what this post aims to achieve (educate, build trust, drive engagement, etc.). Max 500 chars.
 1. **`imageTextOnImage`**: The precise text rendered on the graphic. {{textGuide}} 
+   - *STRICT:* Must NEVER exceed 200 characters. Shorten to fit—do not output truncated text.
    - *Hierarchy Tags:* You must use these exact labels so the image generator applies the correct typography: `主標題：` (Headline), `副標題：` (Subheadline), `內文：` (Body). 
    - *Constraints:* No markdown symbols (#, *, etc.). Be substantive (2–4 lines minimum for text-heavy/editorial layouts).
    - *Example:* "主標題：5 Mistakes That Kill Your Growth\n副標題：Here's what nobody tells you\n內文：Most people make these errors without realizing."
@@ -95,7 +96,7 @@ Dynamically structure the slide functions based on the total page count:
 
 ## Typographic & Visual Rules
 - **Source Image Overlay:** If a `[Source Image URL: https...]` is provided in the brief, you MUST structure `visualAdvice` on every page (or at least the cover) to include an explicit layout command: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
-- **`imageTextOnImage`**: Max 200 chars per slide. Plain text only, no markdown. Use `\n` for line breaks. You must use typography labels: `主標題：`, `副標題：`, `內文：`. Be substantive, not minimal.
+- **`imageTextOnImage`**: STRICT max 200 chars per slide—never exceed. Shorten to fit, do not output truncated text. Plain text only, no markdown. Use `\n` for line breaks. You must use typography labels: `主標題：`, `副標題：`, `內文：`. Be substantive, not minimal.
 - **`visualAdvice` for Page 1 (Cover):** Dramatic, highly visual, scroll-stopping (4–6 sentences, 80–120 words). Integrate `{{style}}`. Specify: subject/scene in detail, composition (rule of thirds, center, etc.), lighting (direction, quality), text overlay placement, color usage, mood. Do NOT be minimal.
 - **`visualAdvice` for Pages 2 to N (Inner Pages):** Designer-level layout instructions (4–6 sentences each, 80–120 words). Specify: (1) Background—exact treatment (soft cream gradient, solid navy, textured paper, etc.); leave 40–60% negative space. (2) Text arrangement—headline block position (top-left, centered), subheadline placement, body block with line spacing; max 3–4 lines per block. (3) Color harmony—which colors for headline, body, accents; avoid clashing. (4) Optional: subtle motif, icon, or miniaturized graphic (position, size). Example: "Soft cream-to-beige gradient background, top to bottom. Headline block top-left, 2× line spacing, bold primary color. Body text block 20% from top, 3 lines max, secondary color. Small watercolor leaf motif bottom-right corner, 15% of frame. Muted brand accent for subheadline highlights."
 

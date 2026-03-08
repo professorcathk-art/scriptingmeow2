@@ -467,19 +467,20 @@ const LAYOUT_SPATIAL_DIRECTIVES: Record<string, string> = {
   "tweet-card": "STATEMENT CARD LAYOUT: Extreme minimalism. The text is the hero. Generate a beautifully textured, soft, or abstract background with ZERO distracting subjects. Ensure 90% negative space for massive, centered typography.",
 };
 
+const IMAGE_TEXT_LIMIT = "STRICT: imageTextOnImage must NEVER exceed 200 characters. Shorten to fit—do not crop or truncate in output.";
 const LAYOUT_TEXT_GUIDE: Record<string, string> = {
-  "magazine-editorial": "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown. Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography. Be substantive—2–4 lines.",
-  "cinematic-poster": "Cinematic Poster: Line 1 = title. Line 2+ = supporting text. Bold, dramatic typography. Plain text only, no markdown.",
+  "magazine-editorial": `Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown. Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography. Be substantive—2–4 lines. ${IMAGE_TEXT_LIMIT}`,
+  "cinematic-poster": `Cinematic Poster: Line 1 = title. Line 2+ = supporting text. Bold, dramatic typography. Plain text only, no markdown. ${IMAGE_TEXT_LIMIT}`,
   "immersive-visual": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
-  "split-screen": "Split Screen: Line 1 = main headline, Line 2+ = body. Be substantive. Plain text only, no markdown.",
-  "text-top": "Text Top: Headline and subheadline at top. Line 1 = headline, Line 2 = subheadline, Line 3+ = body. Plain text only.",
-  "text-bottom": "Image Top / Text Bottom: Headline and body at bottom. Line 1 = headline, Line 2+ = body. Plain text only.",
-  "text-heavy-infographic": "Text-Heavy / Infographic: Bold typography center stage. imageTextOnImage: 2–5 lines (main headline 主標題 + subheadline + body). Up to 200 chars per slide. Plain text only, no markdown.",
-  "quote-card": "Quote / Tweet Card: Stylized quote. imageTextOnImage: the key quote (2–3 lines), plain text only, no markdown.",
+  "split-screen": `Split Screen: Line 1 = main headline, Line 2+ = body. Be substantive. Plain text only, no markdown. ${IMAGE_TEXT_LIMIT}`,
+  "text-top": `Text Top: Headline and subheadline at top. Line 1 = headline, Line 2 = subheadline, Line 3+ = body. Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "text-bottom": `Image Top / Text Bottom: Headline and body at bottom. Line 1 = headline, Line 2+ = body. Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "text-heavy-infographic": `Text-Heavy / Infographic: Bold typography center stage. imageTextOnImage: 2–5 lines (main headline 主標題 + subheadline + body). ${IMAGE_TEXT_LIMIT} Plain text only, no markdown.`,
+  "quote-card": `Quote / Tweet Card: Stylized quote. imageTextOnImage: the key quote (2–3 lines), plain text only, no markdown. ${IMAGE_TEXT_LIMIT}`,
   "immersive-photo": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
-  editorial: "Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown. Line 1 = main headline. Line 2 = subheadline. Line 3+ = body.",
-  "text-heavy": "Text-Heavy / Infographic: Bold typography center stage. imageTextOnImage: 2–5 lines. Up to 200 chars per slide. Plain text only, no markdown.",
-  "tweet-card": "Quote / Tweet Card: Stylized quote. imageTextOnImage: the key quote (2–3 lines), plain text only, no markdown.",
+  editorial: `Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown. Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. ${IMAGE_TEXT_LIMIT}`,
+  "text-heavy": `Text-Heavy / Infographic: Bold typography center stage. imageTextOnImage: 2–5 lines. ${IMAGE_TEXT_LIMIT} Plain text only, no markdown.`,
+  "tweet-card": `Quote / Tweet Card: Stylized quote. imageTextOnImage: the key quote (2–3 lines), plain text only, no markdown. ${IMAGE_TEXT_LIMIT}`,
 };
 
 /** Single post (單頁圖表): impress target audience. Carousel (複頁教學貼文): save value. */
