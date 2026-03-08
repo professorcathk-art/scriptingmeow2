@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { generatePost, generatePostLight, type CarouselDraftOutput } from "@/lib/ai/gemini";
 import { augmentIdeaWithSourceImage } from "@/lib/rss-image-extract";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -99,7 +99,8 @@ export async function POST(request: Request) {
           postStyle,
           false,
           contentFramework,
-          carouselPageCount
+          carouselPageCount,
+          true // preferFast: reduce timeout risk on Vercel
         )
       : await generatePostLight(
       enrichedIdea,
