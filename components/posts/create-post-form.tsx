@@ -459,7 +459,7 @@ export function CreatePostForm({
       postStyle: formData.postStyle,
       carouselPageCount: formData.postType === "carousel" ? formData.carouselPageCount : undefined,
     };
-    const DRAFT_TIMEOUT_MS = 280000;
+    const DRAFT_TIMEOUT_MS = 90000;
     const doFetch = () => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), DRAFT_TIMEOUT_MS);
