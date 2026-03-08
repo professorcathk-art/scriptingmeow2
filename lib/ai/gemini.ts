@@ -16,7 +16,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 /** Models that require v1beta (Gemini 3). Legacy @google/generative-ai SDK uses v1 only. */
 const V1BETA_MODELS = ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview"] as const;
 
-const GEMINI_MODELS = ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"] as const;
+/** gemini-2.0-flash deprecated 2026 - no longer available. Use 2.5-flash instead. */
+const GEMINI_MODELS = ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro"] as const;
 
 const API_BASE_V1BETA = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -732,7 +733,7 @@ export async function generatePost(
     });
 
     const modelOrder = preferPro
-      ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
+      ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"] as const)
       : GEMINI_MODELS;
     const safetyOrder = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
     const parts: ContentPart[] = [{ text: carouselPrompt }];
@@ -836,7 +837,7 @@ export async function generatePost(
   });
 
   const modelOrder = preferPro
-    ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"] as const)
+    ? (["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash"] as const)
     : GEMINI_MODELS;
   const safetyOrder = [DEFAULT_SAFETY, RELAXED_SAFETY] as const;
   const parts: ContentPart[] = [{ text: prompt }];
