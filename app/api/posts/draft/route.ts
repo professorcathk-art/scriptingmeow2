@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { generatePostLight, type CarouselDraftOutput } from "@/lib/ai/gemini";
+import { generatePost, generatePostLight, type CarouselDraftOutput } from "@/lib/ai/gemini";
 import { augmentIdeaWithSourceImage } from "@/lib/rss-image-extract";
 
 export const maxDuration = 60;
@@ -78,7 +78,30 @@ export async function POST(request: Request) {
 
     enrichedIdea = await augmentIdeaWithSourceImage(enrichedIdea);
 
-    const result = await generatePostLight(
+    const { data: brandbook } = await supabase
+      .from("brandbooks")
+      .select("brand_personality, tone_of_voice, visual_style, dos_and_donts")
+      .eq("brand_space_id", brandSpaceId)
+      .single();
+
+    const result = brandbook
+      ? await generatePost(
+          {
+            brandPersonality: brandbook.brand_personality ?? "",
+            toneOfVoice: brandbook.tone_of_voice ?? "",
+            visualStyle: brandbook.visual_style ?? {},
+            dosAndDonts: brandbook.dos_and_donts ?? {},
+          },
+          enrichedIdea,
+          language,
+          postType,
+          format,
+          postStyle,
+          false,
+          contentFramework,
+          carouselPageCount
+        )
+      : await generatePostLight(
       enrichedIdea,
       language,
       postType,
@@ -86,7 +109,7 @@ export async function POST(request: Request) {
       postStyle,
       contentFramework,
       carouselPageCount
-    );
+        );
 
     if ("pages" in result) {
       const carousel = result as CarouselDraftOutput;

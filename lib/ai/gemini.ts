@@ -776,7 +776,7 @@ export async function generatePost(
         visualAdvice: `Professional Instagram carousel page ${i + 1}. ${idea}. Clean, modern style.`,
       });
     }
-    return { pages: fallbackPages, igCaption: `${idea.slice(0, 200)}...\n\n#instagram #content` };
+    return { pages: fallbackPages, igCaption: `${idea.slice(0, 200)}...\n\n#instagram #content`, postAim: idea.slice(0, 150) };
   }
 
   const vs = brandbook.visualStyle as {

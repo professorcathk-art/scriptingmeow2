@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { Brandbook, BrandReferenceImage, LogoPlacement } from "@/types/database";
 
-const LOGO_PLACEMENT_OPTIONS: { value: LogoPlacement; label: string }[] = [
+const LOGO_PLACEMENT_OPTIONS: { value: LogoPlacement | ""; label: string }[] = [
+  { value: "", label: "--- please select ---" },
   { value: "none", label: "No logo" },
   { value: "top-left", label: "Top left" },
   { value: "top-center", label: "Top center" },
@@ -37,7 +38,9 @@ export function BrandbookForm({
   const [hasEdited, setHasEdited] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl ?? null);
-  const [logoPlacement, setLogoPlacement] = useState<LogoPlacement | null>(initialLogoPlacement ?? null);
+  const [logoPlacement, setLogoPlacement] = useState<LogoPlacement | "" | null>(
+    initialLogoPlacement ?? ""
+  );
   const [savingPlacement, setSavingPlacement] = useState(false);
   const initIdRef = useRef(initialBrandbook?.id);
 
@@ -47,7 +50,7 @@ export function BrandbookForm({
 
   useEffect(() => {
     setLogoUrl(initialLogoUrl ?? null);
-    setLogoPlacement(initialLogoPlacement ?? null);
+    setLogoPlacement(initialLogoPlacement ?? "");
   }, [initialLogoUrl, initialLogoPlacement]);
 
   useEffect(() => {
@@ -129,7 +132,11 @@ export function BrandbookForm({
     }
   };
 
-  const handleLogoPlacementChange = async (value: LogoPlacement) => {
+  const handleLogoPlacementChange = async (value: LogoPlacement | "") => {
+    if (value === "") {
+      setLogoPlacement("");
+      return;
+    }
     setSavingPlacement(true);
     try {
       const res = await fetch(`/api/brand-spaces/${brandSpaceId}`, {
@@ -173,8 +180,9 @@ export function BrandbookForm({
   };
 
   const handleGenerateBrandbook = async () => {
-    if (logoUrl && (logoPlacement === null || logoPlacement === undefined)) {
-      alert("Please choose logo placement before generating. Logo placement is required when you have a logo.");
+    const placementNotSelected = logoPlacement === "" || logoPlacement === null || logoPlacement === undefined;
+    if (logoUrl && placementNotSelected) {
+      alert("Required: choose where your logo appears on generated posts. Select an option from the dropdown (including 'No logo' if you don't want the logo on posts).");
       return;
     }
     setGenerating(true);
@@ -277,10 +285,10 @@ export function BrandbookForm({
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Logo placement in generated images *
             </label>
-            <p className="text-xs text-zinc-500 mb-2">Required: choose where your logo appears on generated posts.</p>
+            <p className="text-xs text-zinc-500 mb-2">Required: choose where your logo appears on generated posts (or &quot;No logo&quot; if you don&apos;t want it on posts).</p>
             <select
-              value={logoPlacement ?? "none"}
-              onChange={(e) => handleLogoPlacementChange(e.target.value as LogoPlacement)}
+              value={logoPlacement ?? ""}
+              onChange={(e) => handleLogoPlacementChange(e.target.value as LogoPlacement | "")}
               disabled={savingPlacement}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
             >
