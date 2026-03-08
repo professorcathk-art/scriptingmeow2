@@ -1,5 +1,7 @@
 import { DashboardShell } from "@/components/navigation/dashboard-shell";
 import { CreditsProvider } from "@/components/credits/credits-provider";
+import { TourProvider } from "@/components/tour/tour-provider";
+import { TourAutoStarter } from "@/components/tour/tour-auto-starter";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -24,13 +26,16 @@ export default async function MainLayout({
     .single();
 
   return (
-      <CreditsProvider
-        initialCredits={userProfile?.credits_remaining ?? 0}
-        initialFourKCredits={userProfile?.four_k_credits ?? 0}
-        initialResetDate={userProfile?.credits_reset_date ?? new Date().toISOString()}
-        initialPlanTier={userProfile?.plan_tier ?? "free"}
-      >
-      <DashboardShell>{children}</DashboardShell>
+    <CreditsProvider
+      initialCredits={userProfile?.credits_remaining ?? 0}
+      initialFourKCredits={userProfile?.four_k_credits ?? 0}
+      initialResetDate={userProfile?.credits_reset_date ?? new Date().toISOString()}
+      initialPlanTier={userProfile?.plan_tier ?? "free"}
+    >
+      <TourProvider>
+        <TourAutoStarter />
+        <DashboardShell>{children}</DashboardShell>
+      </TourProvider>
     </CreditsProvider>
   );
 }

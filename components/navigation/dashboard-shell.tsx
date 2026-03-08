@@ -5,6 +5,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CreditRing } from "@/components/credits/credit-ring";
+import { useTour } from "@/components/tour/tour-provider";
+import { TourReplayButton } from "@/components/tour/tour-replay-button";
+
+const tourIds: Record<string, string | undefined> = {
+  "/brand-spaces": "tour-brand-spaces",
+  "/create-post": "tour-create-post",
+  "/bulk-create": "tour-bulk-create",
+  "/library": "tour-library",
+};
 
 function NavIconDashboard({ className }: { className?: string }) {
   return (
@@ -79,9 +88,15 @@ const navItemsBase = [
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const tour = useTour();
+  const registerOpenMobileMenu = tour?.registerOpenMobileMenu;
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [discoverCount, setDiscoverCount] = useState(0);
+
+  useEffect(() => {
+    registerOpenMobileMenu?.(() => setMobileOpen(true));
+  }, [registerOpenMobileMenu]);
 
   useEffect(() => {
     fetch("/api/discover/count")
@@ -148,6 +163,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
+              id={tourIds[item.href]}
               className={navLinkClass(item.href)}
               onClick={() => setMobileOpen(false)}
             >
@@ -155,6 +171,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
+        <div className="p-2 border-t border-white/5">
+          <TourReplayButton />
+        </div>
       </aside>
 
       {/* Desktop Sidebar: hidden on mobile, inline on md+ */}
@@ -193,6 +212,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
+              id={tourIds[item.href]}
               className={navLinkClass(item.href)}
             >
               {collapsed ? (
@@ -205,6 +225,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
+        <div className="p-2 border-t border-white/5">
+          <TourReplayButton />
+        </div>
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">

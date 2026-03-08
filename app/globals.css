@@ -115,3 +115,75 @@ body {
     scrollbar-width: none;
   }
 }
+
+/* Driver.js dark theme overrides - premium purple aesthetic */
+.driver-popover.driver-popover-dark {
+  background: #111115 !important;
+  color: #a1a1aa !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.1) !important;
+  max-width: min(340px, calc(100vw - 2rem)) !important;
+  padding: 1rem !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-title {
+  color: #f4f4f5 !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  text-shadow: none !important;
+  border: none !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-description {
+  color: #a1a1aa !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  text-shadow: none !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-footer button {
+  background: rgba(139, 92, 246, 0.2) !important;
+  color: #c4b5fd !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+  text-shadow: none !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 0.5rem !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-footer button:hover {
+  background: rgba(139, 92, 246, 0.35) !important;
+  border-color: rgba(139, 92, 246, 0.5) !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-progress-text {
+  color: #71717a !important;
+  font-size: 0.75rem !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-arrow {
+  border-color: #111115 !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-arrow-side-left.driver-popover-arrow {
+  border-right-color: #111115 !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-arrow-side-right.driver-popover-arrow {
+  border-left-color: #111115 !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-arrow-side-top.driver-popover-arrow {
+  border-bottom-color: #111115 !important;
+}
+.driver-popover.driver-popover-dark .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-top-color: #111115 !important;
+}
+
+@media (max-width: 640px) {
+  .driver-popover.driver-popover-dark {
+    margin: 0.5rem !important;
+    padding: 0.875rem !important;
+  }
+  .driver-popover.driver-popover-dark .driver-popover-title {
+    font-size: 0.9375rem !important;
+  }
+  .driver-popover.driver-popover-dark .driver-popover-description {
+    font-size: 0.8125rem !important;
+  }
+  .driver-popover.driver-popover-dark .driver-popover-footer button {
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.8125rem !important;
+  }
+}
