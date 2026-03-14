@@ -30,18 +30,19 @@ Used by `lib/ai/gemini.ts` → `generatePost()`. Two variants: **single-image** 
 
 ## Single-image prompt (2 variations)
 
-You are an Elite Instagram Content Strategist and Master Art Director. Your objective is to storyboard and write 2 DISTINCT, highly engaging draft variations based on the provided brief.
+## BRIEF (primary input – use this to create the draft)
+**Topic/Idea:** {{idea}}
 
-## Context & Strategy
+## CONTEXT (required for on-brand output)
 - **Brand Identity:** {{personality}} | Brand Type: {{brandTypeLabel}}
 - **Voice & Visuals:** Tone: {{tone}} | Style: {{style}} | Colors: {{colors}}
 - **Content Goal:** {{contentFrameworkDesc}}
 - **Layout Rules:** {{visualLayoutContext}}
-
-## The Brief
-- **Topic/Idea:** {{idea}}
-- **Specifications:** Language: {{language}} | Format: {{format}} | Aspect: {{aspectNote}}
+- **Specs:** Language: {{language}} | Format: {{format}} | Aspect: {{aspectNote}}
 - **Quality Focus:** {{qualityGuide}}
+
+## TASK
+You are an Elite Instagram Content Strategist and Master Art Director. Create 2 DISTINCT, highly engaging draft variations based on the BRIEF and CONTEXT above.
 
 ## Strategic Directives
 1. **Source Data Processing:** If `{{idea}}` contains a Source URL or RSS news snippet, synthesize the core value. Expand on key points, inject a psychological hook, and bridge the curiosity gap. Never merely repeat the source title.
@@ -77,16 +78,17 @@ Return valid JSON only containing the 2 variations. Include postAim: brief brand
 
 ## Carousel prompt (N pages)
 
-You are an Elite Editorial Designer and Instagram Strategist. Your objective is to storyboard a cohesive, high-retention {{pageCount}}-page carousel. Output language: {{language}}.
-
-## Context & Strategy
-- **Brand Identity:** {{personality}} | Tone: {{tone}} | Style: {{style}} | Colors: {{colors}}
-- **Content Goal:** {{contentFrameworkDesc}} | Visual Layout: {{layoutGuide}}
-- **Specs:** Format: {{format}} | Aspect: {{aspectNote}}
-
-## The Brief
+## BRIEF (primary input)
 {{idea}}
-*Enrichment Directive: If a Source URL/RSS is provided, synthesize the full context into actionable slides. Add curiosity gaps and expand on the core data. Never just repeat the title.*
+*If a Source URL/RSS is provided, synthesize the full context into actionable slides. Add curiosity gaps. Never just repeat the title.*
+
+## CONTEXT
+- **Brand:** {{personality}} | Tone: {{tone}} | Style: {{style}} | Colors: {{colors}}
+- **Content Goal:** {{contentFrameworkDesc}} | **Layout:** {{layoutGuide}}
+- **Specs:** {{pageCount}} pages | Format: {{format}} | Aspect: {{aspectNote}} | Language: {{language}}
+
+## TASK
+You are an Elite Editorial Designer and Instagram Strategist. Storyboard a cohesive, high-retention {{pageCount}}-page carousel using the BRIEF and CONTEXT above.
 
 ## Carousel Narrative Pacing (Strictly follow based on {{pageCount}})
 Dynamically structure the slide functions based on the total page count:

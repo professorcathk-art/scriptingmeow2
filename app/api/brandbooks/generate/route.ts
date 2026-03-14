@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generateBrandbook } from "@/lib/ai/gemini";
 
+export const maxDuration = 120;
+
 function omit<T extends Record<string, unknown>>(obj: T, key: keyof T): Omit<T, typeof key> {
   const { [key]: _, ...rest } = obj;
   return rest;

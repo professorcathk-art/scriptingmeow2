@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       .eq("brand_space_id", brandSpaceId)
       .single();
 
-    const result = brandbook
+    let result = brandbook
       ? await generatePost(
           {
             brandPersonality: brandbook.brand_personality ?? "",
@@ -103,14 +103,32 @@ export async function POST(request: Request) {
           true // singleSafety: match brandbook (5 attempts not 10), avoid timeout
         )
       : await generatePostLight(
-      enrichedIdea,
-      language,
-      postType,
-      format,
-      postStyle,
-      contentFramework,
-      carouselPageCount
+          enrichedIdea,
+          language,
+          postType,
+          format,
+          postStyle,
+          contentFramework,
+          carouselPageCount
         );
+
+    const isFallback = (r: typeof result) =>
+      !("pages" in r) &&
+      Array.isArray(r) &&
+      r.length > 0 &&
+      (r[0].visualAdvice?.startsWith("Professional Instagram post image.") ?? false);
+    if (brandbook && isFallback(result)) {
+      console.warn("[posts/draft] generatePost returned fallback, retrying with generatePostLight");
+      result = await generatePostLight(
+        enrichedIdea,
+        language,
+        postType,
+        format,
+        postStyle,
+        contentFramework,
+        carouselPageCount
+      );
+    }
 
     if ("pages" in result) {
       const carousel = result as CarouselDraftOutput;

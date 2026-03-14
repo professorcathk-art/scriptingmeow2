@@ -113,20 +113,18 @@ export function getSingleImageDraftPrompt(vars: {
   return replaceAll(template, vars);
 }
 
-const FALLBACK_SINGLE = `You are a Master Instagram Content Strategist. Create 2 DISTINCT draft variations.
+const FALLBACK_SINGLE = `## BRIEF (primary input)
+**Topic/Idea:** {{idea}}
 
-## Brand & Context
+## CONTEXT
 - Brand: {{personality}}. Tone: {{tone}}. Style: {{style}}. Colors: {{colors}}.
-- Brand type: {{brandTypeLabel}}.
-- Content goal: {{contentFrameworkDesc}}
+- Brand type: {{brandTypeLabel}}. Content goal: {{contentFrameworkDesc}}
 {{visualLayoutContext}}
+- Quality: {{qualityGuide}}
+- Specs: Lang {{language}}. Format {{format}}.
 
-## Quality Focus
-{{qualityGuide}}
-
-## Brief
-{{idea}}
-Lang: {{language}}. Format: {{format}}.
+## TASK
+Create 2 DISTINCT Instagram post draft variations using the BRIEF and CONTEXT above.
 
 ## Output Format
 Return valid JSON only:
@@ -183,18 +181,17 @@ export function getCarouselDraftPrompt(vars: {
   });
 }
 
-const FALLBACK_CAROUSEL = `You are an expert Instagram Art Director. Create a {{pageCount}}-page carousel.
-
-## Brand & Context
-- Brand: {{personality}}. Tone: {{tone}}. Style: {{style}}. Colors: {{colors}}.
-- Content framework: {{contentFrameworkDesc}}
-- Visual layout: {{layoutGuide}}
-{{extraContext}}
-
-## User Brief
+const FALLBACK_CAROUSEL = `## BRIEF (primary input)
 {{idea}}
 
-Format: {{format}}. Aspect ratio: {{aspectNote}}.
+## CONTEXT
+- Brand: {{personality}}. Tone: {{tone}}. Style: {{style}}. Colors: {{colors}}.
+- Content: {{contentFrameworkDesc}}. Layout: {{layoutGuide}}
+{{extraContext}}
+- Format: {{format}}. Aspect: {{aspectNote}}.
+
+## TASK
+Create a {{pageCount}}-page Instagram carousel using the BRIEF and CONTEXT above.
 
 ## Output Format
 If a [Source Image URL: https...] is provided, visualAdvice MUST include: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
@@ -208,12 +205,15 @@ Return valid JSON only. imageTextOnImage: {{textGuide}}
 }`;
 
 /** Lightweight draft prompts - no brandbook needed. Used for fast draft generation. */
-const DRAFT_SINGLE_LIGHT = `Create 2 DISTINCT Instagram post draft variations. Be DETAILED—imageTextOnImage and visualAdvice must be substantive, not minimal.
-
-## Brief
+const DRAFT_SINGLE_LIGHT = `## BRIEF (primary input)
 Content idea: {{idea}}
-Language: {{language}}. Format: {{format}}. Layout: {{layout}}.
-Content goal: {{contentFrameworkDesc}}
+
+## CONTEXT
+- Language: {{language}}. Format: {{format}}. Layout: {{layout}}.
+- Content goal: {{contentFrameworkDesc}}
+
+## TASK
+Create 2 DISTINCT Instagram post draft variations. Be DETAILED—imageTextOnImage and visualAdvice must be substantive, not minimal.
 
 ## Enrichment (CRITICAL)
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
@@ -233,13 +233,15 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
 
 Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). STRICT: imageTextOnImage must NEVER exceed 200 characters—shorten to fit, do not output truncated text. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = HIGHLY DETAILED DESIGNER LAYOUT (4–7 sentences, 80–150 words): scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text arrangement (blocks, spacing, positions), cohesive color palette, mood. Aspect {{aspectNote}}. Do NOT be brief—the image generator needs rich detail. igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
 
-const DRAFT_CAROUSEL_LIGHT = `Create a {{pageCount}}-page Instagram carousel. Be DETAILED—imageTextOnImage (up to 200 chars/slide) and visualAdvice (2–4 sentences per page) must be substantive.
-
-## Brief
+const DRAFT_CAROUSEL_LIGHT = `## BRIEF (primary input)
 {{idea}}
-Language: {{language}}. Format: {{format}}. Aspect: {{aspectNote}}.
-Content goal: {{contentFrameworkDesc}}
-Visual layout: {{layoutGuide}}
+
+## CONTEXT
+- Language: {{language}}. Format: {{format}}. Aspect: {{aspectNote}}.
+- Content goal: {{contentFrameworkDesc}}. Visual layout: {{layoutGuide}}
+
+## TASK
+Create a {{pageCount}}-page Instagram carousel. Be DETAILED—imageTextOnImage (up to 200 chars/slide) and visualAdvice (2–4 sentences per page) must be substantive.
 {{#isTextHeavy}}TEXT-HEAVY MODE: Headlines and imageTextOnImage must be SUBSTANTIVE—2–5 lines per slide, up to 200 chars. Main headline (主標題) + subheadline + body. Do NOT be brief or minimal. Educational/value content: teach, inform, actionable advice.{{/isTextHeavy}}
 
 ## Enrichment (CRITICAL)

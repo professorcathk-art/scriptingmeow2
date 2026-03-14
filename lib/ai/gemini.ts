@@ -16,8 +16,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 /** Models that require v1beta (Gemini 3). Legacy @google/generative-ai SDK uses v1 only. */
 const V1BETA_MODELS = ["gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3-flash-preview"] as const;
 
-/** gemini-2.0-flash deprecated. Use 3-flash first (fast), then fallbacks. */
-const GEMINI_MODELS = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-3-pro-preview"] as const;
+/** gemini-2.0-flash deprecated. Try 2.5-flash first (stable v1), then 3-flash (v1beta). */
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-3-pro-preview"] as const;
 
 const API_BASE_V1BETA = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -61,6 +61,7 @@ export async function generateContentV1Beta(
       "x-goog-api-key": apiKey,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(90000),
   });
 
   if (!res.ok) {
@@ -879,11 +880,12 @@ export async function generatePost(
       }
     }
   }
+  const headline = idea.slice(0, 80).trim() + (idea.length > 80 ? "…" : "");
   const fallback: DraftOutput = {
-    imageTextOnImage: "",
+    imageTextOnImage: headline ? `主標題：${headline}` : "",
     visualAdvice: `Professional Instagram post image. ${contentIdea}. Clean, modern style. High-quality, scroll-stopping visual. ${format === "portrait" ? "Portrait 4:5." : format === "story" || format === "reel-cover" ? "Vertical 9:16." : "Square 1:1."}`,
     igCaption: `${contentIdea.slice(0, 200)}${contentIdea.length > 200 ? "..." : ""}\n\nFollow for more.\n\n#instagram #content`,
   };
-  console.warn("[generatePost] All models failed, using fallback");
+  console.warn("[generatePost] All models failed, using fallback. Last error:", lastError instanceof Error ? lastError.message : lastError);
   return [fallback, { ...fallback }];
 }

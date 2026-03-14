@@ -7,6 +7,8 @@ import {
 } from "@google/generative-ai";
 import { generateContentV1Beta, isV1BetaModel, safetyToV1Beta } from "@/lib/ai/gemini";
 
+export const maxDuration = 60;
+
 const GEMINI_MODELS = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-3-pro-preview"] as const;
 
 const DEFAULT_SAFETY = [

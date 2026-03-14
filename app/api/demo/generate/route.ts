@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { generatePost } from "@/lib/ai/gemini";
 
+export const maxDuration = 120;
+
 // Demo post generation - no auth required for zero-friction landing
 export async function POST(request: Request) {
   try {

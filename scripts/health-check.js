@@ -62,7 +62,9 @@ async function healthCheck() {
   // Check 1: Health endpoint
   try {
     console.log('1. Checking health endpoint...');
-    const healthRes = await fetch(`${BASE_URL}/api/health`);
+    const healthRes = await fetch(`${BASE_URL}/api/health`, {
+      signal: AbortSignal.timeout(10000),
+    });
     const healthData = await healthRes.json();
     console.log('   ✅ Health endpoint:', healthData.status);
     console.log('   Details:', JSON.stringify(healthData.checks, null, 2));

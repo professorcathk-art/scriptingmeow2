@@ -101,6 +101,7 @@ Generate exactly ONE Instagram post idea. Keep it under 1000 characters so it fi
         "x-goog-api-key": apiKey,
       },
       body: JSON.stringify(bodyPayload),
+      signal: AbortSignal.timeout(55000),
     });
 
     if (!res.ok) {
