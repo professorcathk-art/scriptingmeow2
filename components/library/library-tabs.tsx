@@ -10,6 +10,7 @@ import { RssAutofeedTab } from "./rss-autofeed-tab";
 type Post = {
   id: string;
   visual_url?: string;
+  carousel_urls?: string[] | null;
   content_idea?: string;
   created_at: string;
   tags?: string[];
@@ -111,7 +112,7 @@ export function LibraryTabs({
     ...posts.map((p) => ({
       type: "post" as const,
       id: p.id,
-      imageUrl: p.visual_url ?? "",
+      imageUrl: (p.carousel_urls?.[0] ?? p.visual_url) ?? "",
       created_at: p.created_at,
       label: p.brand_spaces?.name,
       href: `/posts/${p.id}/review`,
@@ -224,8 +225,8 @@ export function LibraryTabs({
                   className="block bg-zinc-900/50 rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden hover:border-violet-500/30 transition-all"
                 >
                   <div className="aspect-square bg-zinc-800/50 flex items-center justify-center overflow-hidden">
-                    {post.visual_url ? (
-                      <Image src={post.visual_url} alt="Post" width={200} height={200} className="w-full h-full object-cover" />
+                    {(post.carousel_urls?.[0] ?? post.visual_url) ? (
+                      <Image src={post.carousel_urls?.[0] ?? post.visual_url ?? ""} alt="Post" width={200} height={200} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-zinc-500 text-xs">No visual</span>
                     )}

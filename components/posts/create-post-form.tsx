@@ -1330,11 +1330,6 @@ export function CreatePostForm({
     return (
       <div className={cardClass}>
         <Stepper />
-        {loading && (
-          <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
-            Please stay on this page. Do not leave or refresh while the image is being generated.
-          </div>
-        )}
         <h2 className="text-xl font-semibold text-zinc-100">
           Step 3: Confirm & Generate Image
         </h2>
@@ -1726,7 +1721,7 @@ export function CreatePostForm({
           </div>
         </div>
 
-        <div className="flex gap-4 pt-4">
+        <div className="flex flex-col sm:flex-row gap-4 pt-4">
           <button
             type="button"
             onClick={() => saveDraftAndSetStep(2)}
@@ -1743,6 +1738,11 @@ export function CreatePostForm({
             {loading ? "Generating image..." : "Confirm & Generate Image"}
           </button>
         </div>
+        {loading && (
+          <p className="mt-4 p-3 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm text-center sm:text-left">
+            Please stay on this page. Do not leave or refresh while the image is being generated.
+          </p>
+        )}
       </div>
     );
   }

@@ -43,17 +43,18 @@ export default async function LibraryPage({
 
   const hasBrandbook = (brandbooks?.length ?? 0) > 0;
 
+  const brandSpaceIds = brandSpaces?.map((b) => b.id) ?? [];
   let query = supabase
     .from("generated_posts")
     .select("*, brand_spaces(name)")
     .eq("status", "saved")
+    .in("brand_space_id", brandSpaceIds.length > 0 ? brandSpaceIds : ["__none__"])
     .order("created_at", { ascending: false });
 
   if (searchParams.brand) query = query.eq("brand_space_id", searchParams.brand);
 
   const { data: posts } = await query;
 
-  const brandSpaceIds = brandSpaces?.map((b) => b.id) ?? [];
   const { data: referenceImages } = brandSpaceIds.length > 0
     ? await supabase
         .from("brand_reference_images")
@@ -106,7 +107,7 @@ export default async function LibraryPage({
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   // Ensure all props are JSON-serializable for Client Components (avoids Server Components render errors)
-  type LibPost = { id: string; visual_url?: string; content_idea?: string; created_at: string; tags?: string[]; brand_spaces?: { name?: string } };
+  type LibPost = { id: string; visual_url?: string; carousel_urls?: string[] | null; content_idea?: string; created_at: string; tags?: string[]; brand_spaces?: { name?: string } };
   type LibRef = { id: string; image_url: string; created_at: string; source: string };
   type LibIdea = { id: string; content: string; created_at: string };
   type LibDesign = { id: string; image_url: string; created_at: string; metadata?: Record<string, unknown>; source_id?: string | null };
