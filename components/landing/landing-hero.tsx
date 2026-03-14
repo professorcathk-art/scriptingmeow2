@@ -153,7 +153,7 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
               </button>
             </div>
           ))}
-          {publicDesigns.map((design) => (
+          {publicDesigns.slice(0, Math.max(0, 9 - LANDING_STYLES.length)).map((design) => (
             <Link key={design.id} href={`/discover/${design.id}`} className="group block">
               <div className="w-full text-left glass-elevated rounded-2xl overflow-hidden border border-white/5 hover:border-violet-500/30 hover:shadow-[0_0_20px_rgba(168,85,247,0.15)] transition-all duration-300">
                 <div className="relative aspect-[4/5] overflow-hidden">
