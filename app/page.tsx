@@ -48,7 +48,7 @@ export default async function HomePage() {
       id: p.id,
       image_url: (p.carousel_urls as string[])?.[0] ?? (p.visual_url as string) ?? "",
       content_idea: p.content_idea as string,
-    })).filter((p) => p.image_url);
+    })).filter((p) => p.image_url).slice(0, 9);
   } catch {
     // Admin client may not be configured
   }
