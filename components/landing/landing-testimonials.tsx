@@ -48,7 +48,7 @@ function StarIcon() {
 
 export function LandingTestimonials() {
   return (
-    <section className="py-24 px-4">
+    <section className="py-24 px-4" aria-label="Testimonials: Wall of Love from creators">
       <div className="max-w-2xl mx-auto text-center mb-16">
         <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4">
           Wall of Love
@@ -60,12 +60,12 @@ export function LandingTestimonials() {
 
       <div className="max-w-6xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {TESTIMONIALS.map((t, i) => (
-          <div
+          <article
             key={i}
             className="p-6 rounded-2xl bg-zinc-900/50 border border-white/10"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-semibold text-zinc-200">
+              <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-sm font-semibold text-zinc-200" aria-hidden>
                 {t.avatar}
               </div>
               <div>
@@ -73,15 +73,20 @@ export function LandingTestimonials() {
                 <p className="text-xs text-zinc-500">{t.handle}</p>
               </div>
             </div>
-            <div className="flex gap-1 mb-3">
+            <div className="flex gap-1 mb-3" aria-label={`${t.rating} out of 5 stars`}>
               {Array.from({ length: t.rating }).map((_, j) => (
                 <StarIcon key={j} />
               ))}
             </div>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              &quot;{t.content}&quot;
+            <blockquote className="text-zinc-400 text-sm leading-relaxed m-0 border-l-0 pl-0">
+              {t.content}
+            </blockquote>
+            <p className="mt-3 text-xs text-zinc-500">
+              <cite className="not-italic font-medium text-zinc-400">{t.name}</cite>
+              {", "}
+              <cite className="not-italic text-zinc-500">{t.handle}</cite>
             </p>
-          </div>
+          </article>
         ))}
       </div>
     </section>

@@ -21,8 +21,9 @@ const LEGAL: FooterLink[] = [
 
 export function LandingFooter() {
   return (
-    <footer className="border-t border-white/5 py-16 px-4">
+    <footer className="border-t border-white/5 py-16 px-4" aria-label="Site footer">
       <div className="max-w-6xl mx-auto">
+        <h2 className="sr-only">Site footer</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
           <div className="col-span-2 md:col-span-1">
             <span className="text-xl font-bold text-zinc-100 mb-4 block">
@@ -33,10 +34,10 @@ export function LandingFooter() {
             </p>
           </div>
 
-          <div>
-            <h4 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
+          <nav aria-label="Product links">
+            <h3 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
               Product
-            </h4>
+            </h3>
             <ul className="space-y-2">
               {PRODUCT.map(({ label, href }) => (
                 <li key={label}>
@@ -49,12 +50,12 @@ export function LandingFooter() {
                 </li>
               ))}
             </ul>
-          </div>
+          </nav>
 
-          <div>
-            <h4 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
+          <nav aria-label="Resources">
+            <h3 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
               Resources
-            </h4>
+            </h3>
             <ul className="space-y-2">
               {RESOURCES.map(({ label, href }) => (
                 <li key={label}>
@@ -67,12 +68,12 @@ export function LandingFooter() {
                 </li>
               ))}
             </ul>
-          </div>
+          </nav>
 
-          <div>
-            <h4 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
+          <nav aria-label="Legal">
+            <h3 className="text-sm font-semibold text-zinc-100 mb-4 uppercase tracking-wider">
               Legal
-            </h4>
+            </h3>
             <ul className="space-y-2">
               {LEGAL.map(({ label, href }) => (
                 <li key={label}>
@@ -85,7 +86,7 @@ export function LandingFooter() {
                 </li>
               ))}
             </ul>
-          </div>
+          </nav>
         </div>
 
         <div className="mt-12 pt-8 border-t border-white/5">

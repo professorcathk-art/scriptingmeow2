@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
+import { jsonLdScriptContent, organizationJsonLd, softwareApplicationJsonLd } from "@/lib/seo/landing-jsonld";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -9,39 +10,63 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
+const SITE = "https://designermeow.com";
+const OG_IMAGE = `${SITE}/thumnail/Gemini_Generated_Image_3skk0k3skk0k3skk.png`;
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://designermeow.com"),
-  title: "designermeow - AI Instagram Post Generator | Content Creators Create IG Posts with Nano Banana",
+  metadataBase: new URL(SITE),
+  title: {
+    default: "designermeow — AI Instagram Post Generator for Creators & Brands",
+    template: "%s | designermeow",
+  },
   description:
-    "Let content creators use AI to create Instagram posts with Nano Banana. designermeow helps creators and brands generate consistent, on-brand IG posts in minutes. AI-powered design, brandbook, and viral content.",
+    "designermeow.com is an AI Instagram post generator: define your brand DNA in a Brand Space, prompt the AI studio for single or carousel posts, and generate on-brand visuals (including Nano Banana). Web app for content creators, agencies, and brands.",
   keywords: [
-    "content creator",
-    "AI Instagram post",
+    "AI Instagram post generator",
+    "designermeow",
     "Nano Banana",
-    "Instagram post generator",
-    "AI Instagram",
-    "create IG posts with AI",
-    "social media design",
-    "Instagram design tool",
+    "content creator",
+    "AI IG posts",
+    "Instagram carousel AI",
+    "brandbook Instagram",
+    "social media design AI",
   ],
+  authors: [{ name: "designermeow", url: SITE }],
+  creator: "designermeow",
+  publisher: "designermeow",
   openGraph: {
-    title: "designermeow - Content Creators Create IG Posts with AI & Nano Banana",
-    description: "Let content creators use AI to create Instagram posts with Nano Banana. Generate on-brand IG content in minutes.",
-    url: "https://designermeow.com",
+    title: "designermeow — AI Instagram Post Generator (Web App)",
+    description:
+      "Generate on-brand Instagram posts and carousels from your brandbook and prompts. AI design tool for creators—designermeow.com.",
+    url: SITE,
     siteName: "designermeow",
     type: "website",
+    locale: "en_US",
+    images: [
+      {
+        url: OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: "designermeow AI Instagram post generator",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "designermeow - Content Creators Create IG Posts with AI & Nano Banana",
-    description: "Let content creators use AI to create Instagram posts with Nano Banana. Generate on-brand IG content in minutes.",
+    title: "designermeow — AI Instagram Post Generator",
+    description:
+      "Web-based AI tool to create on-brand Instagram posts and carousels. Brand Space, prompts, Nano Banana visuals.",
+    images: [OG_IMAGE],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: { index: true, follow: true },
   },
+  alternates: { canonical: SITE },
   other: {
-    "ai-content-declaration": "This site helps content creators use AI to create Instagram posts with Nano Banana image generation.",
+    "ai-content-declaration":
+      "designermeow helps users create Instagram posts with AI-assisted design and image generation; disclose AI use per platform rules.",
   },
   icons: {
     icon: "/thumnail/Gemini_Generated_Image_3skk0k3skk0k3skk.png",
@@ -50,21 +75,9 @@ export const metadata: Metadata = {
   },
 };
 
-const jsonLd = {
+const rootGraphJsonLd = {
   "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: "designermeow",
-  description:
-    "Let content creators use AI to create Instagram posts with Nano Banana. AI-powered Instagram post generator for creators and brands.",
-  url: "https://designermeow.com",
-  applicationCategory: "DesignApplication",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-  featureList: [
-    "AI Instagram post generation",
-    "Content creator tools",
-    "Nano Banana image generation",
-    "Brandbook and on-brand design",
-  ],
+  "@graph": [organizationJsonLd, softwareApplicationJsonLd],
 };
 
 export default function RootLayout({
@@ -74,13 +87,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} dark`}>
-      <body className="font-sans antialiased">
+      <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(rootGraphJsonLd) }}
         />
-        {children}
-      </body>
+      </head>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }

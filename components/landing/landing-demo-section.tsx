@@ -2,7 +2,10 @@
 
 export function LandingDemoSection() {
   return (
-    <section className="py-24 px-4">
+    <section
+      className="py-24 px-4"
+      aria-label="Product features: RSS feeds to on-brand Instagram posts"
+    >
       <div className="max-w-3xl mx-auto text-center mb-16">
         <h2 className="text-3xl md:text-5xl font-bold text-zinc-100">
           Your entire content pipeline,{" "}

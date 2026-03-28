@@ -37,13 +37,12 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
 
   return (
     <div className="min-h-screen flex flex-col px-4 pt-20 pb-24">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-20 glass border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
           <span className="text-xl font-bold tracking-tight text-white">
             designermeow
           </span>
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <nav aria-label="Marketing site primary navigation" className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {isAuthenticated ? (
               <Link
                 href="/dashboard"
@@ -67,12 +66,14 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
                 </Link>
               </>
             )}
-          </div>
+          </nav>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="text-center max-w-4xl mx-auto mb-16">
+      <section
+        className="text-center max-w-4xl mx-auto mb-16"
+        aria-label="Hero: AI Instagram post generator value proposition"
+      >
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight leading-tight">
           Designer-quality Instagram posts{" "}
           <span
@@ -92,8 +93,10 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
         </p>
       </section>
 
-      {/* CTA - before Steal a Style */}
-      <section className="max-w-3xl mx-auto w-full mb-16 px-4 md:px-0">
+      <section
+        className="max-w-3xl mx-auto w-full mb-16 px-4 md:px-0"
+        aria-label="Get started: enter your brand name to generate your first post"
+      >
         <div className="glass rounded-2xl p-6 sm:p-8 border border-white/10">
           <div className="flex flex-col sm:flex-row gap-3">
             <input
@@ -115,8 +118,10 @@ export function LandingHero({ isAuthenticated = false, publicDesigns = [], publi
         </div>
       </section>
 
-      {/* Steal a Style Gallery */}
-      <section className="max-w-6xl mx-auto w-full mb-20">
+      <section
+        className="max-w-6xl mx-auto w-full mb-20"
+        aria-label="Style gallery: sample AI Instagram posts you can save as a style"
+      >
         <h2 className="text-xl font-semibold text-zinc-300 mb-6 text-center sm:text-left">
           Steal a Style from below AI generated posts
         </h2>

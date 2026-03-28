@@ -17,7 +17,10 @@ const STEPS = [
 
 export function LandingHowItWorks() {
   return (
-    <section className="py-24 px-4 bg-zinc-900/30">
+    <section
+      className="py-24 px-4 bg-zinc-900/30"
+      aria-label="How it works: three steps from brand DNA to generated posts"
+    >
       <div className="max-w-2xl mx-auto text-center mb-16">
         <h2 className="text-3xl md:text-4xl font-bold text-zinc-100 mb-4">
           How it works
@@ -27,20 +30,22 @@ export function LandingHowItWorks() {
         </p>
       </div>
 
-      <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
+      <ol className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6 list-none p-0 m-0">
         {STEPS.map((step, i) => (
-          <div
+          <li
             key={i}
             className="relative p-8 rounded-2xl bg-zinc-900/50 border border-white/10"
           >
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" aria-hidden>
               <span className="text-[120px] font-bold text-zinc-500/20">
                 {i + 1}
               </span>
             </div>
             <div className="relative">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center mb-6">
-                <span className="text-xl font-bold text-white">{i + 1}</span>
+                <span className="text-xl font-bold text-white" aria-hidden>
+                  {i + 1}
+                </span>
               </div>
               <h3 className="text-xl font-semibold text-zinc-100 mb-3">
                 {step.title}
@@ -49,9 +54,9 @@ export function LandingHowItWorks() {
                 {step.description}
               </p>
             </div>
-          </div>
+          </li>
         ))}
-      </div>
+      </ol>
     </section>
   );
 }

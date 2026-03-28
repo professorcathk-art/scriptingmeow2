@@ -6,21 +6,26 @@ import { LandingLogoCloud } from "@/components/landing/landing-logo-cloud";
 import { LandingDemoSection } from "@/components/landing/landing-demo-section";
 import { LandingHowItWorks } from "@/components/landing/landing-how-it-works";
 import { LandingTestimonials } from "@/components/landing/landing-testimonials";
-import { FAQ_ITEMS } from "@/lib/faq-data";
 import { LandingFaq } from "@/components/landing/landing-faq";
 import { LandingFooter } from "@/components/landing/landing-footer";
+import { faqPageJsonLdDocument, jsonLdScriptContent } from "@/lib/seo/landing-jsonld";
+import type { Metadata } from "next";
 
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: FAQ_ITEMS.map((item) => ({
-    "@type": "Question",
-    name: item.q,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: item.a,
-    },
-  })),
+export const metadata: Metadata = {
+  title: "designermeow — AI Instagram Post Generator",
+  description:
+    "designermeow.com: AI Instagram post generator for creators and brands. Define Brand DNA, prompt the AI studio, generate square/portrait/story/carousel posts with Nano Banana. FAQs, pricing, and free tier on site.",
+  openGraph: {
+    title: "designermeow — AI Instagram Post Generator",
+    description:
+      "Web app to create on-brand Instagram posts and carousels: Brand Space, brandbook, prompts, library. designermeow.com.",
+    url: "https://designermeow.com",
+  },
+  twitter: {
+    title: "designermeow — AI Instagram Post Generator",
+    description:
+      "AI-powered Instagram design: brandbook, single & carousel posts, style gallery. designermeow.com.",
+  },
 };
 
 export default async function HomePage() {
@@ -54,16 +59,25 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-950 overflow-x-hidden">
+    <main className="min-h-screen bg-zinc-950 overflow-x-hidden" aria-label="designermeow marketing home">
       <Script
         id="faq-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(faqPageJsonLdDocument) }}
         strategy="afterInteractive"
       />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(139,92,246,0.15),transparent)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_80%_0%,rgba(6,182,212,0.08),transparent)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_20%_50%,rgba(236,72,153,0.06),transparent)] pointer-events-none" />
+      <div
+        className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(139,92,246,0.15),transparent)] pointer-events-none"
+        aria-hidden
+      />
+      <div
+        className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_80%_0%,rgba(6,182,212,0.08),transparent)] pointer-events-none"
+        aria-hidden
+      />
+      <div
+        className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_20%_50%,rgba(236,72,153,0.06),transparent)] pointer-events-none"
+        aria-hidden
+      />
       <div className="relative z-10">
         <LandingHero isAuthenticated={!!user} publicDesigns={publicDesigns} publicDesignCount={publicDesignCount} />
         <LandingLogoCloud />
