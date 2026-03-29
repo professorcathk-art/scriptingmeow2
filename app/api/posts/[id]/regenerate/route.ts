@@ -5,13 +5,14 @@ import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
 import { MAX_IG_CAPTION_CHARS } from "@/lib/constants";
+import { mergeLegacyDraftToOverall, normalizeDraftPageRow } from "@/lib/draft-data";
 
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    let body: { draft_data?: { visualAdvice?: string; imageTextOnImage?: string } } = {};
+    let body: { draft_data?: { styling?: string; overallDesign?: string; visualAdvice?: string; imageTextOnImage?: string } } = {};
     try {
       body = await request.json();
     } catch {
@@ -60,16 +61,33 @@ export async function POST(
     }
 
     const postStyle = (post as { post_style?: string }).post_style;
-    const storedDraft = post.draft_data as { visualAdvice?: string; imageTextOnImage?: string; postAim?: string } | null | undefined;
+    const storedDraft = post.draft_data as {
+      styling?: string;
+      overallDesign?: string;
+      visualAdvice?: string;
+      imageTextOnImage?: string;
+      postAim?: string;
+    } | null | undefined;
     const draftData = body.draft_data ?? storedDraft;
 
-    let visualAdvice: string;
-    let imageTextOnImage: string;
+    let overallDesign: string;
+    let styling: string;
     let igCaption: string;
 
-    if (draftData && "visualAdvice" in draftData && "imageTextOnImage" in draftData) {
-      visualAdvice = (draftData.visualAdvice ?? "").trim();
-      imageTextOnImage = draftData.imageTextOnImage ?? "";
+    if (
+      draftData &&
+      (("overallDesign" in draftData && "styling" in draftData) ||
+        ("visualAdvice" in draftData && "imageTextOnImage" in draftData))
+    ) {
+      const n = normalizeDraftPageRow(draftData as Record<string, unknown>);
+      overallDesign = n.overallDesign;
+      styling = n.styling;
+      if (!overallDesign && (draftData.visualAdvice != null || draftData.imageTextOnImage != null)) {
+        overallDesign = mergeLegacyDraftToOverall(
+          draftData.visualAdvice ?? "",
+          draftData.imageTextOnImage ?? ""
+        );
+      }
       igCaption = (post.caption as { igCaption?: string })?.igCaption ?? "";
     } else {
       const genResult = await generatePost(
@@ -97,13 +115,13 @@ export async function POST(
           { status: 400 }
         );
       }
-      visualAdvice = generatedPost.visualAdvice?.trim() || "";
-      imageTextOnImage = generatedPost.imageTextOnImage ?? "";
+      overallDesign = generatedPost.overallDesign ?? "";
+      styling = generatedPost.styling?.trim() || "";
       igCaption = (generatedPost.igCaption ?? "").slice(0, MAX_IG_CAPTION_CHARS);
     }
 
-    const visualAdviceResolved =
-      visualAdvice ||
+    const stylingResolved =
+      styling ||
       (() => {
         const vs = brandbook.visual_style as {
           primaryColor?: string;
@@ -121,8 +139,8 @@ export async function POST(
     const postAim = (draftData && "postAim" in draftData && draftData.postAim) ? String(draftData.postAim).trim() : undefined;
     const fullImagePrompt = buildImagePrompt({
       brandbook,
-      visualAdvice: visualAdviceResolved,
-      imageTextOnImage: imageTextOnImage || undefined,
+      overallDesign: overallDesign || undefined,
+      styling: stylingResolved || undefined,
       postStyle: postStyle?.trim() || undefined,
       logoUrl: brandSpace?.logo_url ?? null,
       logoPlacement: brandSpace?.logo_placement ?? null,
@@ -148,7 +166,7 @@ export async function POST(
       visualUrl = await uploadPostImage(imageBuffer, params.id, user.id);
     } else {
       visualUrl = await uploadPostPlaceholder(
-        visualAdviceResolved || "Post image",
+        overallDesign || stylingResolved || "Post image",
         params.id,
         user.id
       );
@@ -161,7 +179,11 @@ export async function POST(
       visual_url: visualUrl,
       updated_at: new Date().toISOString(),
     };
-    if (draftData && "visualAdvice" in draftData && "imageTextOnImage" in draftData) {
+    if (
+      draftData &&
+      (("overallDesign" in draftData && "styling" in draftData) ||
+        ("visualAdvice" in draftData && "imageTextOnImage" in draftData))
+    ) {
       updatePayload.draft_data = draftData;
     }
     const { data: updatedPost, error } = await supabase

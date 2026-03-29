@@ -7,6 +7,7 @@ import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
 import { augmentIdeaWithSourceImage } from "@/lib/rss-image-extract";
 import { MAX_IG_CAPTION_CHARS } from "@/lib/constants";
+import { mergeLegacyDraftToOverall, normalizeDraftPageRow } from "@/lib/draft-data";
 
 export const maxDuration = 300;
 
@@ -44,6 +45,8 @@ export async function POST(request: Request) {
     carouselPages,
     postStyle,
     contentFramework,
+    confirmedOverallDesign,
+    confirmedStyling,
     confirmedImageTextOnImage,
     confirmedVisualAdvice,
     confirmedIgCaption,
@@ -66,11 +69,15 @@ export async function POST(request: Request) {
     carouselPages?: Array<{
       pageIndex: number;
       header: string;
-      imageTextOnImage: string;
-      visualAdvice: string;
+      overallDesign?: string;
+      styling?: string;
+      imageTextOnImage?: string;
+      visualAdvice?: string;
     }>;
     postStyle?: string;
     contentFramework?: string;
+    confirmedOverallDesign?: string;
+    confirmedStyling?: string;
     confirmedImageTextOnImage?: string;
     confirmedVisualAdvice?: string;
     confirmedIgCaption?: string;
@@ -127,8 +134,8 @@ export async function POST(request: Request) {
 
     // Use confirmed draft or generate new
     let caption: { igCaption: string } | { hook: string; body: string; cta: string; hashtags: string[] };
-    let imagePrompt = "";
-    let imageTextOnImage = "";
+    let overallDesign = "";
+    let styling = "";
 
     const igCaptionFromConfirmed =
       confirmedIgCaption !== undefined
@@ -143,6 +150,9 @@ export async function POST(request: Request) {
           : "";
 
     const hasConfirmedDraft =
+      confirmedOverallDesign !== undefined ||
+      confirmedStyling !== undefined ||
+      confirmedImageTextOnImage !== undefined ||
       confirmedVisualAdvice !== undefined ||
       confirmedIgCaption !== undefined ||
       (confirmedCaption && (confirmedCaption.hook || confirmedCaption.body || confirmedCaption.cta));
@@ -151,8 +161,14 @@ export async function POST(request: Request) {
       caption = { igCaption: igCaptionFromConfirmed.slice(0, MAX_IG_CAPTION_CHARS) || "Carousel post." };
     } else if (hasConfirmedDraft) {
       caption = { igCaption: igCaptionFromConfirmed.slice(0, MAX_IG_CAPTION_CHARS) };
-      imageTextOnImage = (confirmedImageTextOnImage ?? "").trim();
-      imagePrompt = (confirmedVisualAdvice ?? "").trim();
+      overallDesign = (confirmedOverallDesign ?? "").trim();
+      styling = (confirmedStyling ?? "").trim();
+      if (!overallDesign && (confirmedVisualAdvice !== undefined || confirmedImageTextOnImage !== undefined)) {
+        overallDesign = mergeLegacyDraftToOverall(
+          (confirmedVisualAdvice ?? "") as string,
+          (confirmedImageTextOnImage ?? "") as string
+        );
+      }
     } else {
       const genResult = await generatePost(
         {
@@ -175,18 +191,18 @@ export async function POST(request: Request) {
         contentFramework
       );
       const generatedPost = Array.isArray(genResult) ? genResult[0] : null;
-      if (generatedPost && "imageTextOnImage" in generatedPost) {
+      if (generatedPost && "overallDesign" in generatedPost) {
         caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, MAX_IG_CAPTION_CHARS) };
-        imageTextOnImage = generatedPost.imageTextOnImage ?? "";
-        imagePrompt = generatedPost.visualAdvice?.trim() || "";
+        overallDesign = generatedPost.overallDesign ?? "";
+        styling = generatedPost.styling?.trim() || "";
       } else {
         caption = { igCaption: "" };
-        imageTextOnImage = "";
-        imagePrompt = "";
+        overallDesign = "";
+        styling = "";
       }
     }
 
-    if (!isCarousel && !imagePrompt) {
+    if (!isCarousel && !styling && !overallDesign) {
       const vs = brandbook.visual_style as {
         primaryColor?: string;
         secondaryColor1?: string;
@@ -198,7 +214,7 @@ export async function POST(request: Request) {
         ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
         : vs?.colors?.join(", ") || "";
       const style = vs?.imageStyle || "professional";
-      imagePrompt = `Professional Instagram post. Style: ${style}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
+      styling = `Professional Instagram post. Style: ${style}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
     }
 
     // Check credits
@@ -239,7 +255,7 @@ export async function POST(request: Request) {
 
     const draftData = isCarousel && carouselPages
       ? { carouselPages, postAim: postAim?.trim() || undefined }
-      : { visualAdvice: imagePrompt, imageTextOnImage, postAim: postAim?.trim() || undefined };
+      : { overallDesign, styling, postAim: postAim?.trim() || undefined };
 
     const contentIdeaToStore = await augmentIdeaWithSourceImage(contentIdea || "");
 
@@ -304,7 +320,9 @@ export async function POST(request: Request) {
       const totalPages = carouselPages.length;
       for (let i = 0; i < carouselPages.length; i++) {
         const page = carouselPages[i];
-        const imageText = (page.imageTextOnImage ?? "").trim();
+        const normalized = normalizeDraftPageRow(page as Record<string, unknown>);
+        const od = normalized.overallDesign;
+        const st = normalized.styling;
         const previousPageUrls = carouselUrls.slice(0, i);
         const styleRefsWithContext = [
           ...previousPageUrls,
@@ -318,8 +336,10 @@ export async function POST(request: Request) {
         ].slice(0, 5);
         const fullImagePrompt = buildImagePrompt({
           brandbook,
-          visualAdvice: page.visualAdvice?.trim() || `Carousel page ${page.pageIndex}. ${contentIdea || ""}`,
-          imageTextOnImage: imageText || undefined,
+          overallDesign: od || undefined,
+          styling:
+            st ||
+            `Carousel page ${page.pageIndex}. Brand-consistent palette and lighting. ${contentIdea?.slice(0, 120) ?? ""}`,
           postStyle: postStyle?.trim() || undefined,
           pageIndex: page.pageIndex,
           carouselPageCount: totalPages,
@@ -342,7 +362,7 @@ export async function POST(request: Request) {
           imageBuffer
             ? await uploadPostImage(imageBuffer, post.id, user.id, page.pageIndex)
             : await uploadPostPlaceholder(
-                page.visualAdvice || `Page ${page.pageIndex}`,
+                od || st || `Page ${page.pageIndex}`,
                 `${post.id}-page-${page.pageIndex}`,
                 user.id
               );
@@ -356,8 +376,8 @@ export async function POST(request: Request) {
     } else {
       const fullImagePrompt = buildImagePrompt({
         brandbook,
-        visualAdvice: imagePrompt,
-        imageTextOnImage: imageTextOnImage || undefined,
+        overallDesign: overallDesign || undefined,
+        styling: styling || undefined,
         postStyle: postStyle?.trim() || undefined,
         logoUrl: brandSpace?.logo_url ?? null,
         logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
@@ -378,7 +398,7 @@ export async function POST(request: Request) {
         visualUrl = await uploadPostImage(imageBuffer, post.id, user.id);
       } else {
         visualUrl = await uploadPostPlaceholder(
-          imagePrompt,
+          overallDesign || styling || "Post image",
           post.id,
           user.id
         );

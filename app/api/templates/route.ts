@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       }
 
       const draftData = post.draft_data as
-        | { carouselPages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }> }
+        | { carouselPages?: Array<Record<string, unknown>> }
         | null
         | undefined;
       const carouselPages = draftData && "carouselPages" in draftData ? draftData.carouselPages : null;

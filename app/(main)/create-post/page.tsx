@@ -149,7 +149,7 @@ export default async function CreatePostPage({
     customWidth?: number;
     customHeight?: number;
     carouselPageCount: number;
-    carouselPages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }>;
+    carouselPages?: import("@/lib/draft-data").DraftCarouselPageFields[];
   } | null = null;
   if (searchParams.templateId && templates?.length) {
     const t = templates.find((x) => x.id === searchParams.templateId);

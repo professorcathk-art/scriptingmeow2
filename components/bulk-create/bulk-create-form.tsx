@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { DraftCarouselPageFields } from "@/lib/draft-data";
 import { useRouter } from "next/navigation";
 import { useCredits } from "@/components/credits/credits-provider";
 import { CreateTemplateModal } from "./create-template-modal";
@@ -17,7 +18,7 @@ type Template = {
   custom_width?: number | null;
   custom_height?: number | null;
   carousel_page_count?: number | null;
-  carousel_pages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }> | null;
+  carousel_pages?: DraftCarouselPageFields[] | null;
 };
 type Idea = { id: string; content: string; title?: string | null; brand_space_id?: string | null };
 

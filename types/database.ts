@@ -87,9 +87,21 @@ export interface BrandReferenceImage {
   uploaded_at: string;
 }
 
+/** Stored draft for image generation; legacy single keys still appear on older rows. */
 export type DraftData =
+  | { overallDesign: string; styling: string; postAim?: string }
   | { visualAdvice: string; imageTextOnImage: string }
-  | { carouselPages: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }> };
+  | {
+      carouselPages: Array<{
+        pageIndex: number;
+        header: string;
+        overallDesign?: string;
+        styling?: string;
+        imageTextOnImage?: string;
+        visualAdvice?: string;
+      }>;
+      postAim?: string;
+    };
 
 export interface GeneratedPost {
   id: string;

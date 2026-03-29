@@ -5,7 +5,7 @@
 
 import { readFileSync } from "fs";
 import { join } from "path";
-import { MAX_ON_IMAGE_INSTRUCTION_CHARS } from "@/lib/constants";
+import { MAX_ON_IMAGE_INSTRUCTION_CHARS, MAX_STYLING_CHARS } from "@/lib/constants";
 
 function loadMarkdown(filename: string): string {
   try {
@@ -101,7 +101,8 @@ export function getSingleImageDraftPrompt(vars: {
   idea: string;
   language: string;
   format: string;
-  textGuide: string;
+  overallDesignGuide: string;
+  stylingGuide: string;
   aspectNote: string;
 }): string {
   const raw = loadMarkdown("draft-post.md");
@@ -127,13 +128,13 @@ Create 2 DISTINCT Instagram post draft variations using the BRIEF and CONTEXT ab
 Return valid JSON only. Include postAim first (required): who this is for, what the post should achieve for the image model, and how it supports the brand—1–3 sentences, max 500 characters.
 {
   "postAim": "Required: brand context + intent for this post",
-  "variation1": {"imageTextOnImage":"","visualAdvice":"","igCaption":""},
-  "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
+  "variation1": {"overallDesign":"","styling":"","igCaption":""},
+  "variation2": {"overallDesign":"","styling":"","igCaption":""}
 }
 
 ### Field rules:
-1. imageTextOnImage: {{textGuide}}
-2. visualAdvice: HIGHLY DETAILED (4–7 sentences, 80–150 words). If a [Source Image URL: https...] is provided, you MUST include: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later." Scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text placement, color usage from brand, mood. Aspect {{aspectNote}}. Do NOT be brief.
+1. **overallDesign** (single field for the whole graphic): {{overallDesignGuide}} Plain text only, no markdown. This must describe the **complete** creative intent—setting/background, people and objects, composition, framing, and **every** piece of text that should appear (with placement and emphasis). Do not split “text” from “scene” across two fields; that belongs here together.
+2. **styling**: {{stylingGuide}} Express brand-look only—palette, lighting mood, medium (photo/illustration/3D), texture, typography personality. Do **not** repeat scene layout or narrative here; that is in overallDesign. If a [Source Image URL: https...] is provided, include in **overallDesign** the layout command: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
 3. igCaption: Standalone Instagram caption up to 2000 characters—hook, full explanation of the idea (so the post is understandable without the image), value, and a save/share CTA. Max 3 hashtags.`;
 
 export function getCarouselDraftPrompt(vars: {
@@ -144,10 +145,11 @@ export function getCarouselDraftPrompt(vars: {
   style: string;
   colors: string;
   contentFrameworkDesc: string;
-  layoutGuide: string;
+  layoutSpatialLine: string;
   layoutStyleDetail?: string;
   dosDonts?: string;
-  textGuide?: string;
+  overallDesignGuide: string;
+  stylingGuide: string;
   idea: string;
   format: string;
   aspectNote: string;
@@ -169,16 +171,16 @@ export function getCarouselDraftPrompt(vars: {
     style: vars.style,
     colors: vars.colors,
     contentFrameworkDesc: vars.contentFrameworkDesc,
-    layoutGuide: vars.layoutGuide,
+    layoutSpatialLine: vars.layoutSpatialLine,
     extraContext,
-    textGuide:
-      vars.textGuide ||
-      `Per slide: plain text, director-style shot list (zone + emphasis + exact copy). Up to ${MAX_ON_IMAGE_INSTRUCTION_CHARS} characters. Avoid robotic Headline/Subhead/Body unless the slide truly needs it.`,
+    overallDesignGuide: vars.overallDesignGuide,
+    stylingGuide: vars.stylingGuide,
     idea: vars.idea,
     format: vars.format,
     aspectNote: vars.aspectNote,
     language: vars.language,
-    onImageMaxChars: String(MAX_ON_IMAGE_INSTRUCTION_CHARS),
+    overallMaxChars: String(MAX_ON_IMAGE_INSTRUCTION_CHARS),
+    stylingMaxChars: String(MAX_STYLING_CHARS),
   });
 }
 
@@ -187,7 +189,7 @@ const FALLBACK_CAROUSEL = `## BRIEF (primary input)
 
 ## CONTEXT
 - Brand: {{personality}}. Tone: {{tone}}. Style: {{style}}. Colors: {{colors}}.
-- Content: {{contentFrameworkDesc}}. Layout: {{layoutGuide}}
+- Content: {{contentFrameworkDesc}}. Spatial layout: {{layoutSpatialLine}}
 {{extraContext}}
 - Format: {{format}}. Aspect: {{aspectNote}}.
 
@@ -195,12 +197,13 @@ const FALLBACK_CAROUSEL = `## BRIEF (primary input)
 Create a {{pageCount}}-page Instagram carousel using the BRIEF and CONTEXT above.
 
 ## Output Format
-If a [Source Image URL: https...] is provided, visualAdvice MUST include: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
-Return valid JSON only. Include postAim (required): brand context + intent, max 500 characters. imageTextOnImage: {{textGuide}}
+If a [Source Image URL: https...] is provided, put that layout command in **overallDesign** (not styling alone): "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
+Return valid JSON only. Include postAim (required): brand context + intent, max 500 characters.
+Per page: **overallDesign** = {{overallDesignGuide}} (max {{overallMaxChars}} chars). **styling** = {{stylingGuide}} (max {{stylingMaxChars}} chars).
 {
   "postAim": "Required: brand context + intent for this carousel",
   "pages": [
-    { "pageIndex": 1, "imageTextOnImage": "Placement-first brief in the user's language; separate elements with newlines in JSON.", "visualAdvice": "HIGHLY DETAILED (4–6 sentences): scene, composition, lighting, text placement, color usage, mood" },
+    { "pageIndex": 1, "header": "", "overallDesign": "Full slide brief: scene + objects + text in the user's language", "styling": "Brand look: palette, light, mood, medium" },
     ...
   ],
   "igCaption": "Full caption up to 2000 characters: hook, full story, CTA. Max 3 hashtags."
@@ -211,11 +214,15 @@ const DRAFT_SINGLE_LIGHT = `## BRIEF (primary input)
 Content idea: {{idea}}
 
 ## CONTEXT
-- Language: {{language}}. Format: {{format}}. Layout: {{layout}}.
+- Language: {{language}}. Format: {{format}}. Spatial layout: {{layoutSpatialLine}}
 - Content goal: {{contentFrameworkDesc}}
 
 ## TASK
-Create 2 DISTINCT Instagram post draft variations. Treat **imageTextOnImage** as a **director-style** brief: plain text only—**where** each line sits, **how big** it reads, and the **exact wording**. Do not default to a stiff Headline / Subhead / Body block unless the layout truly needs it. Stay within {{onImageMaxChars}} characters per variation; compress without losing the message.
+Create 2 DISTINCT Instagram post draft variations.
+
+**overallDesign** = one unified field for the **entire** graphic: describe the scene (setting, people, objects), composition, and **all** text that must appear on the image (placement + emphasis + exact words). Plain text, no markdown. Follow: {{overallDesignGuide}} Max {{overallMaxChars}} characters per variation.
+
+**styling** = brand-aligned **look** only: palette, lighting mood, medium/texture, typography personality—aligned with how a brandbook would describe execution. Follow: {{stylingGuide}} Max {{stylingMaxChars}} characters. Do not put scene layout or story beats here; those belong in overallDesign.
 
 ## Enrichment (CRITICAL)
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
@@ -223,20 +230,20 @@ Create 2 DISTINCT Instagram post draft variations. Treat **imageTextOnImage** as
 - Create value-driven, shareable content—not a dry summary. Hook the reader in the first line.
 
 ## Source Image Overlay
-- If a [Source Image URL: https...] is provided in the idea, you MUST structure your visualAdvice to include an explicit layout command: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
+- If a [Source Image URL: https...] is provided in the idea, put the layout command in **overallDesign**: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
 
 ## Output
 Return valid JSON only. **postAim must be the first substantive field** (required): 1–3 sentences, max 500 characters—audience, intent, and how the visual should support the post.
 {
   "postAim": "Required: audience + intent + role of the visual",
-  "variation1": {"imageTextOnImage":"","visualAdvice":"","igCaption":""},
-  "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
+  "variation1": {"overallDesign":"","styling":"","igCaption":""},
+  "variation2": {"overallDesign":"","styling":"","igCaption":""}
 }
 
 Completion rules:
 - postAim: Never omit or leave empty.
-- imageTextOnImage: Match the layout context; prioritise readable hierarchy and faithful placement notes within {{onImageMaxChars}} characters.
-- visualAdvice: HIGHLY DETAILED designer layout (4–7 sentences, 80–150 words): scene, composition, lighting, text blocks, palette, mood. Aspect {{aspectNote}}.
+- overallDesign: Must read as one coherent art direction for the frame (scene + type). Aspect {{aspectNote}}.
+- styling: Must reflect brand-appropriate execution without duplicating the scene description.
 - igCaption: Full Instagram caption up to 2000 characters—opening hook, complete articulation of the idea (understandable without the image), proof or steps as needed, and a save/share CTA. Max 3 hashtags. Write one cohesive narrative, not a teaser paragraph.`;
 
 const DRAFT_CAROUSEL_LIGHT = `## BRIEF (primary input)
@@ -244,43 +251,46 @@ const DRAFT_CAROUSEL_LIGHT = `## BRIEF (primary input)
 
 ## CONTEXT
 - Language: {{language}}. Format: {{format}}. Aspect: {{aspectNote}}.
-- Content goal: {{contentFrameworkDesc}}. Visual layout: {{layoutGuide}}
+- Content goal: {{contentFrameworkDesc}}. Spatial layout: {{layoutSpatialLine}}
 
 ## TASK
-Create a {{pageCount}}-page Instagram carousel. Per slide, **imageTextOnImage** is a **shot-list** brief: placement-first (zones, emphasis, exact copy)—**not** a mechanical Headline/Subhead/Body template. Up to {{onImageMaxChars}} characters per slide. **visualAdvice** must be a rich designer layout every time.
-{{#isTextHeavy}}TEXT-HEAVY MODE: Each slide needs substantive on-image copy—multiple lines, clear hierarchy, teaching or persuasive depth. Do not under-write.{{/isTextHeavy}}
+Create a {{pageCount}}-page Instagram carousel. Each page has **overallDesign** (full slide brief: scene + objects + all text) and **styling** (brand look only). {{overallDesignGuide}} / {{stylingGuide}}
+{{#isTextHeavy}}TEXT-HEAVY MODE: Each slide needs substantive content—multiple lines where needed, clear hierarchy, teaching or persuasive depth. Do not under-write.{{/isTextHeavy}}
 
 ## Enrichment (CRITICAL)
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
 - ENRICH the idea: add scroll-stopping hooks, curiosity gaps, emotional angles. Expand key points. Create value-driven, shareable content.
 
 ## Source Image Overlay
-- If a [Source Image URL: https...] is provided in the idea, you MUST structure visualAdvice on every page (or at least the cover) to include an explicit layout command: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
+- If a [Source Image URL: https...] is provided in the idea, put the layout command in each relevant page's **overallDesign**.
 
 ## Output
 Return valid JSON only. **postAim is required** (1–3 sentences, max 500 characters): brand- and audience-grounded intent for the whole carousel.
 {
   "postAim": "Required: context + intent for the carousel",
   "pages": [
-    { "pageIndex": 1, "imageTextOnImage": "e.g. upper third, large: [hero copy] — lower right, small: [caption] (in the user's language)", "visualAdvice": "Designer layout: background + text blocks + spacing + cohesive colors (4–6 sentences)" },
+    { "pageIndex": 1, "header": "", "overallDesign": "Full slide: scene + copy + placement", "styling": "Palette, light, mood, medium" },
     ...
   ],
   "igCaption": "Full caption up to 2000 characters: hook, complete narrative across slides, CTA. Max 3 hashtags."
 }
 
-Field discipline: each slide's imageTextOnImage stays within {{onImageMaxChars}} characters. visualAdvice per page: HIGHLY DETAILED (4–6 sentences, 80–120 words). igCaption: one full story that reflects the entire carousel—not a short teaser.`;
+Field discipline: each slide overallDesign ≤ {{overallMaxChars}} characters; styling ≤ {{stylingMaxChars}} characters. igCaption: one full story that reflects the entire carousel—not a short teaser.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;
   language: string;
   format: string;
-  layout: string;
+  layoutSpatialLine: string;
+  overallDesignGuide: string;
+  stylingGuide: string;
   contentFrameworkDesc: string;
   aspectNote: string;
 }): string {
   return replaceAll(DRAFT_SINGLE_LIGHT, {
     ...vars,
-    onImageMaxChars: String(MAX_ON_IMAGE_INSTRUCTION_CHARS),
+    overallMaxChars: String(MAX_ON_IMAGE_INSTRUCTION_CHARS),
+    stylingMaxChars: String(MAX_STYLING_CHARS),
   });
 }
 
@@ -291,7 +301,9 @@ export function getCarouselDraftPromptLight(vars: {
   format: string;
   aspectNote: string;
   contentFrameworkDesc: string;
-  layoutGuide: string;
+  layoutSpatialLine: string;
+  overallDesignGuide: string;
+  stylingGuide: string;
   isTextHeavy: boolean;
 }): string {
   let t = DRAFT_CAROUSEL_LIGHT.replace(/\{\{pageCount\}\}/g, String(vars.pageCount));
@@ -302,7 +314,10 @@ export function getCarouselDraftPromptLight(vars: {
     format: vars.format,
     aspectNote: vars.aspectNote,
     contentFrameworkDesc: vars.contentFrameworkDesc,
-    layoutGuide: vars.layoutGuide,
-    onImageMaxChars: String(MAX_ON_IMAGE_INSTRUCTION_CHARS),
+    layoutSpatialLine: vars.layoutSpatialLine,
+    overallDesignGuide: vars.overallDesignGuide,
+    stylingGuide: vars.stylingGuide,
+    overallMaxChars: String(MAX_ON_IMAGE_INSTRUCTION_CHARS),
+    stylingMaxChars: String(MAX_STYLING_CHARS),
   });
 }

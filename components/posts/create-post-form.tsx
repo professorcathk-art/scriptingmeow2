@@ -10,15 +10,19 @@ import { PLAN_LIMITS } from "@/types/database";
 import {
   MAX_IG_CAPTION_CHARS,
   MAX_CONTENT_IDEA_CHARS,
-  MAX_ON_IMAGE_INSTRUCTION_CHARS,
+  MAX_OVERALL_DESIGN_CHARS,
+  MAX_STYLING_CHARS,
 } from "@/lib/constants";
+import {
+  normalizeCarouselDraftPage,
+  normalizeDraftPageRow,
+  type DraftCarouselPageFields,
+} from "@/lib/draft-data";
 import { parseStructuredIdea, structuredIdeaToBrief, ideaListLabel } from "@/lib/idea-content";
 
 const CREATE_POST_DRAFT_KEY = "createPost_draft";
 const MAX_CAPTION_CHARS = MAX_IG_CAPTION_CHARS;
 const MAX_HASHTAGS = 3;
-/** On-image brief: copy + placement instructions (aligned with AI prompts). */
-const MAX_IMAGE_TEXT_CHARS = MAX_ON_IMAGE_INSTRUCTION_CHARS;
 
 /** Enforce max chars and max 3 hashtags on caption input. */
 function enforceCaptionLimits(text: string): string {
@@ -50,7 +54,7 @@ type PostTemplate = {
   custom_width?: number | null;
   custom_height?: number | null;
   carousel_page_count?: number | null;
-  carousel_pages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }> | null;
+  carousel_pages?: DraftCarouselPageFields[] | null;
 };
 
 interface CreatePostFormProps {
@@ -68,7 +72,7 @@ interface CreatePostFormProps {
     customWidth?: number;
     customHeight?: number;
     carouselPageCount: number;
-    carouselPages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }>;
+    carouselPages?: DraftCarouselPageFields[];
   } | null;
   editPost?: {
     id: string;
@@ -137,8 +141,8 @@ export function CreatePostForm({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
   const [tryStyleSetupLoading, setTryStyleSetupLoading] = useState(!!prefillFromTryStyle);
-  type SingleDraft = { imageTextOnImage: string; visualAdvice: string; igCaption: string; postAim?: string };
-  type CarouselDraftItem = { pages: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]; igCaption: string; postAim?: string };
+  type SingleDraft = { overallDesign: string; styling: string; igCaption: string; postAim?: string };
+  type CarouselDraftItem = { pages: DraftCarouselPageFields[]; igCaption: string; postAim?: string };
   const [draftVariations, setDraftVariations] = useState<(SingleDraft | CarouselDraftItem)[] | null>(null);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState<0 | 1>(0);
   const [formData, setFormData] = useState({
@@ -163,9 +167,7 @@ export function CreatePostForm({
   const [referenceImageUrls, setReferenceImageUrls] = useState<string[]>([]);
   const [referenceText, setReferenceText] = useState("");
   const [referenceUploading, setReferenceUploading] = useState(false);
-  const [carouselPages, setCarouselPages] = useState<
-    { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]
-  >([]);
+  const [carouselPages, setCarouselPages] = useState<DraftCarouselPageFields[]>([]);
   const [is4KEnabled, setIs4KEnabled] = useState(false);
   const saveDraft = useCallback(() => {
     try {
@@ -275,7 +277,9 @@ export function CreatePostForm({
         carouselPageCount: prefillTemplate.carouselPageCount,
       }));
       if (prefillTemplate.carouselPages?.length) {
-        setCarouselPages(prefillTemplate.carouselPages);
+        setCarouselPages(
+          prefillTemplate.carouselPages.map((p) => normalizeCarouselDraftPage(p as Record<string, unknown>))
+        );
       }
     }
   }, [prefillTemplate]);
@@ -287,7 +291,7 @@ export function CreatePostForm({
       return;
     }
     if (editPost) {
-      const draft = editPost.draft_data as { visualAdvice?: string; imageTextOnImage?: string; carouselPages?: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[] } | null;
+      const draft = editPost.draft_data as Record<string, unknown> | null;
       const cap = editPost.caption as { igCaption?: string };
       setFormData((prev) => ({
         ...prev,
@@ -296,14 +300,25 @@ export function CreatePostForm({
         format: (editPost.format as PostFormat) || "square",
         contentIdea: editPost.content_idea || "",
       }));
-      if (draft?.carouselPages?.length) {
-        setCarouselPages(draft.carouselPages);
-        setDraftVariations([{ pages: draft.carouselPages, igCaption: cap?.igCaption ?? "" }]);
-      } else if (draft?.visualAdvice !== undefined) {
+      if (draft && "carouselPages" in draft && Array.isArray(draft.carouselPages) && draft.carouselPages.length) {
+        const pages = (draft.carouselPages as unknown[]).map((p) =>
+          normalizeCarouselDraftPage(p as Record<string, unknown>)
+        );
+        setCarouselPages(pages);
+        setDraftVariations([
+          {
+            pages,
+            igCaption: cap?.igCaption ?? "",
+            postAim: typeof draft.postAim === "string" ? draft.postAim : undefined,
+          },
+        ]);
+      } else if (draft != null) {
+        const norm = normalizeDraftPageRow(draft);
         const single = {
-          imageTextOnImage: draft.imageTextOnImage ?? "",
-          visualAdvice: draft.visualAdvice ?? "",
+          overallDesign: norm.overallDesign,
+          styling: norm.styling,
           igCaption: cap?.igCaption ?? "",
+          postAim: typeof draft.postAim === "string" ? draft.postAim : undefined,
         };
         setDraftVariations([single, single]);
       }
@@ -319,7 +334,11 @@ export function CreatePostForm({
           setStep(Math.min(data.step, 3) as 1 | 2 | 3);
           if (data.draftVariations?.length) setDraftVariations(data.draftVariations);
           if (typeof data.selectedDraftIndex === "number") setSelectedDraftIndex(data.selectedDraftIndex as 0 | 1);
-          if (Array.isArray(data.carouselPages)) setCarouselPages(data.carouselPages);
+          if (Array.isArray(data.carouselPages)) {
+            setCarouselPages(
+              data.carouselPages.map((p: Record<string, unknown>) => normalizeCarouselDraftPage(p))
+            );
+          }
           if (Array.isArray(data.selectedSampleUrls)) setSelectedSampleUrls(data.selectedSampleUrls);
           if (Array.isArray(data.importantAssetUrls)) setImportantAssetUrls(data.importantAssetUrls);
           if (Array.isArray(data.referenceImageUrls)) setReferenceImageUrls(data.referenceImageUrls);
@@ -502,7 +521,11 @@ export function CreatePostForm({
           if (isCarouselDraft && vars.length >= 1) {
             setDraftVariations(vars);
             setSelectedDraftIndex(0);
-            setCarouselPages(vars[0].pages ?? []);
+            setCarouselPages(
+              (vars[0].pages ?? []).map((p: Record<string, unknown>) =>
+                normalizeCarouselDraftPage(p)
+              )
+            );
           } else if (vars.length >= 2) {
             setDraftVariations(vars);
             setSelectedDraftIndex(0);
@@ -511,8 +534,8 @@ export function CreatePostForm({
             setSelectedDraftIndex(0);
           } else {
             const single = {
-              imageTextOnImage: data.imageTextOnImage ?? "",
-              visualAdvice: data.visualAdvice ?? "",
+              overallDesign: data.overallDesign ?? "",
+              styling: data.styling ?? "",
               igCaption: data.igCaption ?? "",
               postAim: data.postAim ?? "",
             };
@@ -574,15 +597,15 @@ export function CreatePostForm({
           carouselPageCount: formData.postType === "carousel" ? formData.carouselPageCount : undefined,
           contentFramework: formData.contentFramework,
           postStyle: formData.postStyle,
-          confirmedImageTextOnImage: isCarousel ? undefined : (draft as { imageTextOnImage?: string }).imageTextOnImage,
-          confirmedVisualAdvice: isCarousel ? undefined : (draft as { visualAdvice?: string }).visualAdvice,
+          confirmedOverallDesign: isCarousel ? undefined : (draft as SingleDraft).overallDesign,
+          confirmedStyling: isCarousel ? undefined : (draft as SingleDraft).styling,
           confirmedIgCaption: draft.igCaption,
           postAim: (draft as { postAim?: string }).postAim,
           carouselPages:
             formData.postType === "carousel"
               ? carouselPages.length > 0
                 ? carouselPages
-                : (draftVariations?.[selectedDraftIndex] as { pages?: { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[] })?.pages
+                : (draftVariations?.[selectedDraftIndex] as { pages?: DraftCarouselPageFields[] })?.pages
               : undefined,
           selectedSampleImageUrls: selectedSampleUrls,
           importantAssetUrls: importantAssetUrls,
@@ -1246,7 +1269,7 @@ export function CreatePostForm({
     const draft = draftVariations[selectedDraftIndex];
     const isCarouselDraft = "pages" in draft;
     const carouselDraft = isCarouselDraft ? (draft as CarouselDraftItem) : null;
-    const setDraftField = (field: "imageTextOnImage" | "visualAdvice" | "igCaption" | "postAim", value: string) => {
+    const setDraftField = (field: "overallDesign" | "styling" | "igCaption" | "postAim", value: string) => {
       setDraftVariations((prev) => {
         if (!prev) return prev;
         if (field === "postAim" && !isCarouselDraft) {
@@ -1259,7 +1282,7 @@ export function CreatePostForm({
     };
     const setCarouselPageField = (
       pageIndex: number,
-      field: "header" | "imageTextOnImage" | "visualAdvice",
+      field: "header" | "overallDesign" | "styling",
       value: string
     ) => {
       setCarouselPages((prev) =>
@@ -1275,7 +1298,7 @@ export function CreatePostForm({
           Step 3: Confirm & Generate Image
         </h2>
         <p className="text-sm text-zinc-400 mb-4">
-          Review the caption and visual advice. Edit if needed, then confirm to generate the image.
+          Review the caption, overall design, and styling. Edit if needed, then confirm to generate the image.
         </p>
 
         <div className="space-y-4">
@@ -1318,7 +1341,9 @@ export function CreatePostForm({
                   >
                     <span className="text-xs font-medium text-zinc-500">Variation {i + 1}</span>
                     <p className="mt-2 text-sm text-zinc-200 line-clamp-3">
-                      {"pages" in v ? `Carousel (${v.pages.length} pages)` : v.imageTextOnImage || v.igCaption || "—"}
+                      {"pages" in v
+                        ? `Carousel (${v.pages.length} pages)`
+                        : (v as SingleDraft).overallDesign || v.igCaption || "—"}
                     </p>
                   </button>
                 ))}
@@ -1341,35 +1366,45 @@ export function CreatePostForm({
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">
-                      Text on Image (plain text) — where each line sits, how prominent it is, and the exact wording (shot-list style)
+                      Overall design
                     </label>
+                    <p className="text-xs text-zinc-600 mb-1">
+                      One brief for the whole slide: scene, subjects, composition, objects, and all text that appears on the image (placement and exact wording). Plain text only.
+                    </p>
                     <textarea
-                      value={page.imageTextOnImage}
+                      value={page.overallDesign}
                       onChange={(e) =>
-                        setCarouselPageField(page.pageIndex, "imageTextOnImage", e.target.value)
+                        setCarouselPageField(page.pageIndex, "overallDesign", e.target.value)
                       }
-                      maxLength={MAX_IMAGE_TEXT_CHARS}
+                      maxLength={MAX_OVERALL_DESIGN_CHARS}
                       className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                      rows={5}
-                      placeholder={`e.g. Upper third, large: main hook\nLower right, small: supporting line\nOver photo, medium: label — up to ${MAX_IMAGE_TEXT_CHARS} characters per slide`}
+                      rows={6}
+                      placeholder={`e.g. A split layout: left, product on marble; right, headline and three bullet lines with labels. Upper third: small kicker. — up to ${MAX_OVERALL_DESIGN_CHARS} characters per slide`}
                     />
                     <p className="text-xs text-zinc-600 mt-1">
-                      {page.imageTextOnImage.length}/{MAX_IMAGE_TEXT_CHARS}
+                      {page.overallDesign.length}/{MAX_OVERALL_DESIGN_CHARS}
                     </p>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">
-                      Visual Advice (for image generation)
+                      Styling
                     </label>
+                    <p className="text-xs text-zinc-600 mb-1">
+                      Brand-aligned look: palette, light, mood, medium, typography feel. Keep this aligned with your brandbook so execution stays consistent.
+                    </p>
                     <textarea
-                      value={page.visualAdvice}
+                      value={page.styling}
                       onChange={(e) =>
-                        setCarouselPageField(page.pageIndex, "visualAdvice", e.target.value)
+                        setCarouselPageField(page.pageIndex, "styling", e.target.value)
                       }
+                      maxLength={MAX_STYLING_CHARS}
                       className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
                       rows={5}
-                      placeholder="Detailed visual description (2–4 sentences: composition, lighting, text placement)"
+                      placeholder="e.g. Soft natural light, muted sage and cream, editorial sans-serif feel, generous margins"
                     />
+                    <p className="text-xs text-zinc-600 mt-1">
+                      {page.styling.length}/{MAX_STYLING_CHARS}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -1377,27 +1412,23 @@ export function CreatePostForm({
           ) : (
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Text on Image (editable) — Plain text only, no markdown
+              Overall design
             </label>
             <p className="text-xs text-zinc-500 mb-1">
-              {!formData.postStyle || formData.postStyle === "immersive-photo"
-                ? "Minimal or no text. Leave blank for pure image."
-                : formData.postStyle === "editorial"
-                  ? "Describe placement + emphasis + exact copy (zones, alignment)—or a simple headline stack if that fits. Plain text only (no #, ##, ###)."
-                  : "Art-direction brief: where each text block sits, how big it reads, and the exact words. Plain text only."}
+              One brief for the whole graphic: scene, subjects, composition, objects, and all on-image copy (where it sits and exact wording). Plain text only, no markdown.
             </p>
             <textarea
-              value={draft.imageTextOnImage}
+              value={(draft as SingleDraft).overallDesign}
               onChange={(e) =>
-                setDraftField("imageTextOnImage", e.target.value)
+                setDraftField("overallDesign", e.target.value)
               }
-              maxLength={MAX_IMAGE_TEXT_CHARS}
+              maxLength={MAX_OVERALL_DESIGN_CHARS}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-              rows={6}
-              placeholder={!formData.postStyle || formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : `e.g. Top center, hero: …\nBottom band, small: … — up to ${MAX_IMAGE_TEXT_CHARS} characters`}
+              rows={8}
+              placeholder={`e.g. A calm lifestyle scene: subject at desk, soft window light; headline upper left, subline under it, small CTA bottom center — up to ${MAX_OVERALL_DESIGN_CHARS} characters`}
             />
             <p className="text-xs text-zinc-500 mt-1">
-              {draft.imageTextOnImage.length}/{MAX_IMAGE_TEXT_CHARS}
+              {(draft as SingleDraft).overallDesign.length}/{MAX_OVERALL_DESIGN_CHARS}
             </p>
           </div>
           )}
@@ -1405,17 +1436,24 @@ export function CreatePostForm({
           {!isCarouselDraft && (
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Visual Advice for Image Generation
+              Styling
             </label>
+            <p className="text-xs text-zinc-500 mb-1">
+              How it should look: palette, light, mood, medium, typography feel—aligned with your brandbook. This steers execution without repeating the full brandbook in the image prompt.
+            </p>
             <textarea
-              value={draft.visualAdvice}
+              value={(draft as SingleDraft).styling}
               onChange={(e) =>
-                setDraftField("visualAdvice", e.target.value)
+                setDraftField("styling", e.target.value)
               }
+              maxLength={MAX_STYLING_CHARS}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
               rows={6}
-              placeholder="Detailed visual description (2–4 sentences: composition, lighting, text placement, style)"
+              placeholder="e.g. Warm diffused light, deep navy and gold accents, premium editorial, high contrast for mobile readability"
             />
+            <p className="text-xs text-zinc-500 mt-1">
+              {(draft as SingleDraft).styling.length}/{MAX_STYLING_CHARS}
+            </p>
           </div>
           )}
 

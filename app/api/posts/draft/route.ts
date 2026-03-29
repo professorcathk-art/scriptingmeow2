@@ -130,11 +130,14 @@ export async function POST(request: Request) {
           carouselPageCount
         );
 
-    const isFallback = (r: typeof result) =>
-      !("pages" in r) &&
-      Array.isArray(r) &&
-      r.length > 0 &&
-      (r[0].visualAdvice?.startsWith("Professional Instagram post image.") ?? false);
+    const isFallback = (r: typeof result) => {
+      if ("pages" in r || !Array.isArray(r) || r.length === 0) return false;
+      const s = r[0].styling ?? "";
+      return (
+        s.startsWith("Professional Instagram post image.") ||
+        s.startsWith("Professional Instagram post.")
+      );
+    };
     if (brandbook && isFallback(result)) {
       console.warn("[posts/draft] generatePost returned fallback, retrying with generatePostLight");
       result = await generatePostLight(
@@ -158,8 +161,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       variations: result.map((v) => ({
-        imageTextOnImage: v.imageTextOnImage ?? "",
-        visualAdvice: v.visualAdvice ?? "",
+        overallDesign: v.overallDesign ?? "",
+        styling: v.styling ?? "",
         igCaption: v.igCaption ?? "",
         postAim: v.postAim?.trim() || defaultPostAimFromBrief(enrichedIdea),
       })),

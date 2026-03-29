@@ -10,7 +10,12 @@ import {
   getSingleImageDraftPromptLight,
   getCarouselDraftPromptLight,
 } from "./load-prompts";
-import { MAX_IG_CAPTION_CHARS, MAX_CONTENT_IDEA_CHARS, MAX_ON_IMAGE_INSTRUCTION_CHARS } from "@/lib/constants";
+import {
+  MAX_IG_CAPTION_CHARS,
+  MAX_CONTENT_IDEA_CHARS,
+  MAX_ON_IMAGE_INSTRUCTION_CHARS,
+  MAX_STYLING_CHARS,
+} from "@/lib/constants";
 import { defaultPostAimFromBrief } from "@/lib/brand-context";
 import {
   draftOutputLanguageInstruction,
@@ -110,8 +115,8 @@ function safeGetText(response: { candidates?: Array<{ content?: { parts?: Array<
 }
 
 export type DraftOutput = {
-  imageTextOnImage: string;
-  visualAdvice: string;
+  overallDesign: string;
+  styling: string;
   igCaption: string;
   postAim?: string;
 };
@@ -119,8 +124,8 @@ export type DraftOutput = {
 export type CarouselPageDraft = {
   pageIndex: number;
   header: string;
-  imageTextOnImage: string;
-  visualAdvice: string;
+  overallDesign: string;
+  styling: string;
 };
 
 export type CarouselDraftOutput = {
@@ -141,12 +146,12 @@ function stripMarkdownFromText(s: string): string {
     .trim();
 }
 
-/** Parse single draft from JSON. */
+/** Parse single draft from JSON (supports legacy imageTextOnImage / visualAdvice keys). */
 function parseSingleDraft(post: Record<string, unknown>, postAim?: string): DraftOutput {
-  const raw = String(post.imageTextOnImage ?? post.imageText ?? "").trim();
+  const raw = String(post.overallDesign ?? post.imageTextOnImage ?? post.imageText ?? "").trim();
   return {
-    imageTextOnImage: stripMarkdownFromText(raw),
-    visualAdvice: String(post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
+    overallDesign: stripMarkdownFromText(raw),
+    styling: String(post.styling ?? post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
     igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, MAX_IG_CAPTION_CHARS),
     postAim: postAim || (typeof post.postAim === "string" ? post.postAim : undefined),
   };
@@ -516,22 +521,41 @@ const LAYOUT_SPATIAL_DIRECTIVES: Record<string, string> = {
     "INTEGRATED TEXT–IMAGE: Weave type with imagery; text may overlay, wrap, or sit in designed pockets within the scene—not only in empty margins.",
 };
 
-const IMAGE_TEXT_LIMIT = `On-image field: plain text only, no markdown. Cap total length at ${MAX_ON_IMAGE_INSTRUCTION_CHARS} characters (exact wording + optional placement notes). Compress thoughtfully—never end mid-sentence.`;
-const LAYOUT_TEXT_GUIDE: Record<string, string> = {
-  "magazine-editorial": `Minimalist editorial: clean, magazine-like. PLAIN TEXT only. Prefer zone + emphasis + exact wording (e.g. top band large / margin small quote); rigid Headline/Subhead/Body only if it fits. ${IMAGE_TEXT_LIMIT}`,
-  "cinematic-poster": `Cinematic poster: title line plus supporting lines; bold, dramatic type. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "immersive-visual": "Immersive visual: no text or one short tagline. Leave imageTextOnImage blank or a single line. Prioritize photography/illustration.",
-  "split-screen": `Split screen: headline plus supporting copy; substantive. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "text-top": `Text at top: headline and subhead in upper area; body below as needed. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "text-bottom": `Image top, text bottom: headline and body anchored low. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "text-heavy-infographic": `Infographic: dense type. Prefer a placement-first brief (zone + emphasis + exact copy per line); avoid robotic Headline/Subhead/Body unless the slide truly needs that structure. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "quote-card": `Statement card: the key quote or claim (2–4 lines). Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "immersive-photo": "Immersive photo: no text or one short tagline. Leave imageTextOnImage blank or minimal.",
-  editorial: `Editorial: Headline / Subhead / Body or equivalent; generous negative space implied in your wording. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "text-heavy": `Text-heavy slide: placement-first brief (where + how prominent + exact copy per block). Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "tweet-card": `Quote-style card: punchy quote or hot take (2–4 lines). Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  unspecified: `Balanced graphic: on-image copy only when it serves the idea. Write a short director-style brief—zones, emphasis, exact words—not a filler Headline/Subhead/Body pattern. ${IMAGE_TEXT_LIMIT}`,
-  "text-image-balanced": `Integrated text–image: weave copy into the scene. Describe placement-first (where each line sits, how bold/large) plus exact wording—avoid defaulting to a rigid three-line template. ${IMAGE_TEXT_LIMIT}`,
+const OVERALL_LIMIT = `Plain text only, no markdown. Cap at ${MAX_ON_IMAGE_INSTRUCTION_CHARS} characters. Describe the full picture: setting, people/objects, composition, and all text that must appear (placement + emphasis + exact words).`;
+const STYLING_LIMIT = `Plain text only, no markdown. Cap at ${MAX_STYLING_CHARS} characters. Brand-aligned look only: palette, lighting mood, medium/texture, typography personality—no scene layout or story (that belongs in overallDesign).`;
+
+const LAYOUT_OVERALL_DESIGN_GUIDE: Record<string, string> = {
+  "magazine-editorial": `Overall design: editorial scene + all in-frame text—who/what is in shot, where elements sit, hero vs supporting type. ${OVERALL_LIMIT}`,
+  "cinematic-poster": `Overall design: poster scene + title/supporting copy placement. ${OVERALL_LIMIT}`,
+  "immersive-visual": "Overall design: immersive scene; text minimal or one tagline—describe scene and any text precisely.",
+  "split-screen": `Overall design: split layout—what fills each region and all copy. ${OVERALL_LIMIT}`,
+  "text-top": `Overall design: subject anchored low; text block in upper area—describe both. ${OVERALL_LIMIT}`,
+  "text-bottom": `Overall design: subject upper; text anchored low—describe both. ${OVERALL_LIMIT}`,
+  "text-heavy-infographic": `Overall design: structured slide—data points, labels, hierarchy, placement. ${OVERALL_LIMIT}`,
+  "quote-card": `Overall design: quote card—background treatment implied + exact quote lines and positions. ${OVERALL_LIMIT}`,
+  "immersive-photo": "Overall design: photo-forward scene; text optional—describe scene and any overlay copy.",
+  editorial: `Overall design: editorial spread—scene, subjects, masthead and body copy zones. ${OVERALL_LIMIT}`,
+  "text-heavy": `Overall design: dense slide—blocks, bullets, placement. ${OVERALL_LIMIT}`,
+  "tweet-card": `Overall design: statement card—quote/hot take and layout. ${OVERALL_LIMIT}`,
+  unspecified: `Overall design: one coherent shot—scene, key objects, composition, all on-image text. ${OVERALL_LIMIT}`,
+  "text-image-balanced": `Overall design: integrated text–image—how type weaves with the scene and what exactly reads where. ${OVERALL_LIMIT}`,
+};
+
+const LAYOUT_STYLING_GUIDE: Record<string, string> = {
+  "magazine-editorial": `Styling: refined editorial palette, paper-like or matte finish, high contrast type, premium restrained accents. ${STYLING_LIMIT}`,
+  "cinematic-poster": `Styling: cinematic color grade, dramatic light, bold type treatment, filmic contrast. ${STYLING_LIMIT}`,
+  "immersive-visual": `Styling: natural or graded photographic light, cohesive palette, believable materials. ${STYLING_LIMIT}`,
+  "split-screen": `Styling: clean split color fields, crisp typography, balanced contrast across halves. ${STYLING_LIMIT}`,
+  "text-top": `Styling: bright readable type over image; soft separation if needed; brand-consistent palette. ${STYLING_LIMIT}`,
+  "text-bottom": `Styling: legible lower band; gradient or scrim if needed; cohesive with brand colors. ${STYLING_LIMIT}`,
+  "text-heavy-infographic": `Styling: infographic clarity—limited palette, clear hierarchy, crisp icons/lines if used. ${STYLING_LIMIT}`,
+  "quote-card": `Styling: textured or soft background; quote typography emphasis; muted or bold palette per brand. ${STYLING_LIMIT}`,
+  "immersive-photo": `Styling: photographic realism, natural light, color harmony; subtle overlays only. ${STYLING_LIMIT}`,
+  editorial: `Styling: editorial palette and type personality; premium print feel. ${STYLING_LIMIT}`,
+  "text-heavy": `Styling: chart-friendly palette, readable small type, clean grid discipline. ${STYLING_LIMIT}`,
+  "tweet-card": `Styling: social-card energy—bold type, high contrast, on-brand accent. ${STYLING_LIMIT}`,
+  unspecified: `Styling: cohesive palette, lighting mood, medium (photo/illustration/3D), texture—aligned with brandbook. ${STYLING_LIMIT}`,
+  "text-image-balanced": `Styling: harmonious integration—type color readable on image; brand palette; controlled texture. ${STYLING_LIMIT}`,
 };
 
 /** Quality bar for single vs carousel (English-only for model instructions). */
@@ -573,7 +597,11 @@ export async function generatePostLight(
   const aspectNote =
     format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
   const layoutKey = resolveLayoutKey(postStyle);
-  const layoutGuide = LAYOUT_TEXT_GUIDE[layoutKey] || LAYOUT_TEXT_GUIDE["unspecified"];
+  const overallDesignGuide =
+    LAYOUT_OVERALL_DESIGN_GUIDE[layoutKey] || LAYOUT_OVERALL_DESIGN_GUIDE["unspecified"];
+  const stylingGuide = LAYOUT_STYLING_GUIDE[layoutKey] || LAYOUT_STYLING_GUIDE["unspecified"];
+  const layoutSpatialLine =
+    LAYOUT_SPATIAL_DIRECTIVES[layoutKey] || LAYOUT_SPATIAL_DIRECTIVES["unspecified"];
 
   const isCarousel =
     postType === "carousel" && typeof carouselPageCount === "number" && carouselPageCount >= 1 && carouselPageCount <= 9;
@@ -592,7 +620,9 @@ export async function generatePostLight(
         format,
         aspectNote,
         contentFrameworkDesc,
-        layoutGuide,
+        layoutSpatialLine,
+        overallDesignGuide,
+        stylingGuide,
         isTextHeavy,
       });
     const parts: ContentPart[] = [{ text: prompt }];
@@ -629,8 +659,8 @@ export async function generatePostLight(
       fallbackPages.push({
         pageIndex: i + 1,
         header: `Slide ${i + 1}`,
-        imageTextOnImage: i === 0 ? idea.slice(0, 100) : "",
-        visualAdvice: `Professional Instagram carousel page ${i + 1}. ${idea}.`,
+        overallDesign: i === 0 ? idea.slice(0, 100) : "",
+        styling: `Professional Instagram carousel page ${i + 1}. ${idea}.`,
       });
     }
     return {
@@ -646,7 +676,9 @@ export async function generatePostLight(
       idea,
       language,
       format,
-      layout: layoutGuide,
+      layoutSpatialLine,
+      overallDesignGuide,
+      stylingGuide,
       contentFrameworkDesc,
       aspectNote,
     });
@@ -682,8 +714,8 @@ export async function generatePostLight(
     }
   }
   const fallback: DraftOutput = {
-    imageTextOnImage: "",
-    visualAdvice: `Professional Instagram post. ${idea}. Clean, modern. Aspect ${aspectNote}.`,
+    overallDesign: "",
+    styling: `Professional Instagram post. ${idea}. Clean, modern. Aspect ${aspectNote}.`,
     igCaption: `${idea.replace(/\s+/g, " ").trim().slice(0, MAX_IG_CAPTION_CHARS - 40)}\n\n#instagram`,
     postAim: defaultPostAimFromBrief(idea),
   };
@@ -708,8 +740,8 @@ function parseCarouselJson(text: string, pageCount: number): CarouselDraftOutput
       pages.push({
         pageIndex: i + 1,
         header: String(p.header ?? p.title ?? `Page ${i + 1}`).trim(),
-        imageTextOnImage: stripMarkdownFromText(String(p.imageTextOnImage ?? p.imageText ?? "")),
-        visualAdvice: String(p.visualAdvice ?? p.nanoBananaPrompt ?? "").trim(),
+        overallDesign: stripMarkdownFromText(String(p.overallDesign ?? p.imageTextOnImage ?? p.imageText ?? "")),
+        styling: String(p.styling ?? p.visualAdvice ?? p.nanoBananaPrompt ?? "").trim(),
       });
     }
     return {
@@ -769,10 +801,12 @@ export async function generatePost(
     const carouselLayoutKey = resolveLayoutKey(postStyle);
     const isTextHeavy =
       carouselLayoutKey === "text-heavy-infographic" || carouselLayoutKey === "text-heavy";
-    const layoutGuide =
+    const layoutSpatialLine =
       LAYOUT_SPATIAL_DIRECTIVES[carouselLayoutKey] || LAYOUT_SPATIAL_DIRECTIVES["unspecified"];
-    const textGuide =
-      LAYOUT_TEXT_GUIDE[carouselLayoutKey] || LAYOUT_TEXT_GUIDE["unspecified"];
+    const overallDesignGuide =
+      LAYOUT_OVERALL_DESIGN_GUIDE[carouselLayoutKey] || LAYOUT_OVERALL_DESIGN_GUIDE["unspecified"];
+    const stylingGuide =
+      LAYOUT_STYLING_GUIDE[carouselLayoutKey] || LAYOUT_STYLING_GUIDE["unspecified"];
     const dosDonts = formatDosAndDonts(brandbook.dosAndDonts);
 
     const carouselPrompt =
@@ -786,10 +820,11 @@ export async function generatePost(
         style,
         colors: colors || "professional palette",
         contentFrameworkDesc: CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"],
-        layoutGuide,
+        layoutSpatialLine,
         layoutStyleDetail: "",
         dosDonts,
-        textGuide,
+        overallDesignGuide,
+        stylingGuide,
         idea,
         format,
         aspectNote,
@@ -837,8 +872,8 @@ export async function generatePost(
       fallbackPages.push({
         pageIndex: i + 1,
         header: fallbackHeaders[i] || `Slide ${i + 1}`,
-        imageTextOnImage: i === 0 ? idea.slice(0, 100) : "",
-        visualAdvice: `Professional Instagram carousel page ${i + 1}. ${idea}. Clean, modern style.`,
+        overallDesign: i === 0 ? idea.slice(0, 100) : "",
+        styling: `Professional Instagram carousel page ${i + 1}. ${idea}. Clean, modern style.`,
       });
     }
     return {
@@ -865,7 +900,8 @@ export async function generatePost(
   const personality = truncate(brandbook.brandPersonality, 200);
   const tone = truncate(brandbook.toneOfVoice, 150);
   const layout = resolveLayoutKey(postStyle);
-  const textGuide = LAYOUT_TEXT_GUIDE[layout] || LAYOUT_TEXT_GUIDE["unspecified"];
+  const overallDesignGuide = LAYOUT_OVERALL_DESIGN_GUIDE[layout] || LAYOUT_OVERALL_DESIGN_GUIDE["unspecified"];
+  const stylingGuide = LAYOUT_STYLING_GUIDE[layout] || LAYOUT_STYLING_GUIDE["unspecified"];
   const aspectNote = format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
 
   const contentFrameworkDesc = CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"];
@@ -912,7 +948,8 @@ export async function generatePost(
       idea,
       language,
       format,
-      textGuide,
+      overallDesignGuide,
+      stylingGuide,
       aspectNote,
     });
 
@@ -959,8 +996,8 @@ export async function generatePost(
   }
   const headline = idea.slice(0, 80).trim() + (idea.length > 80 ? "…" : "");
   const fallback: DraftOutput = {
-    imageTextOnImage: headline ? `Headline: ${headline}` : "",
-    visualAdvice: `Professional Instagram post image. ${contentIdea}. Clean, modern style. High-quality, scroll-stopping visual. ${format === "portrait" ? "Portrait 4:5." : format === "story" || format === "reel-cover" ? "Vertical 9:16." : "Square 1:1."}`,
+    overallDesign: headline ? `Hero line: ${headline}` : "",
+    styling: `Professional Instagram post image. ${contentIdea}. Clean, modern style. High-quality, scroll-stopping visual. ${format === "portrait" ? "Portrait 4:5." : format === "story" || format === "reel-cover" ? "Vertical 9:16." : "Square 1:1."}`,
     igCaption: `${contentIdea.replace(/\s+/g, " ").trim().slice(0, MAX_IG_CAPTION_CHARS - 40)}\n\nFollow for more.\n\n#instagram #content`,
     postAim: defaultPostAimFromBrief(idea),
   };

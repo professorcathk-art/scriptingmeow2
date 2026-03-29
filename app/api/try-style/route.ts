@@ -163,8 +163,8 @@ export async function POST(request: Request) {
         status: "generated",
         credits_used: 1,
         draft_data: {
-          visualAdvice: style.visualAdvice,
-          imageTextOnImage: "",
+          overallDesign: idea,
+          styling: style.visualAdvice,
         },
       })
       .select()
@@ -180,8 +180,8 @@ export async function POST(request: Request) {
 
     const fullImagePrompt = buildImagePrompt({
       brandbook,
-      visualAdvice: style.visualAdvice,
-      imageTextOnImage: undefined,
+      overallDesign: idea,
+      styling: style.visualAdvice,
       postStyle: "editorial",
       logoUrl: null,
       logoPlacement: null,

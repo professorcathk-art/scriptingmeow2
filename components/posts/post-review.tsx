@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { GeneratedPost, DraftData } from "@/types/database";
+import { draftDataHasRenderableDraft } from "@/lib/draft-data";
 import { extractSourceImageUrlFromContent } from "@/lib/rss-image-extract";
 import { SaveTemplateModal } from "./save-template-modal";
 import { InstagramHandleForm } from "@/components/billing/instagram-handle-form";
@@ -66,8 +67,8 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
     (initialPost as { is_public_gallery?: boolean }).is_public_gallery ?? false
   );
   const [draftData, setDraftData] = useState<DraftData | null>(() => {
-    const d = (initialPost as { draft_data?: DraftData }).draft_data;
-    if (d && "visualAdvice" in d && "imageTextOnImage" in d) return d;
+    const d = (initialPost as { draft_data?: unknown }).draft_data;
+    if (d && draftDataHasRenderableDraft(d as Record<string, unknown>)) return d as DraftData;
     return null;
   });
   const [sourceImageError, setSourceImageError] = useState(false);
@@ -93,8 +94,8 @@ export function PostReview({ post: initialPost, userCredits: initialCredits = 0,
     setPost(initialPost);
     setCaption(initialPost.caption);
     setIsPublicGallery((initialPost as { is_public_gallery?: boolean }).is_public_gallery ?? false);
-    const d = (initialPost as { draft_data?: DraftData }).draft_data;
-    if (d && "visualAdvice" in d && "imageTextOnImage" in d) setDraftData(d);
+    const d = (initialPost as { draft_data?: unknown }).draft_data;
+    if (d && draftDataHasRenderableDraft(d as Record<string, unknown>)) setDraftData(d as DraftData);
   }, [initialPost]);
 
   useEffect(() => {

@@ -1,13 +1,11 @@
 /**
  * Fragments prepended to draft-generation prompts (Gemini) so outputs match
- * the user's language and carousel on-image copy feels like a director's brief.
+ * the user's language and carousel **overallDesign** reads as one coherent brief.
  */
 
-/** Natural-language shot list for carousel slides (avoids rigid Headline/Subhead/Body). */
-export const DRAFT_CAROUSEL_ON_IMAGE_STYLE = `## CAROUSEL: ON-IMAGE BRIEF (STYLE)
-For each page's \`imageTextOnImage\`, treat the field as a **creative shot list**, not a form. Describe **where** each piece of type sits, **how prominent** it is, and the **exact wording**—for example: upper third centered (large hero line), bottom-right (small supporting line), label over the subject, band across the lower fifth, etc. Separate elements with newlines; use \\n inside JSON strings when needed.
-
-Do **not** default to a stiff "Headline: … / Subhead: … / Body: …" block unless the layout truly calls for it. That pattern reads robotic; prefer fluid, placement-first instructions.
+/** Emphasize unified overallDesign per carousel page (scene + copy together). */
+export const DRAFT_CAROUSEL_ON_IMAGE_STYLE = `## CAROUSEL: OVERALL DESIGN (REMINDER)
+Each page's \`overallDesign\` must describe the **whole** slide: setting and subjects/objects, composition, and **all** text (where it sits and what it says). Do not treat "text" as separate from "picture"—they are one brief. Use newlines to separate elements; use \\n inside JSON strings when needed.
 
 `;
 
@@ -20,7 +18,7 @@ export function draftOutputLanguageInstruction(language: string): string {
 
   if (lower.includes("bilingual")) {
     return `## OUTPUT LANGUAGE (MANDATORY)
-The user selected: **${lang}**. Use English and Chinese together in a natural, audience-appropriate mix across \`postAim\`, \`igCaption\`, every \`imageTextOnImage\`, carousel \`header\` values, and \`visualAdvice\` (write the creative brief in the same bilingual spirit).
+The user selected: **${lang}**. Use English and Chinese together in a natural, audience-appropriate mix across \`postAim\`, \`igCaption\`, every \`overallDesign\`, every \`styling\`, and carousel \`header\` values.
 
 ---
 
@@ -44,11 +42,11 @@ The user selected: **${lang}**.
 Write **all** of the following entirely in **${lang}** (no English defaults):
 - \`postAim\`
 - \`igCaption\`
-- Every \`imageTextOnImage\` value (the exact words that will appear on the graphic)
-- Any carousel \`header\` field
-- \`visualAdvice\`: write the full scene, layout, and lighting brief in **${lang}** so the draft is self-consistent for the user.${scriptNote}
+- Every \`overallDesign\` value (full slide brief, including any words that appear on the image)
+- Every \`styling\` value (brand look / execution notes)
+- Any carousel \`header\` field${scriptNote}
 
-Only keep English for unavoidable proper nouns, product names, or short quoted fragments from a source URL. Do **not** write the main caption or on-image copy in English when **${lang}** is not English.
+Only keep English for unavoidable proper nouns, product names, or short quoted fragments from a source URL. Do **not** write the main caption or design brief in English when **${lang}** is not English.
 
 ---
 

@@ -52,9 +52,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       caption: { igCaption: generatedPost.igCaption },
-      imageTextOnImage: generatedPost.imageTextOnImage,
-      visualDescription: generatedPost.visualAdvice,
-      nanoBananaPrompt: generatedPost.visualAdvice,
+      overallDesign: generatedPost.overallDesign,
+      styling: generatedPost.styling,
+      visualDescription: generatedPost.styling,
+      nanoBananaPrompt: generatedPost.styling,
       brandDescription: trimmed,
     });
   } catch (error) {

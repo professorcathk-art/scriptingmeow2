@@ -1,10 +1,11 @@
 /**
- * Builds the full image generation prompt including brandbook details,
- * visual advice, and text-on-image instructions.
- * Expert-level design guidance for professional IG posts.
+ * Builds the final image generation prompt: overall design brief + styling + layout rules.
+ * When draft "styling" is present, full brandbook palette/typography is not repeated—
+ * the draft styling carries brand look; we still inject logo rules and minimal safety hints.
  */
 
 import { languageInstructionForImage } from "@/lib/language-image-prompt";
+import { mergeLegacyDraftToOverall } from "@/lib/draft-data";
 
 function stripMarkdown(s: string): string {
   return String(s || "")
@@ -18,11 +19,10 @@ function stripMarkdown(s: string): string {
 }
 
 /**
- * Prepare on-image brief for the image model: strip markdown; strip legacy typography
- * role labels (Chinese/English) so they are not painted as visible words; preserve
- * placement lines and freeform instructions verbatim.
+ * Prepare overall design brief: strip markdown; strip legacy typography role labels
+ * so they are not painted as visible words; preserve placement / scene lines.
  */
-function prepareOnImageBriefForModel(rawText: string): string {
+function prepareOverallDesignForModel(rawText: string): string {
   if (!rawText) return "";
 
   const cleaned = stripMarkdown(rawText);
@@ -55,24 +55,22 @@ const BASE_PROMPT =
   "Generate a high-end, scroll-stopping Instagram graphic. Act as a master Art Director and Editorial Designer. Every visual element must be polished, cohesive, and meticulously composed.";
 
 const DESIGN_PRIORITY =
-  "DESIGN PRIORITY: Brandbook colors and reference images are for inspiration only. Your primary goal is a harmonious, professional design that looks good. If brand colors and reference image colors conflict, derive a cohesive palette—do not force clashing colors. Visual harmony and readability always win.";
+  "DESIGN PRIORITY: Reference images are for inspiration. Your primary goal is a harmonious, professional design. If reference colors and the brief conflict, follow the creative brief and styling section. Visual harmony and readability always win.";
 
 const FINAL_DESIGN_COMMANDS = `
 FINAL DESIGN COMMANDS (strictly enforce):
 - Magazine-quality execution. Sophisticated, premium, and intentional.
-- Perfect Typographic Hierarchy: The Headline must be the largest and boldest, immediately drawing the eye. Subheadlines are medium weight.
-- Color Harmony: Use a cohesive, limited palette. Avoid mixing clashing tones (e.g. warm orange with cool purple without intentional design). Ensure flawless contrast between text and background for mobile readability.
+- Perfect Typographic Hierarchy: The main headline must be the largest and boldest when text is present. Supporting lines are medium weight.
+- Color Harmony: Use a cohesive, limited palette. Ensure flawless contrast between text and background for mobile readability.
 - Integration: Text and image must not fight for attention. Use intentional negative space, subtle gradients behind text, or creative overlay techniques to blend them smoothly.
 - Spacing: Generous, clean margins. Avoid cramped, cluttered, or amateur layouts at all costs.`;
 
 const DESIGNER_TEXT_ARRANGEMENT = `
-DESIGNER TEXT ARRANGEMENT (CRITICAL when text is present):
+DESIGNER TEXT ARRANGEMENT (CRITICAL when the brief includes on-image text):
 Arrange like a professional editorial designer. Do NOT cram every word into a dense block.
-- Create breathing room: generous line spacing between headline, subheadline, and body. Leave 40–60% of the frame as intentional negative space.
-- Group related content: Headline + subheadline as one block. Body text as a separate, readable block.
-- Limit density: Max 3–4 lines per block. If body text is long, split into logical chunks with visual separation.
-- Use composition: Left-align, center, or asymmetric layout—choose one and apply consistently. Avoid walls of text.
-- Hierarchy through size: Headline 2–3× subheadline size. Subheadline 1.5× body size. Body text must remain readable at mobile scale.`;
+- Create breathing room: generous line spacing. Leave intentional negative space.
+- Group related content. Limit density: max 3–4 lines per block unless the brief specifies otherwise.
+- Hierarchy through size: hero line largest; supporting copy smaller; fine print smallest.`;
 
 const LAYOUT_DESIGN_GUIDE: Record<string, string> = {
   "magazine-editorial": `
@@ -143,13 +141,19 @@ type BrandbookVisualStyle = {
   vibe?: string[];
 } | null;
 
-export function buildImagePrompt(options: {
+export type BuildImagePromptInput = {
   brandbook: {
     visual_style?: BrandbookVisualStyle;
     brand_personality?: string;
     tone_of_voice?: string;
   };
-  visualAdvice: string;
+  /** Full creative brief: scene, people/objects, composition, all text to appear — unified. */
+  overallDesign?: string;
+  /** Brand-aligned look from draft; when set, reduces duplicate brandbook palette/typography blocks. */
+  styling?: string;
+  /** @deprecated use overallDesign + styling */
+  visualAdvice?: string;
+  /** @deprecated use overallDesign */
   imageTextOnImage?: string;
   postStyle?: string;
   pageIndex?: number;
@@ -160,12 +164,34 @@ export function buildImagePrompt(options: {
   otherBrandType?: string;
   contentFramework?: string;
   postAim?: string;
-  /** Post language — drives on-image text language (e.g. bilingual). */
   language?: string;
-}): string {
-  const vs = options.brandbook?.visual_style as BrandbookVisualStyle;
-  const pageIndex = options.pageIndex ?? 1;
+};
 
+function resolveOverallDesign(o: BuildImagePromptInput): string {
+  const direct = (o.overallDesign ?? "").trim();
+  if (direct) return direct;
+  const legacyText = (o.imageTextOnImage ?? "").trim();
+  const legacyScene = (o.visualAdvice ?? "").trim();
+  if (legacyText || legacyScene) return mergeLegacyDraftToOverall(legacyScene, legacyText);
+  return "";
+}
+
+function resolveStyling(o: BuildImagePromptInput): string {
+  return (o.styling ?? "").trim();
+}
+
+/**
+ * When draft includes a styling block, avoid repeating full brandbook colors/typography.
+ */
+function buildBrandContextBlock(options: {
+  vs: BrandbookVisualStyle;
+  pageIndex: number;
+  totalPages: number;
+  logoPlacement?: string | null;
+  logoUrl?: string | null;
+  condensed: boolean;
+}): string {
+  const { vs, pageIndex, totalPages, condensed } = options;
   const imageGenPrompt = vs?.imageGenerationPrompt?.trim();
   const colors = vs?.primaryColor
     ? [vs.primaryColor, vs.secondaryColor1, vs.secondaryColor2].filter(Boolean).join(", ")
@@ -191,14 +217,22 @@ export function buildImagePrompt(options: {
   const typographySpec = vs?.typographySpec || "";
 
   const brandContextParts: string[] = [];
-  const totalPages = options.carouselPageCount ?? 1;
   if (totalPages > 1) {
-    const pageLabel = pageIndex === 1
-      ? `This is page 1 (cover) of ${totalPages} in an Instagram carousel.`
-      : `This is page ${pageIndex} of ${totalPages} in an Instagram carousel. Maintain visual consistency with previous pages. Use a layout that looks like a typical Instagram carousel inner slide.`;
+    const pageLabel =
+      pageIndex === 1
+        ? `This is page 1 (cover) of ${totalPages} in an Instagram carousel.`
+        : `This is page ${pageIndex} of ${totalPages} in an Instagram carousel. Maintain visual consistency with previous pages. Use a layout that looks like a typical Instagram carousel inner slide.`;
     brandContextParts.push(`CAROUSEL CONTEXT: ${pageLabel}`);
   }
-  if (imageGenPrompt) {
+
+  if (condensed) {
+    if (imageGenPrompt) {
+      brandContextParts.push(`BRAND ANCHOR (short — styling section below is primary): ${imageGenPrompt.slice(0, 400)}${imageGenPrompt.length > 400 ? "…" : ""}`);
+    } else {
+      brandContextParts.push(`DEFAULT MEDIUM HINT (only if styling is silent): ${imageStyle}`);
+      if (colors) brandContextParts.push(`Palette hint (only if styling does not specify colors): ${colors}`);
+    }
+  } else if (imageGenPrompt) {
     brandContextParts.push(`CORE VISUAL IDENTITY: Brand image generation prompt (use as primary style): ${imageGenPrompt}`);
   } else {
     brandContextParts.push(`CORE VISUAL IDENTITY: Use brand visual style: ${imageStyle}`);
@@ -207,8 +241,8 @@ export function buildImagePrompt(options: {
     if (typographySpec) brandContextParts.push(`Typography aesthetic: ${typographySpec}`);
     if (!colorDescriptionDetailed && colors) brandContextParts.push(`Colors (use these): ${colors}`);
   }
-  const logoPlacement = options.logoPlacement;
-  const showLogo = options.logoUrl && logoPlacement && logoPlacement !== "none";
+
+  const showLogo = options.logoUrl && options.logoPlacement && options.logoPlacement !== "none";
   if (showLogo) {
     const placementMap: Record<string, string> = {
       "top-left": "top-left corner",
@@ -218,12 +252,32 @@ export function buildImagePrompt(options: {
       "bottom-center": "bottom center",
       "bottom-right": "bottom-right corner",
     };
-    const placement = placementMap[logoPlacement] ?? "top-right corner";
-    brandContextParts.push(`CRITICAL - LOGO: You MUST include the user's uploaded logo (provided as reference image) in the ${placement} of the composition. The logo is the user's actual branding - use it exactly as shown. Sample posts and reference images are for style/color reference ONLY - do NOT copy logos or branding from them. Always use the user's uploaded logo.`);
+    const placement = placementMap[options.logoPlacement!] ?? "top-right corner";
+    brandContextParts.push(
+      `CRITICAL - LOGO: You MUST include the user's uploaded logo (provided as reference image) in the ${placement} of the composition. The logo is the user's actual branding - use it exactly as shown. Sample posts and reference images are for style reference ONLY - do NOT copy logos from them.`
+    );
   }
-  const brandContext = brandContextParts.length > 0
-    ? `CORE VISUAL IDENTITY (MANDATORY):\n${brandContextParts.join("\n")}`
-    : "";
+
+  if (brandContextParts.length === 0) return "";
+  return `BRAND & CONTEXT (MANDATORY):\n${brandContextParts.join("\n")}`;
+}
+
+export function buildImagePrompt(options: BuildImagePromptInput): string {
+  const vs = options.brandbook?.visual_style as BrandbookVisualStyle;
+  const pageIndex = options.pageIndex ?? 1;
+  const totalPages = options.carouselPageCount ?? 1;
+
+  const stylingDraft = resolveStyling(options);
+  const condensedBrand = Boolean(stylingDraft);
+
+  const brandContext = buildBrandContextBlock({
+    vs: vs ?? {},
+    pageIndex,
+    totalPages,
+    logoPlacement: options.logoPlacement,
+    logoUrl: options.logoUrl,
+    condensed: condensedBrand,
+  });
 
   const parts: string[] = [BASE_PROMPT, DESIGN_PRIORITY];
 
@@ -235,11 +289,14 @@ export function buildImagePrompt(options: {
     const brandTypeNote = options.brandType
       ? `Brand Type: ${options.brandType === "other" && options.otherBrandType ? options.otherBrandType : options.brandType}`
       : "";
-    const contentNote = options.contentFramework && CONTENT_FRAMEWORK_IMAGE_GUIDE[options.contentFramework]
-      ? CONTENT_FRAMEWORK_IMAGE_GUIDE[options.contentFramework]
-      : "";
+    const contentNote =
+      options.contentFramework && CONTENT_FRAMEWORK_IMAGE_GUIDE[options.contentFramework]
+        ? CONTENT_FRAMEWORK_IMAGE_GUIDE[options.contentFramework]
+        : "";
     if (brandTypeNote || contentNote) {
-      parts.push(`CONTEXT & VIBE: ${[brandTypeNote, contentNote].filter(Boolean).join(". ")} Ensure the overall mood, lighting, and composition reflect this specific industry and intent.`);
+      parts.push(
+        `CONTEXT & VIBE: ${[brandTypeNote, contentNote].filter(Boolean).join(". ")} Ensure the overall mood and composition reflect this intent.`
+      );
     }
   }
 
@@ -247,8 +304,18 @@ export function buildImagePrompt(options: {
     parts.push(brandContext);
   }
 
-  if (options.visualAdvice?.trim()) {
-    parts.push(`SCENE & SUBJECT ACTION (CRITICAL): ${options.visualAdvice.trim()}\n*Instruction: Merge this specific scene description seamlessly into the Core Visual Identity defined above. Do not alter the brand's art style to fit the scene; force the scene to match the brand's aesthetic medium and colors exactly.*`);
+  if (stylingDraft) {
+    parts.push(
+      `VISUAL STYLING (PRIMARY — follow this for brand look, palette, mood, medium, light, texture; do not contradict with a generic palette): ${stylingDraft}`
+    );
+  }
+
+  const overallRaw = resolveOverallDesign(options);
+  const overallPrepared = prepareOverallDesignForModel(overallRaw);
+  if (overallPrepared) {
+    parts.push(
+      `FULL DESIGN BRIEF (CRITICAL — scene, people and objects, composition, and all text that must appear): ${overallPrepared.trim()}\n*Execute this brief faithfully. It is the single source of truth for what belongs in the frame.*`
+    );
   }
 
   const lang = (options.language || "English").trim();
@@ -258,31 +325,18 @@ export function buildImagePrompt(options: {
 
   const layoutKey = options.postStyle?.trim();
   if (layoutKey) {
-    const layoutGuide =
-      LAYOUT_DESIGN_GUIDE[layoutKey] || LAYOUT_DESIGN_GUIDE["magazine-editorial"];
+    const layoutGuide = LAYOUT_DESIGN_GUIDE[layoutKey] || LAYOUT_DESIGN_GUIDE["magazine-editorial"];
     parts.push(layoutGuide);
   }
 
   let basePrompt = parts.join("\n\n");
   if (!basePrompt.trim()) {
-    basePrompt = `Professional Instagram post. Style: ${imageStyle}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
+    const fallbackStyle = vs?.imageStyle || vs?.image_style || "professional";
+    basePrompt = `Professional Instagram post. Style: ${fallbackStyle}. High-quality, scroll-stopping visual.`;
   }
 
-  const rawText = (options.imageTextOnImage ?? "").trim();
-  const textOnImage = prepareOnImageBriefForModel(rawText);
-  if (textOnImage) {
-    parts.push(DESIGNER_TEXT_ARRANGEMENT);
-    basePrompt = parts.join("\n\n");
-    const escaped = textOnImage.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-    const hasPlacementHints = /placement|upper|lower|left|right|corner|third|center|above|below|zone|align/i.test(
-      rawText
-    );
-    const placementNote = hasPlacementHints
-      ? " If the brief specifies positions or zones, honour them when composing type and imagery."
-      : "";
-    basePrompt += `\n\nON-IMAGE CONTENT BRIEF (CRITICAL): The block below may include exact wording to render, role-separated lines (headline vs subhead vs body), and/or spatial notes.${placementNote} Do not paint meta-labels or role prefixes as visible text unless they are explicitly part of the quoted copy. Preserve line breaks.
-DEFAULT TYPOGRAPHY (when roles are not explicit): first line = main headline (largest); then subhead; then body—unless spatial notes override.
-Brief:\n"${escaped}"`;
+  if (overallPrepared) {
+    basePrompt += `\n\n${DESIGNER_TEXT_ARRANGEMENT}`;
   }
 
   return basePrompt + FINAL_DESIGN_COMMANDS;
