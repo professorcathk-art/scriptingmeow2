@@ -204,7 +204,7 @@ Create a {{pageCount}}-page Instagram carousel using the BRIEF and CONTEXT above
 ## Output Format
 If a [Source Image URL: https...] is provided, put that layout command in **overallDesign** (not styling alone): "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
 Return valid JSON only. Include postAim (required): brand context + intent, max 500 characters.
-Per page: **overallDesign** = {{overallDesignGuide}} (max {{overallMaxChars}} chars). **styling** = {{stylingGuide}} (max {{stylingMaxChars}} chars).
+Per page: **overallDesign** = {{overallDesignGuide}} (storage ceiling ~{{overallMaxChars}} chars—dense slides should approach this). **styling** = {{stylingGuide}} (storage ceiling ~{{stylingMaxChars}} chars).
 {
   "postAim": "Required: brand context + intent for this carousel",
   "pages": [
@@ -225,9 +225,9 @@ Content idea: {{idea}}
 ## TASK
 Create 2 DISTINCT Instagram post draft variations.
 
-**overallDesign** = one unified field for the **entire** graphic: describe the scene (setting, people, objects), composition, and **all** text that must appear on the image (placement + emphasis + exact words). Plain text, no markdown. Follow: {{overallDesignGuide}} Max {{overallMaxChars}} characters per variation.
+**overallDesign** = one unified field for the **entire** graphic: describe the scene (setting, people, objects), composition, and **all** text that must appear on the image (placement + emphasis + exact words). Plain text, no markdown. Follow: {{overallDesignGuide}} Storage limit ~{{overallMaxChars}} characters per variation (this is a ceiling—text-heavy layouts should use most of it; do not aim for a short answer).
 
-**styling** = brand-aligned **look** only: palette, lighting mood, medium/texture, typography personality—aligned with how a brandbook would describe execution. Follow: {{stylingGuide}} Max {{stylingMaxChars}} characters. Do not put scene layout or story beats here; those belong in overallDesign.
+**styling** = brand-aligned **look** only: palette, lighting mood, medium/texture, typography personality—aligned with how a brandbook would describe execution. Follow: {{stylingGuide}} Storage limit ~{{stylingMaxChars}} characters. Do not put scene layout or story beats here; those belong in overallDesign.
 
 ## Enrichment (CRITICAL)
 - The idea field is a **seed brief** only. You must **develop** it: add layers, specifics, and structure the user did not type.
@@ -283,7 +283,7 @@ Return valid JSON only. **postAim is required** (1–3 sentences, max 500 charac
   "igCaption": "Full caption up to 2000 characters: hook, complete narrative across slides, CTA. Max 3 hashtags."
 }
 
-Field discipline: each slide overallDesign ≤ {{overallMaxChars}} characters; styling ≤ {{stylingMaxChars}} characters. igCaption: one full story that reflects the entire carousel—not a short teaser.`;
+Field discipline: each slide overallDesign must stay within ~{{overallMaxChars}} characters (ceiling, not a target to stay far below—text-heavy slides should use most of this). Styling within ~{{stylingMaxChars}} characters. igCaption: one full story that reflects the entire carousel—not a short teaser.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;

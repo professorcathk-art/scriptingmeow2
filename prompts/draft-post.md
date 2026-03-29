@@ -53,7 +53,7 @@ The **Topic/Idea** above is a **seed brief**, not finished copy. Your job is to 
 2. **Enrich with substance:** Add concrete elements appropriate to the framework—e.g. numbered tips, mini-frameworks, contrasts (myth vs reality), common mistakes, before/after angles, audience pains, or a clear sequence. Aim for at least **several** distinct points or layers that are not verbatim from the idea field (unless the idea is already very long and detailed).
 3. **Hooks and curiosity:** Open with tension, a contrarian line, or a “why this matters now” angle—then deliver payoff in body copy and on-image text.
 4. **Accuracy:** Use broadly correct general knowledge. Do **not** invent fake studies, named experts, or precise statistics; use qualitative claims, ranges, or “many people find…” when specifics are uncertain.
-5. **Layout fit:** If the layout is text-dense (infographic / heavy type), the on-image plan must show **real hierarchy**—headline + supporting lines + bullets or labels—not a single thin headline.
+5. **Layout fit:** If the layout is text-dense (infographic / heavy type), the on-image plan must show **real hierarchy**—headline + supporting lines + bullets or labels—not a single thin headline. For those layouts, **overallDesign** should usually run **many hundreds to a few thousand characters** (up to the storage maximum), spelling out every line of on-image copy and where it sits—never a short paragraph.
 
 ## Strategic Directives
 1. **Source Data Processing:** If `{{idea}}` contains a Source URL or RSS news snippet, synthesize the core value. Expand on key points, inject a psychological hook, and bridge the curiosity gap. Never merely repeat the source title.
@@ -97,7 +97,7 @@ The **BRIEF** is a starting point only. **Develop** it across slides: add specif
 
 {{#isTextHeavy}}
 ### Text-heavy / infographic layout
-Each slide’s `overallDesign` must carry **substantive** on-slide copy: multiple lines where appropriate, clear hierarchy (title, subheads, bullets or numbers), labels, or data callouts. Do **not** under-write. Empty or slogan-only slides fail the brief.
+Each slide’s `overallDesign` must carry **substantive** on-slide copy: multiple lines where appropriate, clear hierarchy (title, subheads, bullets or numbers), labels, or data callouts. Do **not** under-write. Empty or slogan-only slides fail the brief. Aim to use **most of the allowed length** per slide (up to the storage maximum)—brief stubs are wrong.
 {{/isTextHeavy}}
 
 ## Carousel Narrative Pacing (Strictly follow based on {{pageCount}})

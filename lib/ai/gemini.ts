@@ -149,9 +149,14 @@ function stripMarkdownFromText(s: string): string {
 /** Parse single draft from JSON (supports legacy imageTextOnImage / visualAdvice keys). */
 function parseSingleDraft(post: Record<string, unknown>, postAim?: string): DraftOutput {
   const raw = String(post.overallDesign ?? post.imageTextOnImage ?? post.imageText ?? "").trim();
+  const od = stripMarkdownFromText(raw);
   return {
-    overallDesign: stripMarkdownFromText(raw),
-    styling: String(post.styling ?? post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
+    overallDesign:
+      od.length > MAX_ON_IMAGE_INSTRUCTION_CHARS ? od.slice(0, MAX_ON_IMAGE_INSTRUCTION_CHARS) : od,
+    styling: (() => {
+      const st = String(post.styling ?? post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim();
+      return st.length > MAX_STYLING_CHARS ? st.slice(0, MAX_STYLING_CHARS) : st;
+    })(),
     igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, MAX_IG_CAPTION_CHARS),
     postAim: postAim || (typeof post.postAim === "string" ? post.postAim : undefined),
   };
@@ -521,8 +526,23 @@ const LAYOUT_SPATIAL_DIRECTIVES: Record<string, string> = {
     "INTEGRATED TEXT–IMAGE: Weave type with imagery; text may overlay, wrap, or sit in designed pockets within the scene—not only in empty margins.",
 };
 
-const OVERALL_LIMIT = `Plain text only, no markdown. Cap at ${MAX_ON_IMAGE_INSTRUCTION_CHARS} characters. Describe the full picture: setting, people/objects, composition, and all text that must appear (placement + emphasis + exact words).`;
-const STYLING_LIMIT = `Plain text only, no markdown. Cap at ${MAX_STYLING_CHARS} characters. Brand-aligned look only: palette, lighting mood, medium/texture, typography personality—no scene layout or story (that belongs in overallDesign).`;
+/** Hard ceiling for storage/API; prompts must NOT tell the model to “stay under” this as a default—text-heavy layouts should approach this length. */
+const OVERALL_DESIGN_MAX = MAX_ON_IMAGE_INSTRUCTION_CHARS;
+
+const OVERALL_LIMIT = `Plain text only, no markdown. Storage ceiling ~${OVERALL_DESIGN_MAX} characters (do not truncate early—fill this budget when the layout needs detail). Describe the full picture: setting, people/objects, composition, and all text that must appear (placement + emphasis + exact words).`;
+
+const STYLING_LIMIT = `Plain text only, no markdown. Storage ceiling ~${MAX_STYLING_CHARS} characters. Brand-aligned look only: palette, lighting mood, medium/texture, typography personality—no scene layout or story (that belongs in overallDesign).`;
+
+/** Extra instructions when user chose text-heavy / infographic layout (single or per-slide). */
+const TEXT_HEAVY_OVERALL_EXTRA = ` TEXT-HEAVY MODE: This layout is for dense typography. overallDesign must be LONG and SPECIFIC—typically ${Math.min(800, OVERALL_DESIGN_MAX)}–${OVERALL_DESIGN_MAX} characters—zone by zone: list every headline, subhead, bullet line, number, and label that appears on-image. A short slogan or one paragraph is a failure. Use newlines between blocks in your description.`;
+
+function getTextHeavySingleImageReminder(): string {
+  return `
+
+## TEXT-HEAVY LAYOUT (USER SELECTED — SINGLE IMAGE)
+The user chose a dense / infographic-style layout. Each variation’s **overallDesign** must read like a full art-direction brief for a text-heavy graphic: multiple zones, full headline and body copy as it should appear on-image, bullets or numbered lines, and labels—not a short summary. Aim for roughly ${Math.min(800, OVERALL_DESIGN_MAX)}–${OVERALL_DESIGN_MAX} characters in **overallDesign** unless the topic is genuinely minimal. Under-length output is incorrect.
+`;
+}
 
 const LAYOUT_OVERALL_DESIGN_GUIDE: Record<string, string> = {
   "magazine-editorial": `Overall design: editorial scene + all in-frame text—who/what is in shot, where elements sit, hero vs supporting type. ${OVERALL_LIMIT}`,
@@ -531,11 +551,11 @@ const LAYOUT_OVERALL_DESIGN_GUIDE: Record<string, string> = {
   "split-screen": `Overall design: split layout—what fills each region and all copy. ${OVERALL_LIMIT}`,
   "text-top": `Overall design: subject anchored low; text block in upper area—describe both. ${OVERALL_LIMIT}`,
   "text-bottom": `Overall design: subject upper; text anchored low—describe both. ${OVERALL_LIMIT}`,
-  "text-heavy-infographic": `Overall design: structured slide—data points, labels, hierarchy, placement. ${OVERALL_LIMIT}`,
+  "text-heavy-infographic": `Overall design: structured slide—data points, labels, hierarchy, placement. ${OVERALL_LIMIT}${TEXT_HEAVY_OVERALL_EXTRA}`,
   "quote-card": `Overall design: quote card—background treatment implied + exact quote lines and positions. ${OVERALL_LIMIT}`,
   "immersive-photo": "Overall design: photo-forward scene; text optional—describe scene and any overlay copy.",
   editorial: `Overall design: editorial spread—scene, subjects, masthead and body copy zones. ${OVERALL_LIMIT}`,
-  "text-heavy": `Overall design: dense slide—blocks, bullets, placement. ${OVERALL_LIMIT}`,
+  "text-heavy": `Overall design: dense infographic-style slide—blocks, bullets, columns, placement. ${OVERALL_LIMIT}${TEXT_HEAVY_OVERALL_EXTRA}`,
   "tweet-card": `Overall design: statement card—quote/hot take and layout. ${OVERALL_LIMIT}`,
   unspecified: `Overall design: one coherent shot—scene, key objects, composition, all on-image text. ${OVERALL_LIMIT}`,
   "text-image-balanced": `Overall design: integrated text–image—how type weaves with the scene and what exactly reads where. ${OVERALL_LIMIT}`,
@@ -563,7 +583,7 @@ const POST_QUALITY_GUIDE = {
   single: `Single-image post: make one idea land in a glance—clear hierarchy, scroll-stopping hook on-image, credible and shareable. One strong visual thought, not a laundry list.`,
 
   /** Used when the user picked a text-dense / infographic layout for a single image. */
-  singleTextHeavy: `Text-heavy single graphic: treat the slide as an information design—multiple lines, clear hierarchy (headline, subheads, bullets or numbered points, labels). Teach or persuade in one frame with real substance; a thin headline-only concept is a failure. Match the chosen layout’s need for dense, readable typography.`,
+  singleTextHeavy: `Text-heavy single graphic: treat the slide as an information design—multiple lines, clear hierarchy (headline, subheads, bullets or numbered points, labels). Teach or persuade in one frame with real substance; a thin headline-only concept is a failure. overallDesign should usually run hundreds to a few thousand characters—enumerate the full copy deck, not a summary. Match the chosen layout’s need for dense, readable typography.`,
 
   carousel: `Carousel: teach or persuade across slides—each slide earns a save; the arc should feel worth sharing and bookmarking. Logical progression, concrete value every page.`,
 
@@ -635,7 +655,7 @@ export async function generatePostLight(
         if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 0.9,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             thinkingLevel: "low",
             safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
           });
@@ -643,7 +663,7 @@ export async function generatePostLight(
         } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.9, maxOutputTokens: 4096 },
+            generationConfig: { temperature: 0.9, maxOutputTokens: 8192 },
             safetySettings: [...DEFAULT_SAFETY],
           });
           const result = await model.generateContent(prompt);
@@ -673,6 +693,8 @@ export async function generatePostLight(
     };
   }
 
+  const isTextHeavyLayoutLight =
+    layoutKey === "text-heavy" || layoutKey === "text-heavy-infographic";
   const prompt =
     draftOutputLanguageInstruction(language) +
     getSingleImageDraftPromptLight({
@@ -684,7 +706,8 @@ export async function generatePostLight(
       stylingGuide,
       contentFrameworkDesc,
       aspectNote,
-    });
+    }) +
+    (isTextHeavyLayoutLight ? getTextHeavySingleImageReminder() : "");
   const parts: ContentPart[] = [{ text: prompt }];
   for (const modelName of GEMINI_MODELS) {
     try {
@@ -692,7 +715,7 @@ export async function generatePostLight(
       if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
           temperature: 0.9,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
           thinkingLevel: "low",
           safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
         });
@@ -700,7 +723,7 @@ export async function generatePostLight(
       } else {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.9, maxOutputTokens: 4096 },
+          generationConfig: { temperature: 0.9, maxOutputTokens: 8192 },
           safetySettings: [...DEFAULT_SAFETY],
         });
         const result = await model.generateContent(prompt);
@@ -740,11 +763,16 @@ function parseCarouselJson(text: string, pageCount: number): CarouselDraftOutput
     const pages: CarouselPageDraft[] = [];
     for (let i = 0; i < pageCount; i++) {
       const p = pagesRaw[i] ?? {};
+      const odRaw = stripMarkdownFromText(String(p.overallDesign ?? p.imageTextOnImage ?? p.imageText ?? ""));
+      const stRaw = String(p.styling ?? p.visualAdvice ?? p.nanoBananaPrompt ?? "").trim();
       pages.push({
         pageIndex: i + 1,
         header: String(p.header ?? p.title ?? `Page ${i + 1}`).trim(),
-        overallDesign: stripMarkdownFromText(String(p.overallDesign ?? p.imageTextOnImage ?? p.imageText ?? "")),
-        styling: String(p.styling ?? p.visualAdvice ?? p.nanoBananaPrompt ?? "").trim(),
+        overallDesign:
+          odRaw.length > MAX_ON_IMAGE_INSTRUCTION_CHARS
+            ? odRaw.slice(0, MAX_ON_IMAGE_INSTRUCTION_CHARS)
+            : odRaw,
+        styling: stRaw.length > MAX_STYLING_CHARS ? stRaw.slice(0, MAX_STYLING_CHARS) : stRaw,
       });
     }
     return {
@@ -846,7 +874,7 @@ export async function generatePost(
           if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 0.9,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             thinkingLevel: "low",
               safetySettings: safetyToV1Beta(safetySettings),
             });
@@ -854,7 +882,7 @@ export async function generatePost(
           } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.9, maxOutputTokens: 4096 },
+            generationConfig: { temperature: 0.9, maxOutputTokens: 8192 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(carouselPrompt);
@@ -940,6 +968,8 @@ export async function generatePost(
     ? POST_QUALITY_GUIDE.singleTextHeavy
     : POST_QUALITY_GUIDE.single;
 
+  const textHeavySingleReminder = isTextHeavyLayout ? getTextHeavySingleImageReminder() : "";
+
   const prompt =
     draftOutputLanguageInstruction(language) +
     getSingleImageDraftPrompt({
@@ -957,7 +987,8 @@ export async function generatePost(
       overallDesignGuide,
       stylingGuide,
       aspectNote,
-    });
+    }) +
+    textHeavySingleReminder;
 
   const modelOrder = preferPro
     ? (["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-3-pro-preview"] as const)
@@ -972,7 +1003,7 @@ export async function generatePost(
         if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
             temperature: 1.0,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             thinkingLevel: "low",
             safetySettings: safetyToV1Beta(safetySettings),
           });
@@ -980,7 +1011,7 @@ export async function generatePost(
         } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.9, maxOutputTokens: 4096 },
+            generationConfig: { temperature: 0.9, maxOutputTokens: 8192 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(prompt);
