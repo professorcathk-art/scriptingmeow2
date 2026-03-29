@@ -124,6 +124,9 @@ const FALLBACK_SINGLE = `## BRIEF (primary input)
 ## TASK
 Create 2 DISTINCT Instagram post draft variations using the BRIEF and CONTEXT above.
 
+## Idea development (mandatory)
+Treat the **Topic/Idea** as a **seed**, not final copy. Enrich it with concrete structure (tips, steps, contrasts, examples, or teaching beats) that go beyond paraphrasing the user’s words. Do not fill the overallDesign or igCaption JSON fields with mostly recycled sentences from the brief. If the layout is text-heavy, show real hierarchy—multiple lines, bullets, or labels—not a single slogan.
+
 ## Output Format
 Return valid JSON only. Include postAim first (required): who this is for, what the post should achieve for the image model, and how it supports the brand—1–3 sentences, max 500 characters.
 {
@@ -160,10 +163,12 @@ export function getCarouselDraftPrompt(vars: {
   let template = section || FALLBACK_CAROUSEL;
   template = template.replace(/\{\{pageCount\}\}/g, String(vars.pageCount));
   template = template.replace(/\{\{isTextHeavy\}\}/g, String(vars.isTextHeavy));
+  template = template.replace(/\{\{#isTextHeavy\}\}([\s\S]*?)\{\{\/isTextHeavy\}\}/g, vars.isTextHeavy ? "$1" : "");
   const extraParts: string[] = [];
   if (vars.layoutStyleDetail) extraParts.push(`Layout: ${vars.layoutStyleDetail}`);
   if (vars.dosDonts) extraParts.push(`Brand rules: ${vars.dosDonts}`);
-  const extraContext = extraParts.length > 0 ? extraParts.join(". ") : "";
+  const extraContext =
+    extraParts.length > 0 ? `\n${extraParts.map((p) => `- ${p}`).join("\n")}` : "";
 
   return replaceAll(template, {
     personality: vars.personality,
@@ -225,9 +230,11 @@ Create 2 DISTINCT Instagram post draft variations.
 **styling** = brand-aligned **look** only: palette, lighting mood, medium/texture, typography personality—aligned with how a brandbook would describe execution. Follow: {{stylingGuide}} Max {{stylingMaxChars}} characters. Do not put scene layout or story beats here; those belong in overallDesign.
 
 ## Enrichment (CRITICAL)
+- The idea field is a **seed brief** only. You must **develop** it: add layers, specifics, and structure the user did not type.
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
 - ENRICH the idea: add scroll-stopping hooks, curiosity gaps, emotional angles, or counter-intuitive twists. Expand key points.
 - Create value-driven, shareable content—not a dry summary. Hook the reader in the first line.
+- Do **not** treat the user’s paragraph as pasted into the caption; synthesize and expand.
 
 ## Source Image Overlay
 - If a [Source Image URL: https...] is provided in the idea, put the layout command in **overallDesign**: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
@@ -258,6 +265,7 @@ Create a {{pageCount}}-page Instagram carousel. Each page has **overallDesign** 
 {{#isTextHeavy}}TEXT-HEAVY MODE: Each slide needs substantive content—multiple lines where needed, clear hierarchy, teaching or persuasive depth. Do not under-write.{{/isTextHeavy}}
 
 ## Enrichment (CRITICAL)
+- The idea is a **seed** only—develop it across slides with teaching or persuasion beats that are not verbatim from the user text.
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
 - ENRICH the idea: add scroll-stopping hooks, curiosity gaps, emotional angles. Expand key points. Create value-driven, shareable content.
 

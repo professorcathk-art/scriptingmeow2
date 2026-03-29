@@ -562,6 +562,9 @@ const LAYOUT_STYLING_GUIDE: Record<string, string> = {
 const POST_QUALITY_GUIDE = {
   single: `Single-image post: make one idea land in a glance—clear hierarchy, scroll-stopping hook on-image, credible and shareable. One strong visual thought, not a laundry list.`,
 
+  /** Used when the user picked a text-dense / infographic layout for a single image. */
+  singleTextHeavy: `Text-heavy single graphic: treat the slide as an information design—multiple lines, clear hierarchy (headline, subheads, bullets or numbered points, labels). Teach or persuade in one frame with real substance; a thin headline-only concept is a failure. Match the chosen layout’s need for dense, readable typography.`,
+
   carousel: `Carousel: teach or persuade across slides—each slide earns a save; the arc should feel worth sharing and bookmarking. Logical progression, concrete value every page.`,
 
   outputRules: `Output discipline:
@@ -631,7 +634,7 @@ export async function generatePostLight(
         let text: string | null;
         if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
-            temperature: 0.8,
+            temperature: 0.9,
             maxOutputTokens: 4096,
             thinkingLevel: "low",
             safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
@@ -640,7 +643,7 @@ export async function generatePostLight(
         } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+            generationConfig: { temperature: 0.9, maxOutputTokens: 4096 },
             safetySettings: [...DEFAULT_SAFETY],
           });
           const result = await model.generateContent(prompt);
@@ -697,7 +700,7 @@ export async function generatePostLight(
       } else {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.8, maxOutputTokens: 4096 },
+          generationConfig: { temperature: 0.9, maxOutputTokens: 4096 },
           safetySettings: [...DEFAULT_SAFETY],
         });
         const result = await model.generateContent(prompt);
@@ -842,7 +845,7 @@ export async function generatePost(
           let text: string | null;
           if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
-            temperature: 0.8,
+            temperature: 0.9,
             maxOutputTokens: 4096,
             thinkingLevel: "low",
               safetySettings: safetyToV1Beta(safetySettings),
@@ -851,7 +854,7 @@ export async function generatePost(
           } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+            generationConfig: { temperature: 0.9, maxOutputTokens: 4096 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(carouselPrompt);
@@ -931,8 +934,11 @@ export async function generatePost(
           .filter(Boolean)
           .join(". ");
 
-  const isCarousel = layout === "text-heavy";
-  const qualityGuide = isCarousel ? POST_QUALITY_GUIDE.carousel : POST_QUALITY_GUIDE.single;
+  const isTextHeavyLayout =
+    layout === "text-heavy" || layout === "text-heavy-infographic";
+  const qualityGuide = isTextHeavyLayout
+    ? POST_QUALITY_GUIDE.singleTextHeavy
+    : POST_QUALITY_GUIDE.single;
 
   const prompt =
     draftOutputLanguageInstruction(language) +
@@ -974,7 +980,7 @@ export async function generatePost(
         } else {
           const model = genAI.getGenerativeModel({
             model: modelName,
-            generationConfig: { temperature: 0.6, maxOutputTokens: 4096 },
+            generationConfig: { temperature: 0.9, maxOutputTokens: 4096 },
             safetySettings: [...safetySettings],
           });
           const result = await model.generateContent(prompt);
