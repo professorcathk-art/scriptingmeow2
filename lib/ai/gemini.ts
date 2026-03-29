@@ -12,6 +12,10 @@ import {
 } from "./load-prompts";
 import { MAX_IG_CAPTION_CHARS, MAX_CONTENT_IDEA_CHARS, MAX_ON_IMAGE_INSTRUCTION_CHARS } from "@/lib/constants";
 import { defaultPostAimFromBrief } from "@/lib/brand-context";
+import {
+  draftOutputLanguageInstruction,
+  DRAFT_CAROUSEL_ON_IMAGE_STYLE,
+} from "@/lib/ai/draft-output-language";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -514,20 +518,20 @@ const LAYOUT_SPATIAL_DIRECTIVES: Record<string, string> = {
 
 const IMAGE_TEXT_LIMIT = `On-image field: plain text only, no markdown. Cap total length at ${MAX_ON_IMAGE_INSTRUCTION_CHARS} characters (exact wording + optional placement notes). Compress thoughtfully—never end mid-sentence.`;
 const LAYOUT_TEXT_GUIDE: Record<string, string> = {
-  "magazine-editorial": `Minimalist editorial: clean, magazine-like. PLAIN TEXT only. You may use Headline: / Subhead: / Body: lines, or a short zone-based brief (where each line sits). ${IMAGE_TEXT_LIMIT}`,
+  "magazine-editorial": `Minimalist editorial: clean, magazine-like. PLAIN TEXT only. Prefer zone + emphasis + exact wording (e.g. top band large / margin small quote); rigid Headline/Subhead/Body only if it fits. ${IMAGE_TEXT_LIMIT}`,
   "cinematic-poster": `Cinematic poster: title line plus supporting lines; bold, dramatic type. Plain text only. ${IMAGE_TEXT_LIMIT}`,
   "immersive-visual": "Immersive visual: no text or one short tagline. Leave imageTextOnImage blank or a single line. Prioritize photography/illustration.",
   "split-screen": `Split screen: headline plus supporting copy; substantive. Plain text only. ${IMAGE_TEXT_LIMIT}`,
   "text-top": `Text at top: headline and subhead in upper area; body below as needed. Plain text only. ${IMAGE_TEXT_LIMIT}`,
   "text-bottom": `Image top, text bottom: headline and body anchored low. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "text-heavy-infographic": `Infographic: dense, structured type. Specify hierarchy (Headline / Subhead / Body) or bullet-style lines; plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "text-heavy-infographic": `Infographic: dense type. Prefer a placement-first brief (zone + emphasis + exact copy per line); avoid robotic Headline/Subhead/Body unless the slide truly needs that structure. Plain text only. ${IMAGE_TEXT_LIMIT}`,
   "quote-card": `Statement card: the key quote or claim (2–4 lines). Plain text only. ${IMAGE_TEXT_LIMIT}`,
   "immersive-photo": "Immersive photo: no text or one short tagline. Leave imageTextOnImage blank or minimal.",
   editorial: `Editorial: Headline / Subhead / Body or equivalent; generous negative space implied in your wording. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "text-heavy": `Text-heavy slide: multiple lines with clear hierarchy. Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "text-heavy": `Text-heavy slide: placement-first brief (where + how prominent + exact copy per block). Plain text only. ${IMAGE_TEXT_LIMIT}`,
   "tweet-card": `Quote-style card: punchy quote or hot take (2–4 lines). Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  unspecified: `Balanced graphic: include on-image copy only when it serves the idea. You may mix exact lines to render with short placement notes (e.g. “Headline centered upper third; disclaimer lower right”). ${IMAGE_TEXT_LIMIT}`,
-  "text-image-balanced": `Integrated text–image: weave copy into the scene—overlays, wraps, or pockets. State what to render and roughly where (zones, alignment) while staying within the character cap. Headline: / Subhead: / Body: optional. ${IMAGE_TEXT_LIMIT}`,
+  unspecified: `Balanced graphic: on-image copy only when it serves the idea. Write a short director-style brief—zones, emphasis, exact words—not a filler Headline/Subhead/Body pattern. ${IMAGE_TEXT_LIMIT}`,
+  "text-image-balanced": `Integrated text–image: weave copy into the scene. Describe placement-first (where each line sits, how bold/large) plus exact wording—avoid defaulting to a rigid three-line template. ${IMAGE_TEXT_LIMIT}`,
 };
 
 /** Quality bar for single vs carousel (English-only for model instructions). */
@@ -578,16 +582,19 @@ export async function generatePostLight(
     const pageCount = carouselPageCount!;
     const isTextHeavy =
       layoutKey === "text-heavy" || layoutKey === "text-heavy-infographic";
-    const prompt = getCarouselDraftPromptLight({
-      pageCount,
-      idea,
-      language,
-      format,
-      aspectNote,
-      contentFrameworkDesc,
-      layoutGuide,
-      isTextHeavy,
-    });
+    const prompt =
+      draftOutputLanguageInstruction(language) +
+      DRAFT_CAROUSEL_ON_IMAGE_STYLE +
+      getCarouselDraftPromptLight({
+        pageCount,
+        idea,
+        language,
+        format,
+        aspectNote,
+        contentFrameworkDesc,
+        layoutGuide,
+        isTextHeavy,
+      });
     const parts: ContentPart[] = [{ text: prompt }];
     for (const modelName of GEMINI_MODELS) {
       try {
@@ -633,14 +640,16 @@ export async function generatePostLight(
     };
   }
 
-  const prompt = getSingleImageDraftPromptLight({
-    idea,
-    language,
-    format,
-    layout: layoutGuide,
-    contentFrameworkDesc,
-    aspectNote,
-  });
+  const prompt =
+    draftOutputLanguageInstruction(language) +
+    getSingleImageDraftPromptLight({
+      idea,
+      language,
+      format,
+      layout: layoutGuide,
+      contentFrameworkDesc,
+      aspectNote,
+    });
   const parts: ContentPart[] = [{ text: prompt }];
   for (const modelName of GEMINI_MODELS) {
     try {
@@ -766,23 +775,26 @@ export async function generatePost(
       LAYOUT_TEXT_GUIDE[carouselLayoutKey] || LAYOUT_TEXT_GUIDE["unspecified"];
     const dosDonts = formatDosAndDonts(brandbook.dosAndDonts);
 
-    const carouselPrompt = getCarouselDraftPrompt({
-      pageCount,
-      language,
-      personality,
-      tone,
-      style,
-      colors: colors || "professional palette",
-      contentFrameworkDesc: CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"],
-      layoutGuide,
-      layoutStyleDetail: "",
-      dosDonts,
-      textGuide,
-      idea,
-      format,
-      aspectNote,
-      isTextHeavy,
-    });
+    const carouselPrompt =
+      draftOutputLanguageInstruction(language) +
+      DRAFT_CAROUSEL_ON_IMAGE_STYLE +
+      getCarouselDraftPrompt({
+        pageCount,
+        language,
+        personality,
+        tone,
+        style,
+        colors: colors || "professional palette",
+        contentFrameworkDesc: CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"],
+        layoutGuide,
+        layoutStyleDetail: "",
+        dosDonts,
+        textGuide,
+        idea,
+        format,
+        aspectNote,
+        isTextHeavy,
+      });
 
     const modelOrder = preferPro
       ? (["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-3-pro-preview"] as const)
@@ -886,21 +898,23 @@ export async function generatePost(
   const isCarousel = layout === "text-heavy";
   const qualityGuide = isCarousel ? POST_QUALITY_GUIDE.carousel : POST_QUALITY_GUIDE.single;
 
-  const prompt = getSingleImageDraftPrompt({
-    personality,
-    tone,
-    style,
-    colors: colors || "professional palette",
-    brandTypeLabel,
-    contentFrameworkDesc,
-    visualLayoutContext: visualLayoutContext || "",
-    qualityGuide,
-    idea,
-    language,
-    format,
-    textGuide,
-    aspectNote,
-  });
+  const prompt =
+    draftOutputLanguageInstruction(language) +
+    getSingleImageDraftPrompt({
+      personality,
+      tone,
+      style,
+      colors: colors || "professional palette",
+      brandTypeLabel,
+      contentFrameworkDesc,
+      visualLayoutContext: visualLayoutContext || "",
+      qualityGuide,
+      idea,
+      language,
+      format,
+      textGuide,
+      aspectNote,
+    });
 
   const modelOrder = preferPro
     ? (["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-3-pro-preview"] as const)

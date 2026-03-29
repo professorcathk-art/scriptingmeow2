@@ -173,7 +173,7 @@ export function getCarouselDraftPrompt(vars: {
     extraContext,
     textGuide:
       vars.textGuide ||
-      `On-image brief per slide: plain text only. Up to ${MAX_ON_IMAGE_INSTRUCTION_CHARS} characters—exact lines to render plus optional placement notes (e.g. Headline: / Subhead: / Body: or zone-based instructions).`,
+      `Per slide: plain text, director-style shot list (zone + emphasis + exact copy). Up to ${MAX_ON_IMAGE_INSTRUCTION_CHARS} characters. Avoid robotic Headline/Subhead/Body unless the slide truly needs it.`,
     idea: vars.idea,
     format: vars.format,
     aspectNote: vars.aspectNote,
@@ -200,7 +200,7 @@ Return valid JSON only. Include postAim (required): brand context + intent, max 
 {
   "postAim": "Required: brand context + intent for this carousel",
   "pages": [
-    { "pageIndex": 1, "imageTextOnImage": "Plain text; use \\\\n for line breaks. Headline: / Subhead: / Body: or placement notes as needed.", "visualAdvice": "HIGHLY DETAILED (4–6 sentences): scene, composition, lighting, text placement, color usage, mood" },
+    { "pageIndex": 1, "imageTextOnImage": "Placement-first brief in the user's language; separate elements with newlines in JSON.", "visualAdvice": "HIGHLY DETAILED (4–6 sentences): scene, composition, lighting, text placement, color usage, mood" },
     ...
   ],
   "igCaption": "Full caption up to 2000 characters: hook, full story, CTA. Max 3 hashtags."
@@ -215,7 +215,7 @@ Content idea: {{idea}}
 - Content goal: {{contentFrameworkDesc}}
 
 ## TASK
-Create 2 DISTINCT Instagram post draft variations. Treat **imageTextOnImage** as an art-direction brief: plain text only—exact wording to appear on the graphic, optional role labels (Headline / Subhead / Body), and/or short placement notes (zones, alignment). Stay within {{onImageMaxChars}} characters per variation; compress without losing the message.
+Create 2 DISTINCT Instagram post draft variations. Treat **imageTextOnImage** as a **director-style** brief: plain text only—**where** each line sits, **how big** it reads, and the **exact wording**. Do not default to a stiff Headline / Subhead / Body block unless the layout truly needs it. Stay within {{onImageMaxChars}} characters per variation; compress without losing the message.
 
 ## Enrichment (CRITICAL)
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
@@ -247,7 +247,7 @@ const DRAFT_CAROUSEL_LIGHT = `## BRIEF (primary input)
 - Content goal: {{contentFrameworkDesc}}. Visual layout: {{layoutGuide}}
 
 ## TASK
-Create a {{pageCount}}-page Instagram carousel. Per slide, **imageTextOnImage** is an on-image brief (copy + optional placement), up to {{onImageMaxChars}} characters. **visualAdvice** must be a rich designer layout every time.
+Create a {{pageCount}}-page Instagram carousel. Per slide, **imageTextOnImage** is a **shot-list** brief: placement-first (zones, emphasis, exact copy)—**not** a mechanical Headline/Subhead/Body template. Up to {{onImageMaxChars}} characters per slide. **visualAdvice** must be a rich designer layout every time.
 {{#isTextHeavy}}TEXT-HEAVY MODE: Each slide needs substantive on-image copy—multiple lines, clear hierarchy, teaching or persuasive depth. Do not under-write.{{/isTextHeavy}}
 
 ## Enrichment (CRITICAL)
@@ -262,7 +262,7 @@ Return valid JSON only. **postAim is required** (1–3 sentences, max 500 charac
 {
   "postAim": "Required: context + intent for the carousel",
   "pages": [
-    { "pageIndex": 1, "imageTextOnImage": "Headline: ...\\nSubhead: ...\\nBody: ... (or placement notes as needed)", "visualAdvice": "Designer layout: background + text blocks + spacing + cohesive colors (4–6 sentences)" },
+    { "pageIndex": 1, "imageTextOnImage": "e.g. upper third, large: [hero copy] — lower right, small: [caption] (in the user's language)", "visualAdvice": "Designer layout: background + text blocks + spacing + cohesive colors (4–6 sentences)" },
     ...
   ],
   "igCaption": "Full caption up to 2000 characters: hook, complete narrative across slides, CTA. Max 3 hashtags."

@@ -1341,7 +1341,7 @@ export function CreatePostForm({
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">
-                      Text on Image (plain text) — exact copy, Headline/Subhead/Body lines, and/or where text sits in the frame
+                      Text on Image (plain text) — where each line sits, how prominent it is, and the exact wording (shot-list style)
                     </label>
                     <textarea
                       value={page.imageTextOnImage}
@@ -1351,7 +1351,7 @@ export function CreatePostForm({
                       maxLength={MAX_IMAGE_TEXT_CHARS}
                       className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
                       rows={5}
-                      placeholder={`Headline: Main line\nSubhead: Supporting line\nBody: Detail (use line breaks). Optional: e.g. "Disclaimer lower right." — up to ${MAX_IMAGE_TEXT_CHARS} characters per slide`}
+                      placeholder={`e.g. Upper third, large: main hook\nLower right, small: supporting line\nOver photo, medium: label — up to ${MAX_IMAGE_TEXT_CHARS} characters per slide`}
                     />
                     <p className="text-xs text-zinc-600 mt-1">
                       {page.imageTextOnImage.length}/{MAX_IMAGE_TEXT_CHARS}
@@ -1383,8 +1383,8 @@ export function CreatePostForm({
               {!formData.postStyle || formData.postStyle === "immersive-photo"
                 ? "Minimal or no text. Leave blank for pure image."
                 : formData.postStyle === "editorial"
-                  ? "Headline, subhead, and body lines—or describe what to show and where (zones, alignment). Plain text only (no #, ##, ###)."
-                  : "Art-direction brief: exact words to render plus optional placement notes (e.g. upper third, lower right). Plain text only."}
+                  ? "Describe placement + emphasis + exact copy (zones, alignment)—or a simple headline stack if that fits. Plain text only (no #, ##, ###)."
+                  : "Art-direction brief: where each text block sits, how big it reads, and the exact words. Plain text only."}
             </p>
             <textarea
               value={draft.imageTextOnImage}
@@ -1394,7 +1394,7 @@ export function CreatePostForm({
               maxLength={MAX_IMAGE_TEXT_CHARS}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
               rows={6}
-              placeholder={!formData.postStyle || formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : `Headline: …\nSubhead: …\nBody: …\n(Optional placement: e.g. badge top-left, CTA strip bottom) — up to ${MAX_IMAGE_TEXT_CHARS} characters`}
+              placeholder={!formData.postStyle || formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : `e.g. Top center, hero: …\nBottom band, small: … — up to ${MAX_IMAGE_TEXT_CHARS} characters`}
             />
             <p className="text-xs text-zinc-500 mt-1">
               {draft.imageTextOnImage.length}/{MAX_IMAGE_TEXT_CHARS}

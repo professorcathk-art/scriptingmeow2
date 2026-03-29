@@ -59,15 +59,15 @@ Return valid JSON only. **`postAim` is required** and should appear as the first
 }
 
 **Field Generation Rules:**
-0. **`postAim`**: Never omit. Anchor in the brief: who this serves, what outcome the post targets (educate, persuade, entertain, build trust), and any nuance the image generator must respect.
-1. **`imageTextOnImage`**: Art-direction brief for the graphic—plain text only, no markdown. Follow `{{textGuide}}`. You may combine (a) exact wording to render, (b) optional role lines such as Headline / Subhead / Body, and (c) short placement notes (zones, alignment) so the layout can carry the idea. Stay within the character budget implied by the layout guide; compress thoughtfully—never end mid-thought.
-2. **`visualAdvice`**: A HIGHLY DETAILED image-generation prompt (4–7 sentences, 80–150 words minimum). Do NOT be brief. Must contain:
+0. **`postAim`**: Never omit. Anchor in the brief: who this serves, what outcome the post targets (educate, persuade, entertain, build trust), and any nuance the image generator must respect. Write in **{{language}}**.
+1. **`imageTextOnImage`**: **Director-style** brief—plain text only, no markdown. Follow `{{textGuide}}`. Prefer **placement-first** instructions: where each text block sits, how prominent it is, and the exact wording. Avoid defaulting to a rigid Headline / Subhead / Body trio unless the layout truly needs it. Stay within the character budget implied by the layout guide; compress thoughtfully—never end mid-thought. All on-image copy in **{{language}}**.
+2. **`visualAdvice`**: A HIGHLY DETAILED image-generation prompt (4–7 sentences, 80–150 words minimum). Do NOT be brief. Write in **{{language}}**. Must contain:
    - *Source Image Overlay:* If a `[Source Image URL: https...]` is provided in the brief, you MUST include: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
    - *Action & Scene:* Subject, pose, expression, environment, props—specific and filmable.
    - *Composition & Layout:* Camera angle, framing, negative space, where type sits relative to the subject.
    - *Lighting & Mood:* Direction, quality, shadows, emotional tone.
    - *Aesthetic Lock:* Tie palette and medium to `{{style}}` and `{{colors}}`.
-3. **`igCaption`**: A comprehensive, standalone caption (up to 2000 characters) in `{{tone}}`. The reader should understand the full post idea without seeing the image: hook, depth, proof or steps as needed, and a save/share CTA. Max 3 hashtags.
+3. **`igCaption`**: A comprehensive, standalone caption (up to 2000 characters), matching **{{language}}** and `{{tone}}`. The reader should understand the full post idea without seeing the image: hook, depth, proof or steps as needed, and a save/share CTA. Max 3 hashtags.
 
 ---
 
@@ -93,7 +93,7 @@ Dynamically structure the slide functions based on the total page count:
 
 ## Typographic & Visual Rules
 - **Source Image Overlay:** If a `[Source Image URL: https...]` is provided in the brief, you MUST structure `visualAdvice` on every page (or at least the cover) to include an explicit layout command: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
-- **`imageTextOnImage`**: Follow `{{textGuide}}` per slide—plain text, no markdown; on-image brief may include copy plus placement notes; respect the per-slide character budget in the guide.
+- **`imageTextOnImage`**: Follow `{{textGuide}}` per slide—plain text, no markdown. Write a **shot-list** style brief: zones, emphasis, exact copy in **{{language}}**—not a mechanical Headline/Subhead/Body block unless the slide truly needs it. Respect the per-slide character budget in the guide.
 - **`visualAdvice` for Page 1 (Cover):** Dramatic, highly visual, scroll-stopping (4–6 sentences, 80–120 words). Integrate `{{style}}`. Specify subject/scene, composition, lighting, text overlay placement, color usage, mood.
 - **`visualAdvice` for Pages 2 to N (Inner Pages):** Designer-level layout instructions (4–6 sentences each, 80–120 words). Background treatment, text blocks, spacing, hierarchy, palette, optional motifs.
 
@@ -106,7 +106,7 @@ Return valid JSON only. **`postAim` is required** (max 500 characters). For `vis
     {
       "pageIndex": 1,
       "header": "Slide title if applicable",
-      "imageTextOnImage": "Plain text; line breaks with \\n. Headline / Subhead / Body or placement notes per brief.",
+      "imageTextOnImage": "Placement-first brief in {{language}}; line breaks with \\n between elements.",
       "visualAdvice": "Designer layout (4–6 sentences): background + text arrangement + color harmony + optional motif."
     }
   ],
