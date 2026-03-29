@@ -71,7 +71,7 @@ Return valid JSON only containing the 2 variations. Include postAim: brief brand
    - *Lighting & Mood:* Specify lighting (soft diffused, dramatic side light, golden hour, studio), shadows, and emotional tone.
    - *Aesthetic Lock:* Explicitly repeat the medium, texture, and color usage from `{{style}}` and `{{colors}}` so the final render matches the brandbook.
    - *Texture & Details:* Surface materials, background treatment (gradient, solid, texture), typography placement.
-3. **`igCaption`**: A comprehensive, standalone caption (up to 1000 chars) written in `{{tone}}`. 
+3. **`igCaption`**: A comprehensive, standalone caption (up to 2000 chars) written in `{{tone}}`. 
    - *Structure:* (1) Scroll-stopping hook. (2) Deep-dive storytelling delivering immediate value (readers must get value without swiping). (3) Save/Share Call-to-Action. (4) Max 3 targeted hashtags.
 
 ---
@@ -114,5 +114,5 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
     },
     ...
   ],
-  "igCaption": "Comprehensive caption up to 1000 chars. Hook + full storytelling + CTA to save/share. Max 3 hashtags. Must stand alone."
+  "igCaption": "Comprehensive caption up to 2000 chars. Hook + full storytelling + CTA to save/share. Max 3 hashtags. Must stand alone."
 }

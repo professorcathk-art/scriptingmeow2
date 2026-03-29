@@ -24,12 +24,6 @@ export default async function BulkCreatePage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  const { data: postIdeas } = await supabase
-    .from("user_post_ideas")
-    .select("id, content")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
-
   const { data: userProfile } = await supabase
     .from("users")
     .select("plan_tier, credits_remaining")
@@ -37,13 +31,35 @@ export default async function BulkCreatePage() {
     .single();
 
   const isPaid = userProfile?.plan_tier !== "free";
-  const { data: rssIdeas } = isPaid
+
+  const { data: postIdeasRaw } = await supabase
+    .from("user_post_ideas")
+    .select("id, content, brand_space_id")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  const { data: rssFeedsBulk } = isPaid
+    ? await supabase
+        .from("user_rss_feeds")
+        .select("id, brand_space_id")
+        .eq("user_id", user.id)
+    : { data: [] };
+  const rssFeedBrandBulk = new Map((rssFeedsBulk ?? []).map((f) => [f.id, f.brand_space_id]));
+  const { data: rssIdeasRaw } = isPaid
     ? await supabase
         .from("user_rss_ideas")
-        .select("id, content, title")
+        .select("id, content, title, rss_feed_id")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
     : { data: [] };
+
+  const postIdeas = postIdeasRaw ?? [];
+  const rssIdeas = (rssIdeasRaw ?? []).map((r) => ({
+    id: r.id,
+    content: r.content,
+    title: r.title,
+    brand_space_id: r.rss_feed_id ? rssFeedBrandBulk.get(r.rss_feed_id) ?? null : null,
+  }));
 
   return (
     <div className="max-w-4xl mx-auto">

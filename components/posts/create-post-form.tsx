@@ -7,8 +7,11 @@ import { useRouter } from "next/navigation";
 import type { BrandSpace, PostType, PostFormat, PlanTier } from "@/types/database";
 import { PLAN_LIMITS } from "@/types/database";
 
+import { MAX_IG_CAPTION_CHARS, MAX_CONTENT_IDEA_CHARS } from "@/lib/constants";
+import { parseStructuredIdea, structuredIdeaToBrief, ideaListLabel } from "@/lib/idea-content";
+
 const CREATE_POST_DRAFT_KEY = "createPost_draft";
-const MAX_CAPTION_CHARS = 1000;
+const MAX_CAPTION_CHARS = MAX_IG_CAPTION_CHARS;
 const MAX_HASHTAGS = 3;
 /** Text on image limit (20% reduction from 250). */
 const MAX_IMAGE_TEXT_CHARS = 200;
@@ -77,8 +80,14 @@ interface CreatePostFormProps {
   libraryPosts?: LibraryPost[];
   prefillFromTryStyle?: { styleId: string; contentIdea: string };
   prefillIdeaContent?: string;
-  postIdeas?: { id: string; content: string }[];
-  rssIdeas?: { id: string; content: string; title?: string | null }[];
+  postIdeas?: { id: string; content: string; brand_space_id?: string | null; brandName?: string }[];
+  rssIdeas?: {
+    id: string;
+    content: string;
+    title?: string | null;
+    brand_space_id?: string | null;
+    brandName?: string;
+  }[];
 }
 
 const STEPS = [
@@ -138,7 +147,7 @@ export function CreatePostForm({
     customLanguage: "",
     contentIdea: "",
     contentFramework: "educational-value" as string,
-    postStyle: "immersive-photo" as string,
+    postStyle: "" as string,
     variations: 1,
     carouselPageCount: 3,
   });
@@ -154,10 +163,6 @@ export function CreatePostForm({
     { pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }[]
   >([]);
   const [is4KEnabled, setIs4KEnabled] = useState(false);
-  const [aiGenerateIdeas, setAiGenerateIdeas] = useState<string[] | null>(null);
-  const [aiGenerateLoading, setAiGenerateLoading] = useState(false);
-  const [aiGenerateError, setAiGenerateError] = useState<string | null>(null);
-
   const saveDraft = useCallback(() => {
     try {
       sessionStorage.setItem(
@@ -246,7 +251,9 @@ export function CreatePostForm({
 
   useEffect(() => {
     if (prefillIdeaContent) {
-      setFormData((prev) => ({ ...prev, contentIdea: prefillIdeaContent }));
+      const structured = parseStructuredIdea(prefillIdeaContent);
+      const text = structured ? structuredIdeaToBrief(structured) : prefillIdeaContent;
+      setFormData((prev) => ({ ...prev, contentIdea: text.slice(0, MAX_CONTENT_IDEA_CHARS) }));
     }
   }, [prefillIdeaContent]);
 
@@ -416,40 +423,6 @@ export function CreatePostForm({
 
   const removeReferenceImage = (url: string) => {
     setReferenceImageUrls((prev) => prev.filter((u) => u !== url));
-  };
-
-  const handleAiGenerateIdeas = async () => {
-    if (!formData.brandSpaceId) return;
-    setAiGenerateLoading(true);
-    setAiGenerateError(null);
-    setAiGenerateIdeas(null);
-    try {
-      const res = await fetch("/api/library/ideas/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brandSpaceId: formData.brandSpaceId,
-          postType: formData.postType,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to generate");
-      const ideas = data.ideas ?? [];
-      setAiGenerateIdeas(ideas);
-      if (ideas[0]) {
-        fetch("/api/library/ideas", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: ideas[0] }),
-        })
-          .then(() => router.refresh())
-          .catch(() => {});
-      }
-    } catch (e) {
-      setAiGenerateError(e instanceof Error ? e.message : "Failed to generate ideas");
-    } finally {
-      setAiGenerateLoading(false);
-    }
   };
 
   const LANGUAGE_OPTIONS = [
@@ -724,7 +697,7 @@ export function CreatePostForm({
                     ...prev,
                     brandSpaceId: t.brand_space_id,
                     contentFramework: t.content_framework ?? "educational-value",
-                    postStyle: t.post_style ?? "immersive-photo",
+                    postStyle: t.post_style ?? "",
                     postType: t.post_type as PostType,
                     format: t.format as PostFormat,
                     customWidth: t.custom_width ?? undefined,
@@ -939,6 +912,19 @@ export function CreatePostForm({
   }
 
   if (step === 2) {
+    const ideasForBrand = postIdeas.filter(
+      (i) =>
+        !formData.brandSpaceId ||
+        !i.brand_space_id ||
+        i.brand_space_id === formData.brandSpaceId
+    );
+    const rssForBrand = rssIdeas.filter(
+      (i) =>
+        !formData.brandSpaceId ||
+        !i.brand_space_id ||
+        i.brand_space_id === formData.brandSpaceId
+    );
+
     const CONTENT_FRAMEWORK_OPTIONS = [
       {
         value: "educational-value",
@@ -963,6 +949,8 @@ export function CreatePostForm({
     ];
 
     const VISUAL_LAYOUT_OPTIONS = [
+      { value: "", title: "No specific layout", description: "Let the AI choose composition when generating the image—no fixed layout rules." },
+      { value: "text-image-balanced", title: "圖文並茂", description: "Text woven into the image—integrated with the scene, not only in empty margins." },
       { value: "magazine-editorial", title: "Magazine Editorial", description: "Edge-to-edge visual with a massive top masthead and framing text." },
       { value: "cinematic-poster", title: "Cinematic Poster", description: "Dramatic center focus with integrated titles and bottom-heavy text." },
       { value: "immersive-visual", title: "Immersive Visual", description: "Focuses entirely on high-quality graphics with minimal text overlay." },
@@ -1023,32 +1011,7 @@ export function CreatePostForm({
             <label className="block text-sm font-medium text-zinc-400">
               Describe the post you want to create *
             </label>
-            {formData.brandSpaceId && (
-              <button
-                type="button"
-                onClick={handleAiGenerateIdeas}
-                disabled={aiGenerateLoading}
-                className="shrink-0 px-4 py-2 rounded-xl border border-violet-500/50 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2"
-              >
-                {aiGenerateLoading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-violet-500/50 border-t-violet-500 rounded-full animate-spin" />
-                    AI generating…
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    AI Generate
-                  </>
-                )}
-              </button>
-            )}
           </div>
-          {aiGenerateError && (
-            <p className="text-sm text-amber-400 mb-2">{aiGenerateError}</p>
-          )}
           <p className="text-sm text-zinc-500 mb-3">
             Import content from Idea Bank or RSS feed, or type below.
           </p>
@@ -1061,15 +1024,25 @@ export function CreatePostForm({
                 onChange={(e) => {
                   const opt = e.target.value;
                   if (opt) {
-                    const idea = postIdeas.find((i) => i.id === opt);
-                    if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
+                    const idea = ideasForBrand.find((i) => i.id === opt);
+                    if (idea) {
+                      const structured = parseStructuredIdea(idea.content);
+                      const text = structured
+                        ? structuredIdeaToBrief(structured)
+                        : idea.content;
+                      setFormData((prev) => ({
+                        ...prev,
+                        contentIdea: text.slice(0, MAX_CONTENT_IDEA_CHARS),
+                      }));
+                    }
                   }
                 }}
               >
                 <option value="">— Select —</option>
-                {postIdeas.map((i) => (
+                {ideasForBrand.map((i) => (
                   <option key={i.id} value={i.id}>
-                    {i.content.slice(0, 60)}{i.content.length > 60 ? "…" : ""}
+                    {i.brandName ? `[${i.brandName}] ` : ""}
+                    {ideaListLabel(i.content, 52)}
                   </option>
                 ))}
               </select>
@@ -1082,15 +1055,17 @@ export function CreatePostForm({
                 onChange={(e) => {
                   const opt = e.target.value;
                   if (opt) {
-                    const idea = rssIdeas.find((i) => i.id === opt);
+                    const idea = rssForBrand.find((i) => i.id === opt);
                     if (idea) setFormData((prev) => ({ ...prev, contentIdea: idea.content }));
                   }
                 }}
               >
                 <option value="">— Select —</option>
-                {rssIdeas.map((i) => (
+                {rssForBrand.map((i) => (
                   <option key={i.id} value={i.id}>
-                    {(i.title || i.content).slice(0, 60)}{(i.title || i.content).length > 60 ? "…" : ""}
+                    {i.brandName ? `[${i.brandName}] ` : ""}
+                    {(i.title || i.content).slice(0, 52)}
+                    {(i.title || i.content).length > 52 ? "…" : ""}
                   </option>
                 ))}
               </select>
@@ -1098,7 +1073,7 @@ export function CreatePostForm({
           </div>
           <textarea
             required
-            maxLength={1000}
+            maxLength={MAX_CONTENT_IDEA_CHARS}
             value={formData.contentIdea}
             onChange={(e) =>
               setFormData({ ...formData, contentIdea: e.target.value })
@@ -1108,53 +1083,9 @@ export function CreatePostForm({
             placeholder="e.g., Announce our new product launch, share a customer testimonial..."
           />
           <p className="text-xs text-zinc-500 mt-1">
-            {formData.contentIdea.length}/1000
+            {formData.contentIdea.length}/{MAX_CONTENT_IDEA_CHARS}
           </p>
 
-          {aiGenerateIdeas && aiGenerateIdeas.length > 0 && (
-            <div
-              className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pt-6 sm:pt-4 overflow-y-auto"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="ai-ideas-modal-title"
-              onClick={() => setAiGenerateIdeas(null)}
-            >
-              <div
-                className="w-full max-w-lg max-h-[55vh] sm:max-h-[85vh] rounded-xl bg-zinc-900 border border-white/10 shadow-xl flex flex-col overflow-hidden flex-shrink-0"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-4 sm:p-6 flex-shrink-0 border-b border-white/5">
-                  <h2 id="ai-ideas-modal-title" className="text-base font-semibold text-white">
-                    AI-generated Instagram post idea
-                  </h2>
-                </div>
-                <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
-                  <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap break-words mb-4">
-                    {aiGenerateIdeas[0]}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData((prev) => ({ ...prev, contentIdea: aiGenerateIdeas[0].slice(0, MAX_CAPTION_CHARS) }));
-                        setAiGenerateIdeas(null);
-                      }}
-                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-medium hover:opacity-90"
-                    >
-                      Use this
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAiGenerateIdeas(null)}
-                      className="flex-1 py-2.5 rounded-xl border border-white/10 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 text-sm"
-                    >
-                      Discard
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         <div>
@@ -1240,15 +1171,18 @@ export function CreatePostForm({
             Visual Layout
           </p>
           <p className="text-xs text-zinc-500 mb-4">
-            Choose the layout style for your post image.
+            Optional. Choose a layout hint for the image, or leave unset for no fixed template.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {VISUAL_LAYOUT_OPTIONS.map(({ value, title, description }) => (
               <button
-                key={value}
+                key={value || "none"}
                 type="button"
                 onClick={() =>
-                  setFormData({ ...formData, postStyle: value })
+                  setFormData({
+                    ...formData,
+                    postStyle: formData.postStyle === value ? "" : value,
+                  })
                 }
                 className={`p-4 rounded-xl border-2 text-center transition-all hover:border-indigo-500/50 hover:bg-zinc-800/50 flex flex-col items-center ${
                   formData.postStyle === value
@@ -1436,7 +1370,7 @@ export function CreatePostForm({
               Text on Image (editable) — Plain text only, no markdown
             </label>
             <p className="text-xs text-zinc-500 mb-1">
-              {formData.postStyle === "immersive-photo"
+              {!formData.postStyle || formData.postStyle === "immersive-photo"
                 ? "Minimal or no text. Leave blank for pure image."
                 : formData.postStyle === "editorial"
                   ? "Line 1 = headline, Line 2 = subheadline, Line 3+ = body. Plain text only (no #, ##, ###)."
@@ -1450,7 +1384,7 @@ export function CreatePostForm({
               maxLength={MAX_IMAGE_TEXT_CHARS}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
               rows={5}
-              placeholder={formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "Headline\nSubheadline\nBody text... (2–4 lines, up to 200 chars)"}
+              placeholder={!formData.postStyle || formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "Headline\nSubheadline\nBody text... (2–4 lines, up to 200 chars)"}
             />
           </div>
           )}
@@ -1630,7 +1564,7 @@ export function CreatePostForm({
 
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              IG Caption (editable) — Max 1000 chars, max 3 hashtags
+              IG Caption (editable) — Max {MAX_CAPTION_CHARS} chars, max 3 hashtags
             </label>
             <textarea
               value={carouselDraft ? carouselDraft.igCaption : (draft as SingleDraft).igCaption}

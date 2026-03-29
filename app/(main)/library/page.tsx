@@ -70,9 +70,9 @@ export default async function LibraryPage({
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  const { data: postIdeas } = await supabase
+  const { data: postIdeasRaw } = await supabase
     .from("user_post_ideas")
-    .select("id, content, created_at")
+    .select("id, content, created_at, brand_space_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -109,12 +109,20 @@ export default async function LibraryPage({
   // Ensure all props are JSON-serializable for Client Components (avoids Server Components render errors)
   type LibPost = { id: string; visual_url?: string; carousel_urls?: string[] | null; content_idea?: string; created_at: string; tags?: string[]; brand_spaces?: { name?: string } };
   type LibRef = { id: string; image_url: string; created_at: string; source: string };
-  type LibIdea = { id: string; content: string; created_at: string };
+  type LibIdea = { id: string; content: string; created_at: string; brand_space_id?: string | null; brandName?: string };
   type LibDesign = { id: string; image_url: string; created_at: string; metadata?: Record<string, unknown>; source_id?: string | null };
   type LibBrand = { id: string; name: string };
   const serializablePosts = JSON.parse(JSON.stringify(posts ?? [])) as LibPost[];
   const serializableReferences = JSON.parse(JSON.stringify(references)) as LibRef[];
-  const serializablePostIdeas = JSON.parse(JSON.stringify(postIdeas ?? [])) as LibIdea[];
+  const brandNameById = new Map((brandSpaces ?? []).map((b) => [b.id, b.name]));
+  const postIdeas: LibIdea[] = (postIdeasRaw ?? []).map((row) => ({
+    id: row.id,
+    content: row.content,
+    created_at: row.created_at,
+    brand_space_id: row.brand_space_id,
+    brandName: row.brand_space_id ? brandNameById.get(row.brand_space_id) : undefined,
+  }));
+  const serializablePostIdeas = JSON.parse(JSON.stringify(postIdeas)) as LibIdea[];
   const serializableMyDesign = JSON.parse(JSON.stringify(myDesignItems ?? [])) as LibDesign[];
   const serializableBrandSpaces = JSON.parse(JSON.stringify(brandSpaces ?? [])) as LibBrand[];
 

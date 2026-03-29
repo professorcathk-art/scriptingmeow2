@@ -218,6 +218,14 @@ export function BrandbookForm({
   const handleSave = async () => {
     if (!brandbook) return;
 
+    const placementNotSelected = logoPlacement === "" || logoPlacement === null || logoPlacement === undefined;
+    if (logoUrl && placementNotSelected) {
+      alert(
+        "Please choose logo placement before saving. Use the dropdown to pick where your logo appears on generated posts, or choose \"No logo\" if you do not want a logo on posts."
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch(`/api/brandbooks`, {

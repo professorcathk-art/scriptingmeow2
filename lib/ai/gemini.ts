@@ -10,6 +10,7 @@ import {
   getSingleImageDraftPromptLight,
   getCarouselDraftPromptLight,
 } from "./load-prompts";
+import { MAX_IG_CAPTION_CHARS, MAX_CONTENT_IDEA_CHARS } from "@/lib/constants";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -141,7 +142,7 @@ function parseSingleDraft(post: Record<string, unknown>, postAim?: string): Draf
   return {
     imageTextOnImage: stripMarkdownFromText(raw),
     visualAdvice: String(post.visualAdvice ?? post.nanoBananaPrompt ?? "").trim(),
-    igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, 1000),
+    igCaption: String(post.igCaption ?? post.caption ?? "").trim().slice(0, MAX_IG_CAPTION_CHARS),
     postAim: postAim || (typeof post.postAim === "string" ? post.postAim : undefined),
   };
 }
@@ -441,6 +442,12 @@ function truncate(s: string, max: number): string {
   return t.length <= max ? t : t.slice(0, max) + "...";
 }
 
+/** Map empty layout to a neutral draft key (no fixed spatial template). */
+function resolveLayoutKey(postStyle?: string): string {
+  const t = postStyle?.trim();
+  return t || "unspecified";
+}
+
 function formatDosAndDonts(dosAndDonts: unknown): string {
   const d = dosAndDonts as { dos?: string[]; donts?: string[] } | null | undefined;
   if (!d) return "";
@@ -466,6 +473,10 @@ const LAYOUT_SPATIAL_DIRECTIVES: Record<string, string> = {
   editorial: "MAGAZINE EDITORIAL LAYOUT: Edge-to-edge full-bleed background. Leave generous negative space at the absolute top for a massive masthead (Headline). Place the primary subject centrally. Leave smaller pockets of negative space on borders for subheadlines.",
   "text-heavy": "INFOGRAPHIC GRID LAYOUT: Highly structured. Do not generate a massive hero subject. Use a clean background with small, supportive graphical motifs. Maximize whitespace (80% empty) to accommodate dense, multi-point typography.",
   "tweet-card": "STATEMENT CARD LAYOUT: Extreme minimalism. The text is the hero. Generate a beautifully textured, soft, or abstract background with ZERO distracting subjects. Ensure 90% negative space for massive, centered typography.",
+  unspecified:
+    "NO FIXED TEMPLATE: Balance subject, typography, and negative space for the topic—do not force a rigid banded layout.",
+  "text-image-balanced":
+    "INTEGRATED 圖文並茂: Weave text with imagery; type may overlay, wrap, or sit in designed pockets within the scene—not only in empty margins.",
 };
 
 const IMAGE_TEXT_LIMIT = "STRICT: imageTextOnImage must NEVER exceed 200 characters. Shorten to fit—do not crop or truncate in output.";
@@ -482,6 +493,8 @@ const LAYOUT_TEXT_GUIDE: Record<string, string> = {
   editorial: `Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown. Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. ${IMAGE_TEXT_LIMIT}`,
   "text-heavy": `Text-Heavy / Infographic: Bold typography center stage. imageTextOnImage: 2–5 lines. ${IMAGE_TEXT_LIMIT} Plain text only, no markdown.`,
   "tweet-card": `Quote / Tweet Card: Stylized quote. imageTextOnImage: the key quote (2–3 lines), plain text only, no markdown. ${IMAGE_TEXT_LIMIT}`,
+  unspecified: `Balanced graphic: include on-image text only if it serves the idea—2–4 lines when used. Use 主標題：, 副標題：, 內文：. ${IMAGE_TEXT_LIMIT}`,
+  "text-image-balanced": `圖文並茂: integrate text with the scene—overlays, wraps, or pockets inside the image. Clear hierarchy. Use 主標題：, 副標題：, 內文：. ${IMAGE_TEXT_LIMIT}`,
 };
 
 /** Single post (單頁圖表): impress target audience. Carousel (複頁教學貼文): save value. */
@@ -524,21 +537,22 @@ export async function generatePostLight(
   contentFramework?: string,
   carouselPageCount?: number
 ): Promise<DraftOutput[] | CarouselDraftOutput> {
-  const idea = truncate(contentIdea, 1000);
+  const idea = truncate(contentIdea, MAX_CONTENT_IDEA_CHARS);
   const contentFrameworkDesc =
     CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] ||
     CONTENT_FRAMEWORK_GUIDE["educational-value"];
   const aspectNote =
     format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
-  const layoutGuide = LAYOUT_TEXT_GUIDE[postStyle || "immersive-photo"] || LAYOUT_TEXT_GUIDE["immersive-photo"];
+  const layoutKey = resolveLayoutKey(postStyle);
+  const layoutGuide = LAYOUT_TEXT_GUIDE[layoutKey] || LAYOUT_TEXT_GUIDE["unspecified"];
 
   const isCarousel =
     postType === "carousel" && typeof carouselPageCount === "number" && carouselPageCount >= 1 && carouselPageCount <= 9;
 
   if (isCarousel) {
     const pageCount = carouselPageCount!;
-    const isTextHeavy = postStyle === "text-heavy";
-    const layoutGuide = LAYOUT_TEXT_GUIDE[postStyle || "immersive-photo"] || LAYOUT_TEXT_GUIDE["immersive-photo"];
+    const isTextHeavy =
+      layoutKey === "text-heavy" || layoutKey === "text-heavy-infographic";
     const prompt = getCarouselDraftPromptLight({
       pageCount,
       idea,
@@ -662,7 +676,7 @@ function parseCarouselJson(text: string, pageCount: number): CarouselDraftOutput
     }
     return {
       pages,
-      igCaption: String(parsed.igCaption ?? parsed.caption ?? "").trim().slice(0, 1000),
+      igCaption: String(parsed.igCaption ?? parsed.caption ?? "").trim().slice(0, MAX_IG_CAPTION_CHARS),
       postAim: typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined,
     };
   } catch {
@@ -689,7 +703,7 @@ export async function generatePost(
   carouselPageCount?: number,
   singleSafety?: boolean
 ): Promise<DraftOutput[] | CarouselDraftOutput> {
-  const idea = truncate(contentIdea, 1000);
+  const idea = truncate(contentIdea, MAX_CONTENT_IDEA_CHARS);
   const isCarouselPost = postType === "carousel" && typeof carouselPageCount === "number" && carouselPageCount >= 1 && carouselPageCount <= 9;
 
   if (isCarouselPost) {
@@ -711,11 +725,14 @@ export async function generatePost(
     const tone = truncate(brandbook.toneOfVoice, 150);
     const aspectNote = format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
 
-    const isTextHeavy = postStyle === "text-heavy-infographic" || postStyle === "text-heavy";
-    const layoutGuide = LAYOUT_SPATIAL_DIRECTIVES[postStyle || "text-heavy-infographic"] || LAYOUT_SPATIAL_DIRECTIVES["text-heavy-infographic"];
-    const textGuide = LAYOUT_TEXT_GUIDE[postStyle || "text-heavy-infographic"] || LAYOUT_TEXT_GUIDE["text-heavy-infographic"];
+    const carouselLayoutKey = resolveLayoutKey(postStyle);
+    const isTextHeavy =
+      carouselLayoutKey === "text-heavy-infographic" || carouselLayoutKey === "text-heavy";
+    const layoutGuide =
+      LAYOUT_SPATIAL_DIRECTIVES[carouselLayoutKey] || LAYOUT_SPATIAL_DIRECTIVES["unspecified"];
+    const textGuide =
+      LAYOUT_TEXT_GUIDE[carouselLayoutKey] || LAYOUT_TEXT_GUIDE["unspecified"];
     const dosDonts = formatDosAndDonts(brandbook.dosAndDonts);
-    const layoutStyleDetail = truncate((vs as { layoutStyleDetail?: string })?.layoutStyleDetail || "", 200);
 
     const carouselPrompt = getCarouselDraftPrompt({
       pageCount,
@@ -726,7 +743,7 @@ export async function generatePost(
       colors: colors || "professional palette",
       contentFrameworkDesc: CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"],
       layoutGuide,
-      layoutStyleDetail,
+      layoutStyleDetail: "",
       dosDonts,
       textGuide,
       idea,
@@ -797,11 +814,10 @@ export async function generatePost(
     : Array.isArray(vs?.colors) ? vs.colors.filter((c) => c && String(c).trim()).slice(0, 5).join(", ") : "";
   const style = vs?.imageStyle || vs?.image_style || "professional";
   const typography = truncate(vs?.typographySpec || "", 150);
-  const layoutDetail = truncate(vs?.layoutStyleDetail || "", 150);
   const personality = truncate(brandbook.brandPersonality, 200);
   const tone = truncate(brandbook.toneOfVoice, 150);
-  const layout = postStyle || "immersive-photo";
-  const textGuide = LAYOUT_TEXT_GUIDE[layout] || LAYOUT_TEXT_GUIDE["immersive-photo"];
+  const layout = resolveLayoutKey(postStyle);
+  const textGuide = LAYOUT_TEXT_GUIDE[layout] || LAYOUT_TEXT_GUIDE["unspecified"];
   const aspectNote = format === "portrait" ? "4:5" : format === "story" || format === "reel-cover" ? "9:16" : "1:1";
 
   const contentFrameworkDesc = CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"];
@@ -809,16 +825,27 @@ export async function generatePost(
     ? `Other (${brandbook.otherBrandType.trim()})`
     : BRAND_TYPE_GUIDANCE[brandbook.brandType || ""]?.split(":")[0] || brandbook.brandType || "";
 
-  const spatialDirective = LAYOUT_SPATIAL_DIRECTIVES[layout] || LAYOUT_SPATIAL_DIRECTIVES["immersive-visual"];
+  const spatialDirective =
+    layout === "unspecified"
+      ? ""
+      : LAYOUT_SPATIAL_DIRECTIVES[layout] || LAYOUT_SPATIAL_DIRECTIVES["immersive-visual"];
   const dosDonts = formatDosAndDonts(brandbook.dosAndDonts);
-  const visualLayoutContext = [
-    `Visual layout (user chose): ${layout}. ${spatialDirective}`,
-    typography ? `Typography: ${typography}` : "",
-    layoutDetail ? `Layout: ${layoutDetail}` : "",
-    dosDonts ? `Brand rules: ${dosDonts}` : "",
-  ]
-    .filter(Boolean)
-    .join(". ");
+  const visualLayoutContext =
+    layout === "unspecified"
+      ? [
+          `Layout: not fixed—compose a balanced, on-brand graphic for this topic (the user may choose a different layout for the final image).`,
+          typography ? `Typography: ${typography}` : "",
+          dosDonts ? `Brand rules: ${dosDonts}` : "",
+        ]
+          .filter(Boolean)
+          .join(". ")
+      : [
+          `Visual layout (user chose): ${layout}. ${spatialDirective}`,
+          typography ? `Typography: ${typography}` : "",
+          dosDonts ? `Brand rules: ${dosDonts}` : "",
+        ]
+          .filter(Boolean)
+          .join(". ");
 
   const isCarousel = layout === "text-heavy";
   const qualityGuide = isCarousel ? POST_QUALITY_GUIDE.carousel : POST_QUALITY_GUIDE.single;
@@ -885,6 +912,7 @@ export async function generatePost(
     imageTextOnImage: headline ? `主標題：${headline}` : "",
     visualAdvice: `Professional Instagram post image. ${contentIdea}. Clean, modern style. High-quality, scroll-stopping visual. ${format === "portrait" ? "Portrait 4:5." : format === "story" || format === "reel-cover" ? "Vertical 9:16." : "Square 1:1."}`,
     igCaption: `${contentIdea.slice(0, 200)}${contentIdea.length > 200 ? "..." : ""}\n\nFollow for more.\n\n#instagram #content`,
+    postAim: `Deliver value on this topic in line with the brand voice and audience. ${idea.slice(0, 200)}`,
   };
   console.warn("[generatePost] All models failed, using fallback. Last error:", lastError instanceof Error ? lastError.message : lastError);
   return [fallback, { ...fallback }];

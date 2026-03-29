@@ -1,18 +1,51 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { formatBrandDetailsForPrompt } from "@/lib/brand-context";
 
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL = "gemini-2.5-flash";
 
-/** Parse plain-text idea. Returns single idea (whole text). Gemini is instructed to keep under 1000 chars. */
-function parseIdeaFromText(text: string): string | null {
-  const trimmed = text.trim().replace(/^\s*[\d\-•*]+\s*[\.\)]\s*/, "");
-  if (trimmed.length < 20 || trimmed.length > 1200) return null;
-  return trimmed;
+type IdeaPayload = {
+  summary: string;
+  contentFocus: string;
+  textOnImage: string;
+  arrangement: string;
+  visualAdvice: string;
+};
+
+function parseIdeasJson(text: string): IdeaPayload[] | null {
+  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  let jsonStr = match ? match[0] : cleaned;
+  jsonStr = jsonStr.replace(/,(\s*[}\]])/g, "$1");
+  try {
+    const parsed = JSON.parse(jsonStr);
+    const raw = Array.isArray(parsed.ideas) ? parsed.ideas : parsed;
+    if (!Array.isArray(raw) || raw.length < 1) return null;
+    const out: IdeaPayload[] = [];
+    for (const item of raw.slice(0, 3)) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      out.push({
+        summary: String(o.summary ?? "").trim(),
+        contentFocus: String(o.contentFocus ?? "").trim(),
+        textOnImage: String(o.textOnImage ?? "").trim(),
+        arrangement: String(o.arrangement ?? "").trim(),
+        visualAdvice: String(o.visualAdvice ?? "").trim(),
+      });
+    }
+    return out.length ? out : null;
+  } catch {
+    return null;
+  }
 }
 
+/**
+ * POST — Generate 3 on-brand post ideas (structured) for Idea Bank.
+ * Body: { brandSpaceId: string }
+ */
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
@@ -23,7 +56,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { brandSpaceId?: string; postType?: string };
+  let body: { brandSpaceId?: string };
   try {
     body = await request.json();
   } catch {
@@ -31,7 +64,6 @@ export async function POST(request: Request) {
   }
 
   const brandSpaceId = body.brandSpaceId;
-  const postType = body.postType === "carousel" ? "carousel" : "single-image";
   if (!brandSpaceId || typeof brandSpaceId !== "string") {
     return NextResponse.json({ error: "brandSpaceId required" }, { status: 400 });
   }
@@ -48,36 +80,28 @@ export async function POST(request: Request) {
   }
 
   const details = (brandSpace as { brand_details?: Record<string, unknown> }).brand_details ?? {};
-  const toStr = (v: unknown): string => {
-    if (Array.isArray(v)) return v.filter((x) => typeof x === "string").join(", ");
-    if (typeof v === "string") return v.split("\n").map((s) => s.trim()).filter(Boolean).join(", ");
-    return "";
-  };
-
   const brandContext = `
-BRAND INFO (use all fields to inform your idea):
-- Brand name: ${brandSpace.name}
-- Brand type: ${brandSpace.brand_type === "other" ? String(details.otherBrandType || "other") : brandSpace.brand_type}
-- Target audiences: ${toStr(details.targetAudiences) || "—"}
-- Audience pain points: ${toStr(details.painPoints) || "—"}
-- Desired outcomes: ${toStr(details.desiredOutcomes) || "—"}
-- Value proposition: ${String(details.valueProposition ?? "").trim() || "—"}
+Brand name: ${brandSpace.name}
+Brand type: ${brandSpace.brand_type === "other" ? String(details.otherBrandType || "other") : brandSpace.brand_type}
+${formatBrandDetailsForPrompt(details) || "—"}
 `.trim();
 
-  const postTypeNote =
-    postType === "carousel"
-      ? "The user chose CAROUSEL (multi-slide post). Generate an idea suited for a carousel—e.g. a step-by-step guide, list, or multi-point breakdown that works across several slides."
-      : "The user chose SINGLE IMAGE post. Generate an idea suited for one image—e.g. a powerful visual, quote, or single-message graphic. Do NOT suggest carousel or multi-slide content.";
-
-  const prompt = `You are an Instagram content strategist. Generate ONE Instagram post idea for this brand.
-
-This will be used as the content brief for creating an Instagram post (image + caption). The idea should be specific and actionable.
+  const prompt = `You are an Instagram content director. Generate exactly 3 DISTINCT post ideas for this brand. Each idea must be clearly relevant to the brand info below—do not suggest generic topics that ignore the brand.
 
 ${brandContext}
 
-${postTypeNote}
-
-Generate exactly ONE Instagram post idea. Keep it under 1000 characters so it fits our content brief field. It can be 2–4 sentences. Be concrete. No numbering, no bullets, no JSON, no markdown. Just the idea in plain text.`;
+Return valid JSON only (no markdown fences):
+{
+  "ideas": [
+    {
+      "summary": "One short line for list display (max 120 chars)",
+      "contentFocus": "What the post is about and the main message",
+      "textOnImage": "Suggested headline/subhead/body lines for on-image text (plain text, concise)",
+      "arrangement": "How text and visuals should be arranged (without naming a fixed IG layout template)",
+      "visualAdvice": "Visual direction: mood, subject, color/lighting notes for the image"
+    }
+  ]
+}`;
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -88,8 +112,8 @@ Generate exactly ONE Instagram post idea. Keep it under 1000 characters so it fi
   const bodyPayload = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 1024,
+      temperature: 0.85,
+      maxOutputTokens: 4096,
     },
   };
 
@@ -101,7 +125,7 @@ Generate exactly ONE Instagram post idea. Keep it under 1000 characters so it fi
         "x-goog-api-key": apiKey,
       },
       body: JSON.stringify(bodyPayload),
-      signal: AbortSignal.timeout(55000),
+      signal: AbortSignal.timeout(85000),
     });
 
     if (!res.ok) {
@@ -110,30 +134,19 @@ Generate exactly ONE Instagram post idea. Keep it under 1000 characters so it fi
     }
 
     const data = (await res.json()) as {
-      candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> };
-        finishReason?: string;
-      }>;
-      promptFeedback?: { blockReason?: string };
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     };
-    const candidate = data.candidates?.[0];
-    const text = candidate?.content?.parts?.[0]?.text?.trim();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
     if (!text) {
-      const reason = data.promptFeedback?.blockReason ?? candidate?.finishReason ?? "empty";
-      console.warn("[ideas/generate] No text in response:", reason);
-      return NextResponse.json(
-        { error: "No ideas generated", details: String(reason) },
-        { status: 500 }
-      );
-    }
-
-    const idea = parseIdeaFromText(text);
-    if (!idea) {
-      console.warn("[ideas/generate] Parse yielded no idea. Raw text length:", text.length, "preview:", text.slice(0, 200));
       return NextResponse.json({ error: "No ideas generated" }, { status: 500 });
     }
 
-    return NextResponse.json({ ideas: [idea] });
+    const ideas = parseIdeasJson(text);
+    if (!ideas || ideas.length === 0) {
+      return NextResponse.json({ error: "Could not parse ideas" }, { status: 500 });
+    }
+
+    return NextResponse.json({ ideas });
   } catch (err) {
     console.error("[ideas/generate] Error:", err);
     const msg = err instanceof Error ? err.message : "Unknown error";

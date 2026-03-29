@@ -4,6 +4,8 @@
  * Expert-level design guidance for professional IG posts.
  */
 
+import { languageInstructionForImage } from "@/lib/language-image-prompt";
+
 function stripMarkdown(s: string): string {
   return String(s || "")
     .replace(/^#+\s*/gm, "")
@@ -109,6 +111,10 @@ STATEMENT CARD LAYOUT: Extreme minimalism. The text is the hero. Generate a beau
   "immersive-photo": `
 VISUAL LAYOUT & SPATIAL RULES: immersive-visual.
 IMMERSIVE VISUAL LAYOUT: Edge-to-edge subject focus. Do not force large blocks of negative space. The image should be rich and full, as text will be minimally overlaid.`,
+  unspecified: `
+VISUAL LAYOUT: No fixed template. Compose a balanced, premium Instagram graphic that fits the brand and topic. Let composition follow the subject and message naturally.`,
+  "text-image-balanced": `
+VISUAL LAYOUT (圖文並茂): Integrate text and imagery—text weaves through the scene, wraps subjects, or sits in designed pockets within the image (not a separate empty text band). Natural editorial flow, clear hierarchy.`,
 };
 
 const CONTENT_FRAMEWORK_IMAGE_GUIDE: Record<string, string> = {
@@ -154,6 +160,8 @@ export function buildImagePrompt(options: {
   otherBrandType?: string;
   contentFramework?: string;
   postAim?: string;
+  /** Post language — drives on-image text language (e.g. bilingual). */
+  language?: string;
 }): string {
   const vs = options.brandbook?.visual_style as BrandbookVisualStyle;
   const pageIndex = options.pageIndex ?? 1;
@@ -179,12 +187,8 @@ export function buildImagePrompt(options: {
   const colorDescriptionDetailed = colorUsageInstructions
     ? (colors ? `Colors (use these): ${colors}. How to apply: ${colorUsageInstructions}` : `Color usage: ${colorUsageInstructions}`)
     : colorDescriptionFromPalette || (colors ? `Colors (use these): ${colors}` : "");
-  const visualAura = (vs as { visualAura?: string })?.visualAura || "";
   const lineStyle = (vs as { lineStyle?: string })?.lineStyle || "";
-  const layoutTendencies = vs?.layoutTendencies || "";
-  const layoutStyle = vs?.layoutStyle || "";
   const typographySpec = vs?.typographySpec || "";
-  const layoutStyleDetail = vs?.layoutStyleDetail || "";
 
   const brandContextParts: string[] = [];
   const totalPages = options.carouselPageCount ?? 1;
@@ -199,9 +203,7 @@ export function buildImagePrompt(options: {
   } else {
     brandContextParts.push(`CORE VISUAL IDENTITY: Use brand visual style: ${imageStyle}`);
     if (colorDescriptionDetailed) brandContextParts.push(`Color palette & lighting: ${colorDescriptionDetailed}`);
-    if (visualAura) brandContextParts.push(`Visual aura & whitespace rules: ${visualAura}`);
     if (lineStyle) brandContextParts.push(`Line/stroke characteristics: ${lineStyle}`);
-    if (layoutStyle) brandContextParts.push(`Layout rules: ${layoutStyle}`);
     if (typographySpec) brandContextParts.push(`Typography aesthetic: ${typographySpec}`);
     if (!colorDescriptionDetailed && colors) brandContextParts.push(`Colors (use these): ${colors}`);
   }
@@ -249,9 +251,17 @@ export function buildImagePrompt(options: {
     parts.push(`SCENE & SUBJECT ACTION (CRITICAL): ${options.visualAdvice.trim()}\n*Instruction: Merge this specific scene description seamlessly into the Core Visual Identity defined above. Do not alter the brand's art style to fit the scene; force the scene to match the brand's aesthetic medium and colors exactly.*`);
   }
 
-  const layout = options.postStyle || "editorial";
-  const layoutGuide = LAYOUT_DESIGN_GUIDE[layout] || LAYOUT_DESIGN_GUIDE["magazine-editorial"];
-  parts.push(layoutGuide);
+  const lang = (options.language || "English").trim();
+  if (lang) {
+    parts.push(languageInstructionForImage(lang));
+  }
+
+  const layoutKey = options.postStyle?.trim();
+  if (layoutKey) {
+    const layoutGuide =
+      LAYOUT_DESIGN_GUIDE[layoutKey] || LAYOUT_DESIGN_GUIDE["magazine-editorial"];
+    parts.push(layoutGuide);
+  }
 
   let basePrompt = parts.join("\n\n");
   if (!basePrompt.trim()) {

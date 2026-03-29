@@ -46,13 +46,9 @@ const BRANDBOOK_JSON_SCHEMA = `
     "imageStyle": "string",
     "carouselInnerStyle": "string",
     "colorDescriptionDetailed": "string",
-    "visualAura": "string",
     "lineStyle": "string",
-    "layoutTendencies": "string",
-    "layoutStyle": "string",
     "vibe": ["string"],
     "typographySpec": "string",
-    "layoutStyleDetail": "string",
     "imageGenerationPrompt": "string"
   },
   "dosAndDonts": {
@@ -231,7 +227,7 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
 
-Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). STRICT: imageTextOnImage must NEVER exceed 200 characters—shorten to fit, do not output truncated text. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = HIGHLY DETAILED DESIGNER LAYOUT (4–7 sentences, 80–150 words): scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text arrangement (blocks, spacing, positions), cohesive color palette, mood. Aspect {{aspectNote}}. Do NOT be brief—the image generator needs rich detail. igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
+Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). STRICT: imageTextOnImage must NEVER exceed 200 characters—shorten to fit, do not output truncated text. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = HIGHLY DETAILED DESIGNER LAYOUT (4–7 sentences, 80–150 words): scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text arrangement (blocks, spacing, positions), cohesive color palette, mood. Aspect {{aspectNote}}. Do NOT be brief—the image generator needs rich detail. igCaption = COMPREHENSIVE caption up to 2000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
 
 const DRAFT_CAROUSEL_LIGHT = `## BRIEF (primary input)
 {{idea}}
@@ -259,10 +255,10 @@ Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sen
     { "pageIndex": 1, "imageTextOnImage": "主標題：5 Mistakes That Kill Your Growth\\n副標題：Subheadline\\n內文：Body text (use \\n for breaks)", "visualAdvice": "Designer layout: background + text blocks + spacing + cohesive colors (2–4 sentences)" },
     ...
   ],
-  "igCaption": "COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags."
+  "igCaption": "COMPREHENSIVE caption up to 2000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags."
 }
 
-postAim = overall aim for image gen. imageTextOnImage = 2–5 lines per slide. STRICT: each slide's imageTextOnImage must NEVER exceed 200 characters—shorten to fit, do not output truncated text. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = HIGHLY DETAILED DESIGNER LAYOUT per page (4–6 sentences, 80–120 words): background (exact treatment—gradient, solid, texture), text arrangement (headline block position, body block, line spacing, 40–60% negative space), cohesive color palette (which colors for what), optional motif (position, size). Do NOT be brief—each page needs rich detail for the image generator. igCaption = COMPREHENSIVE caption up to 1000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
+postAim = overall aim for image gen. imageTextOnImage = 2–5 lines per slide. STRICT: each slide's imageTextOnImage must NEVER exceed 200 characters—shorten to fit, do not output truncated text. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = HIGHLY DETAILED DESIGNER LAYOUT per page (4–6 sentences, 80–120 words): background, text blocks, spacing, hierarchy, cohesive palette, optional motifs. Do NOT be brief—each page needs rich detail for the image generator. igCaption = COMPREHENSIVE caption up to 2000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;

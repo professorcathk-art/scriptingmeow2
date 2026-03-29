@@ -38,7 +38,7 @@ Formulate the guidelines specifically for a `{{brandTypeContext}}`. Return valid
 
 **`toneOfVoice`** – Define the Brand Archetype and persona (e.g., "Empathetic Pet Behaviorist"). Detail the psychological approach (e.g., scientific yet warm, authoritative but accessible). Specify the exact linguistic perspective (e.g., "Uses first-person plural 'we' to build community"). Markdown allowed.
 
-**`imageStyle`** – The core Visual DNA. Define the exact artistic medium (e.g., Digital Watercolor, High-end Editorial Photography, Flat Vector). Specify lighting, texture, and shading rules. *Crucial:* Translate specific subjects from reference images into universal visual principles. Describe *HOW* things are presented (e.g., "3D objects must use dramatic side lighting"; "Characters must have clean, approachable geometry"). Define the Image-to-Text ratio (e.g., Cover: 40% Image / 60% Text). Do not specify aspect ratios. Markdown allowed.
+**`imageStyle`** – The core Visual DNA. Define the exact artistic medium (e.g., Digital Watercolor, High-end Editorial Photography, Flat Vector). Specify lighting, texture, and shading rules. Translate subjects from reference images into universal visual principles. Describe *how* things are presented (e.g., "3D objects use dramatic side lighting"). Do not specify aspect ratios or per-post layout templates. Markdown allowed.
 
 **`carouselInnerStyle`** – Optional guidance for inner carousel slides (Pages 2 to N). Light suggestions only—e.g., "Consider more whitespace for readability" or "Subtle motifs can support the narrative." Do NOT mandate strict ratios or restrict layout. The image generator will adapt inner pages based on context. Markdown allowed.
 
@@ -49,16 +49,12 @@ Formulate the guidelines specifically for a `{{brandTypeContext}}`. Return valid
 - **Text color:** Main typography (readability purpose, e.g., "dark for strong contrast").
 - **Accent color:** CTAs, highlights, key graphics (purpose).
 
-**`visualAura`** – Define the spatial dynamics and emotional resonance of the layout. Establish a strict whitespace philosophy (e.g., "High whitespace, mandatory 40% negative space to evoke luxury and prevent visual fatigue"). Markdown allowed.
-
 **`lineStyle`** – Detail stroke mechanics and edge quality. Be exact (e.g., "Hand-drawn ink lines with natural bleed" OR "0.5pt ultra-crisp geometric vectors"). Explicitly state what aesthetic to avoid. Markdown allowed.
 
 **`typographySpec`** – Typographic hierarchy and brand perception. Specify:
 - **Headings:** Font classification, vibe, and real-world reference (e.g., "High-contrast Serif like Playfair Display for premium authority").
 - **Body:** Legibility rules (e.g., "Clean Sans-Serif, medium weight, wide tracking").
 - **Hierarchy & Accents:** Scale differences and decorative rules. Markdown allowed.
-
-**`layoutStyleDetail`** – Define the Information Architecture and narrative pacing. Detail the structural flow (e.g., "Three-Act Structure: Heavy pain-point headline on cover -> Empathy breakdown -> Scientific resolution"). Mandate visual anchors like specific emojis or colored highlight blocks. Markdown allowed.
 
 **`colors`** – Array of exactly 5 hex codes mapped precisely to the `colorDescriptionDetailed`. Order: [primary_background, secondary_background, primary_text, secondary_text, backup_color]. Use an empty string `""` for any omitted slot (e.g., `["#F9F7F2", "#F5F3EE", "#3E332A", "", "#8FB995"]`). Max 5 elements.
 

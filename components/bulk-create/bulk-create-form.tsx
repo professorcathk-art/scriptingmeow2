@@ -19,7 +19,7 @@ type Template = {
   carousel_page_count?: number | null;
   carousel_pages?: Array<{ pageIndex: number; header: string; imageTextOnImage: string; visualAdvice: string }> | null;
 };
-type Idea = { id: string; content: string; title?: string | null };
+type Idea = { id: string; content: string; title?: string | null; brand_space_id?: string | null };
 
 interface BulkCreateFormProps {
   brandSpaces: BrandSpace[];
@@ -67,6 +67,12 @@ export function BulkCreateForm({
     }
   };
   const brandSpaceId = selectedTemplate?.brand_space_id ?? "";
+  const ideasForTemplate = postIdeas.filter(
+    (i) => !brandSpaceId || !i.brand_space_id || i.brand_space_id === brandSpaceId
+  );
+  const rssForTemplate = rssIdeas.filter(
+    (i) => !brandSpaceId || !i.brand_space_id || i.brand_space_id === brandSpaceId
+  );
   const isCarousel = selectedTemplate?.post_type === "carousel";
   const carouselPages = selectedTemplate?.carousel_page_count ?? selectedTemplate?.carousel_pages?.length ?? 3;
   const creditsPerPost = isCarousel ? carouselPages : 1;
@@ -174,11 +180,13 @@ export function BulkCreateForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 rounded-xl bg-zinc-900/50 border border-white/10">
             <h4 className="text-sm font-medium text-zinc-300 mb-2">Idea Bank</h4>
-            {postIdeas.length === 0 ? (
-              <p className="text-zinc-500 text-sm">No ideas yet. Add ideas in Library.</p>
+            {!selectedTemplate ? (
+              <p className="text-zinc-500 text-sm">Select a template first.</p>
+            ) : ideasForTemplate.length === 0 ? (
+              <p className="text-zinc-500 text-sm">No ideas for this brand. Add ideas in Library.</p>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {postIdeas.map((idea) => (
+                {ideasForTemplate.map((idea) => (
                   <label
                     key={idea.id}
                     className="flex items-start gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer"
@@ -197,11 +205,13 @@ export function BulkCreateForm({
           </div>
           <div className="p-4 rounded-xl bg-zinc-900/50 border border-white/10">
             <h4 className="text-sm font-medium text-zinc-300 mb-2">RSS Autofeed</h4>
-            {rssIdeas.length === 0 ? (
-              <p className="text-zinc-500 text-sm">No RSS ideas. Add RSS feeds in Library (paid users).</p>
+            {!selectedTemplate ? (
+              <p className="text-zinc-500 text-sm">Select a template first.</p>
+            ) : rssForTemplate.length === 0 ? (
+              <p className="text-zinc-500 text-sm">No RSS ideas for this brand.</p>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {rssIdeas.map((idea) => (
+                {rssForTemplate.map((idea) => (
                   <label
                     key={idea.id}
                     className="flex items-start gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer"

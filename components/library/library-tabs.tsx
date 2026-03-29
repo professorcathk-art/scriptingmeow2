@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { AddIdeaForm } from "./add-idea-form";
 import { RssAutofeedTab } from "./rss-autofeed-tab";
+import { IdeaBankAiPanel } from "./idea-bank-ai-panel";
+import { formatIdeaForDisplay } from "@/lib/idea-content";
 
 type Post = {
   id: string;
@@ -28,6 +30,8 @@ type PostIdea = {
   id: string;
   content: string;
   created_at: string;
+  brand_space_id?: string | null;
+  brandName?: string;
 };
 
 type MyDesignItem = {
@@ -78,6 +82,7 @@ export function LibraryTabs({
   const [tab, setTab] = useState(initialTab || "all");
   const [ideas, setIdeas] = useState(postIdeas);
   const [showAddIdea, setShowAddIdea] = useState(false);
+  const [ideaBrandFilter, setIdeaBrandFilter] = useState<string>("");
 
   useEffect(() => {
     setTab(initialTab || "all");
@@ -138,6 +143,28 @@ export function LibraryTabs({
   const handleAddIdea = (idea: PostIdea) => {
     setIdeas((prev) => [idea, ...prev]);
     setShowAddIdea(false);
+  };
+
+  const enrichIdeas = (raw: PostIdea[]): PostIdea[] =>
+    raw.map((i) => ({
+      ...i,
+      brandName: i.brand_space_id
+        ? brandSpaces.find((b) => b.id === i.brand_space_id)?.name
+        : undefined,
+    }));
+
+  const refreshIdeas = async () => {
+    try {
+      const q = ideaBrandFilter
+        ? `/api/library/ideas?brandSpaceId=${encodeURIComponent(ideaBrandFilter)}`
+        : "/api/library/ideas";
+      const res = await fetch(q);
+      if (!res.ok) return;
+      const data = await res.json();
+      setIdeas(enrichIdeas(data.ideas ?? []));
+    } catch {
+      // ignore
+    }
   };
 
   const handleDeleteIdea = async (id: string) => {
@@ -333,21 +360,46 @@ export function LibraryTabs({
         </>
       )}
 
-      {tab === "rss" && <RssAutofeedTab />}
+      {tab === "rss" && <RssAutofeedTab brandSpaces={brandSpaces} />}
 
       {tab === "ideas" && (
         <>
-          <div className="mb-4">
+          <IdeaBankAiPanel brandSpaces={brandSpaces} onSaved={refreshIdeas} />
+          <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+            <label className="text-sm text-zinc-400 shrink-0">Filter by brand</label>
+            <select
+              value={ideaBrandFilter}
+              onChange={(e) => {
+                const v = e.target.value;
+                setIdeaBrandFilter(v);
+                fetch(v ? `/api/library/ideas?brandSpaceId=${encodeURIComponent(v)}` : "/api/library/ideas")
+                  .then((r) => r.json())
+                  .then((data) => setIdeas(enrichIdeas(data.ideas ?? [])))
+                  .catch(() => {});
+              }}
+              className="px-4 py-2 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm max-w-xs"
+            >
+              <option value="">All brands</option>
+              {brandSpaces.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               onClick={() => setShowAddIdea(true)}
-              className="px-4 py-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 transition-colors text-sm"
+              className="px-4 py-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 transition-colors text-sm w-fit"
             >
               + Add idea
             </button>
           </div>
           {showAddIdea && (
-            <AddIdeaForm onAdd={handleAddIdea} onCancel={() => setShowAddIdea(false)} />
+            <AddIdeaForm
+              brandSpaces={brandSpaces}
+              onAdd={handleAddIdea}
+              onCancel={() => setShowAddIdea(false)}
+            />
           )}
           {ideas.length > 0 ? (
             <div className="space-y-3">
@@ -356,7 +408,16 @@ export function LibraryTabs({
                   key={idea.id}
                   className="p-4 rounded-xl bg-zinc-900/50 border border-white/10 flex justify-between items-start gap-4"
                 >
-                  <p className="text-zinc-300 text-sm flex-1 whitespace-pre-wrap">{idea.content}</p>
+                  <div className="flex-1 min-w-0">
+                    {idea.brandName && (
+                      <span className="inline-block mb-1 px-2 py-0.5 rounded-md bg-violet-500/15 text-violet-300 text-xs">
+                        {idea.brandName}
+                      </span>
+                    )}
+                    <p className="text-zinc-300 text-sm whitespace-pre-wrap break-words">
+                      {formatIdeaForDisplay(idea.content)}
+                    </p>
+                  </div>
                   <div className="flex gap-2 shrink-0">
                     <Link
                       href={`/create-post?ideaId=${idea.id}`}

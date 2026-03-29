@@ -6,6 +6,7 @@ import { augmentIdeaWithSourceImage, stripSourceImageUrlFromContent } from "@/li
 import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
+import { MAX_IG_CAPTION_CHARS } from "@/lib/constants";
 
 export const maxDuration = 600;
 
@@ -166,13 +167,13 @@ export async function POST(request: Request) {
 
       if (isCarousel && draftResult && "pages" in draftResult) {
         carouselPages = draftResult.pages;
-        caption = { igCaption: (draftResult.igCaption ?? "").slice(0, 1000) };
+        caption = { igCaption: (draftResult.igCaption ?? "").slice(0, MAX_IG_CAPTION_CHARS) };
         draftData = { carouselPages };
       } else {
         const single = Array.isArray(draftResult) ? draftResult[0] : null;
         imagePrompt = single?.visualAdvice?.trim() || "";
         imageTextOnImage = single?.imageTextOnImage ?? "";
-        caption = { igCaption: (single?.igCaption ?? "").slice(0, 1000) };
+        caption = { igCaption: (single?.igCaption ?? "").slice(0, MAX_IG_CAPTION_CHARS) };
         draftData = { visualAdvice: imagePrompt, imageTextOnImage };
       }
 
@@ -223,13 +224,15 @@ export async function POST(request: Request) {
             brandbook,
             visualAdvice: page.visualAdvice?.trim() || `Carousel page ${page.pageIndex}. ${idea.content}`,
             imageTextOnImage: imageText || undefined,
-            postStyle: postStyle || "text-heavy",
+            postStyle: postStyle?.trim() || undefined,
             pageIndex: page.pageIndex,
+            carouselPageCount: carouselPages.length,
             logoUrl: brandSpace?.logo_url ?? null,
             logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
             brandType: brandSpace?.brand_type,
-            otherBrandType: brandDetails?.brand_details?.otherBrandType,
+            otherBrandType: brandDetails.brand_details?.otherBrandType,
             contentFramework,
+            language: "English",
           });
           const logoUrlForRef = brandSpace?.logo_url && (brandSpace as { logo_placement?: string | null })?.logo_placement && (brandSpace as { logo_placement?: string }).logo_placement !== "none"
             ? [brandSpace.logo_url]
@@ -257,12 +260,13 @@ export async function POST(request: Request) {
           brandbook,
           visualAdvice: imagePrompt,
           imageTextOnImage: imageTextOnImage || undefined,
-          postStyle,
+          postStyle: postStyle?.trim() || undefined,
           logoUrl: brandSpace?.logo_url ?? null,
           logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
           brandType: brandSpace?.brand_type,
-          otherBrandType: brandDetails?.brand_details?.otherBrandType,
+          otherBrandType: brandDetails.brand_details?.otherBrandType,
           contentFramework,
+          language: "English",
         });
         const logoUrlForRef = brandSpace?.logo_url && (brandSpace as { logo_placement?: string | null })?.logo_placement && (brandSpace as { logo_placement?: string }).logo_placement !== "none"
           ? [brandSpace.logo_url]

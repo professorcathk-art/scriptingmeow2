@@ -4,6 +4,7 @@ import { generatePost } from "@/lib/ai/gemini";
 import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
+import { MAX_IG_CAPTION_CHARS } from "@/lib/constants";
 
 export async function POST(
   request: Request,
@@ -29,7 +30,7 @@ export async function POST(
     // Get post and verify ownership
     const { data: post } = await supabase
       .from("generated_posts")
-      .select("*, brand_spaces!inner(user_id, logo_url, logo_placement)")
+      .select("*, brand_spaces!inner(user_id, logo_url, logo_placement, brand_type, brand_details)")
       .eq("id", params.id)
       .single();
 
@@ -37,7 +38,12 @@ export async function POST(
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    const brandSpace = post.brand_spaces as { logo_url?: string | null; logo_placement?: string | null };
+    const brandSpace = post.brand_spaces as {
+      logo_url?: string | null;
+      logo_placement?: string | null;
+      brand_type?: string;
+      brand_details?: { otherBrandType?: string };
+    };
 
     // Get brandbook
     const { data: brandbook } = await supabase
@@ -72,12 +78,17 @@ export async function POST(
           toneOfVoice: brandbook.tone_of_voice,
           visualStyle: brandbook.visual_style,
           dosAndDonts: brandbook.dos_and_donts,
+          brandType: brandSpace.brand_type,
+          otherBrandType:
+            brandSpace.brand_type === "other" ? brandSpace.brand_details?.otherBrandType : undefined,
         },
         post.content_idea,
         post.language,
         post.post_type,
         post.format,
-        postStyle
+        postStyle,
+        false,
+        (post as { content_framework?: string }).content_framework
       );
       const generatedPost = Array.isArray(genResult) ? genResult[0] : null;
       if (!generatedPost || "pages" in generatedPost) {
@@ -88,7 +99,7 @@ export async function POST(
       }
       visualAdvice = generatedPost.visualAdvice?.trim() || "";
       imageTextOnImage = generatedPost.imageTextOnImage ?? "";
-      igCaption = (generatedPost.igCaption ?? "").slice(0, 1000);
+      igCaption = (generatedPost.igCaption ?? "").slice(0, MAX_IG_CAPTION_CHARS);
     }
 
     const visualAdviceResolved =
@@ -112,10 +123,14 @@ export async function POST(
       brandbook,
       visualAdvice: visualAdviceResolved,
       imageTextOnImage: imageTextOnImage || undefined,
-      postStyle: postStyle || undefined,
+      postStyle: postStyle?.trim() || undefined,
       logoUrl: brandSpace?.logo_url ?? null,
       logoPlacement: brandSpace?.logo_placement ?? null,
+      brandType: brandSpace.brand_type,
+      otherBrandType: brandSpace.brand_details?.otherBrandType,
+      contentFramework: (post as { content_framework?: string }).content_framework,
       postAim,
+      language: post.language || "English",
     });
 
     const aspectRatio =

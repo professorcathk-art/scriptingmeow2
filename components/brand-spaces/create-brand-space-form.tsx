@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { BrandType } from "@/types/database";
+import { BrandType, type LogoPlacement } from "@/types/database";
 import { compressImageForUpload } from "@/lib/image-utils";
 import { PolishModal } from "./polish-modal";
 import { TipIcon } from "./tip-icon";
@@ -30,6 +30,8 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
   const [selectedLibraryUrls, setSelectedLibraryUrls] = useState<string[]>([]);
   const [libraryRefs, setLibraryRefs] = useState<{ id: string; image_url: string }[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  /** Required after logo upload before generating brandbook (same rules as brandbook page). */
+  const [logoPlacementChoice, setLogoPlacementChoice] = useState<LogoPlacement | "">("");
   const [uploading, setUploading] = useState(false);
   const [polishField, setPolishField] = useState<PolishField | null>(null);
   const [polishLoading, setPolishLoading] = useState(false);
@@ -385,6 +387,12 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
 
   const handleSubmitWithImages = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (logoFile && !logoPlacementChoice) {
+      alert(
+        'Logo placement is required when you upload a logo. Choose where it appears on generated posts (or pick "No logo" if you changed your mind—remove the logo file and continue).'
+      );
+      return;
+    }
     setLoading(true);
 
     try {
@@ -412,6 +420,14 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
           body: logoFd,
         });
         if (!logoRes.ok) console.warn("Failed to upload logo");
+        else if (logoPlacementChoice) {
+          const patchRes = await fetch(`/api/brand-spaces/${brandSpaceId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ logoPlacement: logoPlacementChoice }),
+          });
+          if (!patchRes.ok) console.warn("Failed to save logo placement");
+        }
       }
       if (uploadedImages.length > 0) {
         for (const file of uploadedImages) {
@@ -454,7 +470,21 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
       router.push(`/brand-spaces/${brandSpaceId}/brandbook`);
     } catch (error) {
       console.error("Error creating brand space:", error);
-      alert("Failed to create brand space. Please try again.");
+      const msg =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while creating your brand space.";
+      if (
+        msg.includes("generate brandbook") ||
+        msg.includes("brandbook") ||
+        msg.includes("GEMINI")
+      ) {
+        alert(
+          `Could not generate your brandbook: ${msg}. Check your logo placement if you uploaded a logo, then try again from the brandbook page.`
+        );
+      } else {
+        alert(`Failed to create brand space: ${msg}`);
+      }
     } finally {
       setLoading(false);
       setUploading(false);
@@ -481,13 +511,40 @@ export function CreateBrandSpaceForm({ initialName }: CreateBrandSpaceFormProps 
           {logoFile && (
             <button
               type="button"
-              onClick={() => setLogoFile(null)}
+              onClick={() => {
+                setLogoFile(null);
+                setLogoPlacementChoice("");
+              }}
               className="text-xs text-zinc-500 hover:text-red-400"
             >
               Remove
             </button>
           )}
         </div>
+        {logoFile && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Logo placement in generated images *
+            </label>
+            <p className="text-xs text-zinc-500 mb-2">
+              Choose where your logo appears, or &quot;No logo&quot; if you don&apos;t want it on posts.
+            </p>
+            <select
+              value={logoPlacementChoice}
+              onChange={(e) => setLogoPlacementChoice(e.target.value as LogoPlacement | "")}
+              className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+            >
+              <option value="">— Select —</option>
+              <option value="none">No logo</option>
+              <option value="top-left">Top left</option>
+              <option value="top-center">Top center</option>
+              <option value="top-right">Top right</option>
+              <option value="bottom-left">Bottom left</option>
+              <option value="bottom-center">Bottom center</option>
+              <option value="bottom-right">Bottom right</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <div>

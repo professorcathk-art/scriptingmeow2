@@ -6,6 +6,7 @@ import { generateImageWithNanoBanana } from "@/lib/ai/nano-banana";
 import { buildImagePrompt } from "@/lib/ai/build-image-prompt";
 import { uploadPostImage, uploadPostPlaceholder } from "@/lib/storage";
 import { augmentIdeaWithSourceImage } from "@/lib/rss-image-extract";
+import { MAX_IG_CAPTION_CHARS } from "@/lib/constants";
 
 export const maxDuration = 300;
 
@@ -108,6 +109,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
     }
 
+    const brandDetails = brandSpace as { brand_details?: { otherBrandType?: string } };
+
     // Get brandbook (needed for image prompt fallback when not using confirmed data)
     const { data: brandbook } = await supabase
       .from("brandbooks")
@@ -145,9 +148,9 @@ export async function POST(request: Request) {
       (confirmedCaption && (confirmedCaption.hook || confirmedCaption.body || confirmedCaption.cta));
 
     if (isCarousel) {
-      caption = { igCaption: igCaptionFromConfirmed.slice(0, 1000) || "Carousel post." };
+      caption = { igCaption: igCaptionFromConfirmed.slice(0, MAX_IG_CAPTION_CHARS) || "Carousel post." };
     } else if (hasConfirmedDraft) {
-      caption = { igCaption: igCaptionFromConfirmed.slice(0, 1000) };
+      caption = { igCaption: igCaptionFromConfirmed.slice(0, MAX_IG_CAPTION_CHARS) };
       imageTextOnImage = (confirmedImageTextOnImage ?? "").trim();
       imagePrompt = (confirmedVisualAdvice ?? "").trim();
     } else {
@@ -157,6 +160,11 @@ export async function POST(request: Request) {
           toneOfVoice: brandbook.tone_of_voice,
           visualStyle: brandbook.visual_style,
           dosAndDonts: brandbook.dos_and_donts,
+          brandType: brandSpace?.brand_type,
+          otherBrandType:
+            brandSpace?.brand_type === "other"
+              ? brandDetails.brand_details?.otherBrandType
+              : undefined,
         },
         contentIdea || "",
         language || "English",
@@ -168,7 +176,7 @@ export async function POST(request: Request) {
       );
       const generatedPost = Array.isArray(genResult) ? genResult[0] : null;
       if (generatedPost && "imageTextOnImage" in generatedPost) {
-        caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, 1000) };
+        caption = { igCaption: (generatedPost.igCaption ?? "").slice(0, MAX_IG_CAPTION_CHARS) };
         imageTextOnImage = generatedPost.imageTextOnImage ?? "";
         imagePrompt = generatedPost.visualAdvice?.trim() || "";
       } else {
@@ -192,8 +200,6 @@ export async function POST(request: Request) {
       const style = vs?.imageStyle || "professional";
       imagePrompt = `Professional Instagram post. Style: ${style}.${colors ? ` Use these colors: ${colors}.` : ""} High-quality, scroll-stopping visual.`;
     }
-
-    const brandDetails = brandSpace as { brand_details?: { otherBrandType?: string } } | undefined;
 
     // Check credits
     const { data: userProfile } = await supabase
@@ -250,7 +256,7 @@ export async function POST(request: Request) {
       credits_used: creditsNeeded,
       draft_data: draftData,
       content_framework: contentFramework ?? "educational-value",
-      post_style: postStyle ?? "immersive-photo",
+      post_style: postStyle?.trim() ? postStyle.trim() : null,
       custom_width: typeof customWidth === "number" ? customWidth : null,
       custom_height: typeof customHeight === "number" ? customHeight : null,
       carousel_page_count: isCarousel && Array.isArray(carouselPages) ? carouselPages.length : null,
@@ -314,15 +320,16 @@ export async function POST(request: Request) {
           brandbook,
           visualAdvice: page.visualAdvice?.trim() || `Carousel page ${page.pageIndex}. ${contentIdea || ""}`,
           imageTextOnImage: imageText || undefined,
-          postStyle: postStyle || "text-heavy",
+          postStyle: postStyle?.trim() || undefined,
           pageIndex: page.pageIndex,
           carouselPageCount: totalPages,
           logoUrl: brandSpace?.logo_url ?? null,
           logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
           brandType: brandSpace?.brand_type,
-          otherBrandType: brandDetails?.brand_details?.otherBrandType,
+          otherBrandType: brandDetails.brand_details?.otherBrandType,
           contentFramework: contentFramework as string | undefined,
           postAim: postAim?.trim(),
+          language: language || "English",
         });
         const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
           aspectRatio,
@@ -351,13 +358,14 @@ export async function POST(request: Request) {
         brandbook,
         visualAdvice: imagePrompt,
         imageTextOnImage: imageTextOnImage || undefined,
-        postStyle: postStyle || undefined,
+        postStyle: postStyle?.trim() || undefined,
         logoUrl: brandSpace?.logo_url ?? null,
         logoPlacement: (brandSpace as { logo_placement?: string | null })?.logo_placement ?? null,
         brandType: brandSpace?.brand_type,
-        otherBrandType: brandDetails?.brand_details?.otherBrandType,
+        otherBrandType: brandDetails.brand_details?.otherBrandType,
         contentFramework: contentFramework as string | undefined,
         postAim: postAim?.trim(),
+        language: language || "English",
       });
       const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
         aspectRatio,

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CreatePostForm } from "@/components/posts/create-post-form";
+import { structuredIdeaToBrief, parseStructuredIdea } from "@/lib/idea-content";
 
 export default async function CreatePostPage({
   searchParams,
@@ -56,20 +57,44 @@ export default async function CreatePostPage({
     }
   }
 
-  const { data: postIdeas } = await supabase
+  const { data: postIdeasRaw } = await supabase
     .from("user_post_ideas")
-    .select("id, content")
+    .select("id, content, brand_space_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const brandNameById = new Map((brandSpaces ?? []).map((b) => [b.id, b.name]));
+  const postIdeas = (postIdeasRaw ?? []).map((row) => ({
+    id: row.id,
+    content: row.content,
+    brand_space_id: row.brand_space_id,
+    brandName: row.brand_space_id ? brandNameById.get(row.brand_space_id) ?? undefined : undefined,
+  }));
+
   const isPaid = userProfile?.plan_tier !== "free";
-  const { data: rssIdeas } = isPaid
+  const { data: rssFeedsForIdeas } = isPaid
+    ? await supabase
+        .from("user_rss_feeds")
+        .select("id, brand_space_id")
+        .eq("user_id", user.id)
+    : { data: [] };
+  const rssFeedBrand = new Map((rssFeedsForIdeas ?? []).map((f) => [f.id, f.brand_space_id]));
+  const { data: rssIdeasRaw } = isPaid
     ? await supabase
         .from("user_rss_ideas")
-        .select("id, content, title")
+        .select("id, content, title, rss_feed_id")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
     : { data: [] };
+  const rssIdeas = (rssIdeasRaw ?? []).map((r) => ({
+    id: r.id,
+    content: r.content,
+    title: r.title,
+    brand_space_id: r.rss_feed_id ? rssFeedBrand.get(r.rss_feed_id) ?? null : null,
+    brandName: r.rss_feed_id
+      ? brandNameById.get(rssFeedBrand.get(r.rss_feed_id) ?? "") ?? undefined
+      : undefined,
+  }));
 
   const { data: templates } = await supabase
     .from("post_templates")
@@ -98,7 +123,10 @@ export default async function CreatePostPage({
       .eq("id", searchParams.ideaId)
       .eq("user_id", user.id)
       .single();
-    if (idea) prefillIdeaContent = idea.content;
+    if (idea?.content) {
+      const s = parseStructuredIdea(idea.content);
+      prefillIdeaContent = s ? structuredIdeaToBrief(s) : idea.content;
+    }
   }
   if (!prefillIdeaContent && searchParams.rssIdeaId) {
     const { data: rssIdea } = await supabase
@@ -110,7 +138,7 @@ export default async function CreatePostPage({
     if (rssIdea) prefillIdeaContent = rssIdea.content;
   }
 
-  const rssIdeasForForm = rssIdeas ?? [];
+  const rssIdeasForForm = rssIdeas;
 
   let prefillTemplate: {
     brandSpaceId: string;
@@ -129,7 +157,7 @@ export default async function CreatePostPage({
       prefillTemplate = {
         brandSpaceId: t.brand_space_id,
         contentFramework: t.content_framework ?? "educational-value",
-        postStyle: t.post_style ?? "immersive-photo",
+        postStyle: t.post_style ?? "",
         postType: t.post_type,
         format: t.format,
         customWidth: t.custom_width ?? undefined,
@@ -171,7 +199,7 @@ export default async function CreatePostPage({
         prefillFromTryStyle={prefillFromTryStyle}
         prefillIdeaContent={prefillIdeaContent}
         prefillTemplate={prefillTemplate}
-        postIdeas={postIdeas ?? []}
+        postIdeas={postIdeas}
         rssIdeas={rssIdeasForForm}
         templates={templates ?? []}
         skipDraftRestore={!editPost && !prefillFromTryStyle}

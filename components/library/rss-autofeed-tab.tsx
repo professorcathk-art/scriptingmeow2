@@ -9,6 +9,7 @@ type RssFeed = {
   title: string | null;
   created_at: string;
   last_fetched_at: string | null;
+  brand_space_id?: string | null;
 };
 
 type RssIdea = {
@@ -28,14 +29,22 @@ function FolderIcon() {
   );
 }
 
-export function RssAutofeedTab() {
+interface RssAutofeedTabProps {
+  brandSpaces: { id: string; name: string }[];
+}
+
+export function RssAutofeedTab({ brandSpaces }: RssAutofeedTabProps) {
   const [feeds, setFeeds] = useState<RssFeed[]>([]);
   const [ideas, setIdeas] = useState<RssIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [rssUrl, setRssUrl] = useState("");
+  const [rssBrandSpaceId, setRssBrandSpaceId] = useState(brandSpaces[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [rssLimit, setRssLimit] = useState(2);
+
+  const brandName = (id: string | null | undefined) =>
+    id ? brandSpaces.find((b) => b.id === id)?.name : undefined;
 
   const fetchData = async () => {
     setLoading(true);
@@ -75,10 +84,14 @@ export function RssAutofeedTab() {
     setAdding(true);
     setError(null);
     try {
+      if (!rssBrandSpaceId) {
+        setError("Select a brand for this feed");
+        return;
+      }
       const res = await fetch("/api/library/rss", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rssUrl: url }),
+        body: JSON.stringify({ rssUrl: url, brandSpaceId: rssBrandSpaceId }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -136,6 +149,24 @@ export function RssAutofeedTab() {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-col gap-2">
+        <label className="text-sm text-zinc-400">Brand for new feeds *</label>
+        <select
+          value={rssBrandSpaceId}
+          onChange={(e) => setRssBrandSpaceId(e.target.value)}
+          className="w-full max-w-md px-4 py-2 rounded-xl bg-zinc-900/50 border border-white/10 text-zinc-100 text-sm"
+        >
+          {brandSpaces.length === 0 ? (
+            <option value="">Create a brand first</option>
+          ) : (
+            brandSpaces.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))
+          )}
+        </select>
+      </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <input
           type="url"
@@ -147,7 +178,7 @@ export function RssAutofeedTab() {
         <button
           type="button"
           onClick={handleAddFeed}
-          disabled={adding || (rssLimit > 0 && feeds.length >= rssLimit)}
+          disabled={adding || !rssBrandSpaceId || (rssLimit > 0 && feeds.length >= rssLimit)}
           className="px-4 py-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/30 hover:bg-violet-500/30 disabled:opacity-50 transition-colors text-sm"
         >
           {adding ? "Adding..." : feeds.length >= rssLimit ? `Limit reached (${rssLimit})` : "+ Add RSS Feed"}
@@ -169,6 +200,11 @@ export function RssAutofeedTab() {
                 className="p-4 rounded-xl bg-zinc-900/50 border border-white/10 flex flex-wrap items-center justify-between gap-3"
               >
                 <div className="min-w-0 flex-1">
+                  {feed.brand_space_id && (
+                    <span className="inline-block mb-1 px-2 py-0.5 rounded-md bg-violet-500/15 text-violet-300 text-xs">
+                      {brandName(feed.brand_space_id) ?? "Brand"}
+                    </span>
+                  )}
                   <p className="text-zinc-100 font-medium truncate">{feed.title || feed.rss_url}</p>
                   <p className="text-xs text-zinc-500 truncate">{feed.rss_url}</p>
                 </div>

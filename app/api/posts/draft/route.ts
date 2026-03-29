@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { generatePost, generatePostLight, type CarouselDraftOutput } from "@/lib/ai/gemini";
 import { augmentIdeaWithSourceImage } from "@/lib/rss-image-extract";
+import { formatBrandDetailsForPrompt } from "@/lib/brand-context";
+import { MAX_CONTENT_IDEA_CHARS } from "@/lib/constants";
 
 export const maxDuration = 120;
 
@@ -31,7 +33,8 @@ export async function POST(request: Request) {
   const language = (body.language as string) || "English";
   const contentIdea = (body.contentIdea as string) || "";
   const referenceText = (body.referenceText as string) || "";
-  const postStyle = (body.postStyle as string) || "immersive-photo";
+  const postStyle =
+    typeof body.postStyle === "string" ? body.postStyle : "";
   const contentFramework = (body.contentFramework as string) || "educational-value";
   const carouselPageCount =
     postType === "carousel" && typeof body.carouselPageCount === "number"
@@ -63,7 +66,7 @@ export async function POST(request: Request) {
   try {
     const { data: brandSpace } = await supabase
       .from("brand_spaces")
-      .select("id")
+      .select("id, brand_type, brand_details")
       .eq("id", brandSpaceId)
       .eq("user_id", user.id)
       .single();
@@ -72,9 +75,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
     }
 
+    const details = (brandSpace as { brand_details?: Record<string, unknown> }).brand_details;
+    const brandDetailsBlock = formatBrandDetailsForPrompt(details);
+    const otherBrandType =
+      typeof details?.otherBrandType === "string" ? details.otherBrandType.trim() : "";
+
     let enrichedIdea = referenceText.trim()
-      ? `${contentIdea.trim().slice(0, 1000)}\n\n--- Reference (extract key ideas) ---\n${referenceText.trim().slice(0, 3000)}`
-      : contentIdea.trim().slice(0, 1000);
+      ? `${contentIdea.trim().slice(0, MAX_CONTENT_IDEA_CHARS)}\n\n--- Reference (extract key ideas) ---\n${referenceText.trim().slice(0, 3000)}`
+      : contentIdea.trim().slice(0, MAX_CONTENT_IDEA_CHARS);
+
+    if (brandDetailsBlock) {
+      enrichedIdea = `${enrichedIdea}\n\n--- Brand context (use for postAim and on-brand copy) ---\n${brandDetailsBlock}`;
+    }
 
     enrichedIdea = await augmentIdeaWithSourceImage(enrichedIdea);
 
@@ -91,6 +103,11 @@ export async function POST(request: Request) {
             toneOfVoice: brandbook.tone_of_voice ?? "",
             visualStyle: brandbook.visual_style ?? {},
             dosAndDonts: brandbook.dos_and_donts ?? {},
+            brandType: (brandSpace as { brand_type?: string }).brand_type,
+            otherBrandType:
+              (brandSpace as { brand_type?: string }).brand_type === "other"
+                ? otherBrandType
+                : undefined,
           },
           enrichedIdea,
           language,

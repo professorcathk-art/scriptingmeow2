@@ -41,7 +41,7 @@ export async function GET() {
 
     const { data: feeds } = await supabase
       .from("user_rss_feeds")
-      .select("id, rss_url, title, created_at, last_fetched_at")
+      .select("id, rss_url, title, created_at, last_fetched_at, brand_space_id")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -112,13 +112,30 @@ export async function POST(request: Request) {
       );
     }
 
-    const { rssUrl } = (await request.json()) as { rssUrl?: string };
-    const url = (rssUrl || "").trim();
+    const body = (await request.json()) as { rssUrl?: string; brandSpaceId?: string };
+    const url = (body.rssUrl || "").trim();
+    const brandSpaceId = body.brandSpaceId?.trim();
     if (!url || !url.startsWith("http")) {
       return NextResponse.json(
         { error: "Valid RSS URL required" },
         { status: 400 }
       );
+    }
+    if (!brandSpaceId) {
+      return NextResponse.json(
+        { error: "brandSpaceId is required" },
+        { status: 400 }
+      );
+    }
+
+    const { data: brandOk } = await supabase
+      .from("brand_spaces")
+      .select("id")
+      .eq("id", brandSpaceId)
+      .eq("user_id", user.id)
+      .single();
+    if (!brandOk) {
+      return NextResponse.json({ error: "Brand space not found" }, { status: 404 });
     }
 
     let feed;
@@ -136,6 +153,7 @@ export async function POST(request: Request) {
       .from("user_rss_feeds")
       .insert({
         user_id: user.id,
+        brand_space_id: brandSpaceId,
         rss_url: url,
         title: feed.title || url,
         last_fetched_at: new Date().toISOString(),
