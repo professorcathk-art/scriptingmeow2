@@ -5,6 +5,7 @@
 
 import { readFileSync } from "fs";
 import { join } from "path";
+import { MAX_ON_IMAGE_INSTRUCTION_CHARS } from "@/lib/constants";
 
 function loadMarkdown(filename: string): string {
   try {
@@ -123,8 +124,9 @@ const FALLBACK_SINGLE = `## BRIEF (primary input)
 Create 2 DISTINCT Instagram post draft variations using the BRIEF and CONTEXT above.
 
 ## Output Format
-Return valid JSON only:
+Return valid JSON only. Include postAim first (required): who this is for, what the post should achieve for the image model, and how it supports the brand—1–3 sentences, max 500 characters.
 {
+  "postAim": "Required: brand context + intent for this post",
   "variation1": {"imageTextOnImage":"","visualAdvice":"","igCaption":""},
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
@@ -132,7 +134,7 @@ Return valid JSON only:
 ### Field rules:
 1. imageTextOnImage: {{textGuide}}
 2. visualAdvice: HIGHLY DETAILED (4–7 sentences, 80–150 words). If a [Source Image URL: https...] is provided, you MUST include: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later." Scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text placement, color usage from brand, mood. Aspect {{aspectNote}}. Do NOT be brief.
-3. igCaption: Max 400 chars, max 3 hashtags.`;
+3. igCaption: Standalone Instagram caption up to 2000 characters—hook, full explanation of the idea (so the post is understandable without the image), value, and a save/share CTA. Max 3 hashtags.`;
 
 export function getCarouselDraftPrompt(vars: {
   pageCount: number;
@@ -169,11 +171,14 @@ export function getCarouselDraftPrompt(vars: {
     contentFrameworkDesc: vars.contentFrameworkDesc,
     layoutGuide: vars.layoutGuide,
     extraContext,
-    textGuide: vars.textGuide || "2–5 lines per slide, use 主標題：, 副標題：, 內文：. Plain text only.",
+    textGuide:
+      vars.textGuide ||
+      `On-image brief per slide: plain text only. Up to ${MAX_ON_IMAGE_INSTRUCTION_CHARS} characters—exact lines to render plus optional placement notes (e.g. Headline: / Subhead: / Body: or zone-based instructions).`,
     idea: vars.idea,
     format: vars.format,
     aspectNote: vars.aspectNote,
     language: vars.language,
+    onImageMaxChars: String(MAX_ON_IMAGE_INSTRUCTION_CHARS),
   });
 }
 
@@ -191,13 +196,14 @@ Create a {{pageCount}}-page Instagram carousel using the BRIEF and CONTEXT above
 
 ## Output Format
 If a [Source Image URL: https...] is provided, visualAdvice MUST include: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
-Return valid JSON only. imageTextOnImage: {{textGuide}}
+Return valid JSON only. Include postAim (required): brand context + intent, max 500 characters. imageTextOnImage: {{textGuide}}
 {
+  "postAim": "Required: brand context + intent for this carousel",
   "pages": [
-    { "pageIndex": 1, "imageTextOnImage": "Text (use \\n). Include 主標題：, 副標題：, 內文：.", "visualAdvice": "HIGHLY DETAILED (4–6 sentences): scene, composition, lighting, text placement, color usage, mood" },
+    { "pageIndex": 1, "imageTextOnImage": "Plain text; use \\\\n for line breaks. Headline: / Subhead: / Body: or placement notes as needed.", "visualAdvice": "HIGHLY DETAILED (4–6 sentences): scene, composition, lighting, text placement, color usage, mood" },
     ...
   ],
-  "igCaption": "Full caption (max 400 chars, max 3 hashtags)."
+  "igCaption": "Full caption up to 2000 characters: hook, full story, CTA. Max 3 hashtags."
 }`;
 
 /** Lightweight draft prompts - no brandbook needed. Used for fast draft generation. */
@@ -209,7 +215,7 @@ Content idea: {{idea}}
 - Content goal: {{contentFrameworkDesc}}
 
 ## TASK
-Create 2 DISTINCT Instagram post draft variations. Be DETAILED—imageTextOnImage and visualAdvice must be substantive, not minimal.
+Create 2 DISTINCT Instagram post draft variations. Treat **imageTextOnImage** as an art-direction brief: plain text only—exact wording to appear on the graphic, optional role labels (Headline / Subhead / Body), and/or short placement notes (zones, alignment). Stay within {{onImageMaxChars}} characters per variation; compress without losing the message.
 
 ## Enrichment (CRITICAL)
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
@@ -220,14 +226,18 @@ Create 2 DISTINCT Instagram post draft variations. Be DETAILED—imageTextOnImag
 - If a [Source Image URL: https...] is provided in the idea, you MUST structure your visualAdvice to include an explicit layout command: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
 
 ## Output
-Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sentences, max 500 chars). E.g. "Brand: [brief background]. This post aims to educate on X, build trust by Y."
+Return valid JSON only. **postAim must be the first substantive field** (required): 1–3 sentences, max 500 characters—audience, intent, and how the visual should support the post.
 {
-  "postAim": "Brief brand context and post aim (max 500 chars)",
+  "postAim": "Required: audience + intent + role of the visual",
   "variation1": {"imageTextOnImage":"","visualAdvice":"","igCaption":""},
   "variation2": {"imageTextOnImage":"","visualAdvice":"","igCaption":""}
 }
 
-Rules: postAim = overall aim of post for image gen context. imageTextOnImage = text on image—2–4 lines, substantive (plain text). STRICT: imageTextOnImage must NEVER exceed 200 characters—shorten to fit, do not output truncated text. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = HIGHLY DETAILED DESIGNER LAYOUT (4–7 sentences, 80–150 words): scene (subject, pose, environment), composition (framing, negative space), lighting (direction, quality), text arrangement (blocks, spacing, positions), cohesive color palette, mood. Aspect {{aspectNote}}. Do NOT be brief—the image generator needs rich detail. igCaption = COMPREHENSIVE caption up to 2000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
+Completion rules:
+- postAim: Never omit or leave empty.
+- imageTextOnImage: Match the layout context; prioritise readable hierarchy and faithful placement notes within {{onImageMaxChars}} characters.
+- visualAdvice: HIGHLY DETAILED designer layout (4–7 sentences, 80–150 words): scene, composition, lighting, text blocks, palette, mood. Aspect {{aspectNote}}.
+- igCaption: Full Instagram caption up to 2000 characters—opening hook, complete articulation of the idea (understandable without the image), proof or steps as needed, and a save/share CTA. Max 3 hashtags. Write one cohesive narrative, not a teaser paragraph.`;
 
 const DRAFT_CAROUSEL_LIGHT = `## BRIEF (primary input)
 {{idea}}
@@ -237,8 +247,8 @@ const DRAFT_CAROUSEL_LIGHT = `## BRIEF (primary input)
 - Content goal: {{contentFrameworkDesc}}. Visual layout: {{layoutGuide}}
 
 ## TASK
-Create a {{pageCount}}-page Instagram carousel. Be DETAILED—imageTextOnImage (up to 200 chars/slide) and visualAdvice (2–4 sentences per page) must be substantive.
-{{#isTextHeavy}}TEXT-HEAVY MODE: Headlines and imageTextOnImage must be SUBSTANTIVE—2–5 lines per slide, up to 200 chars. Main headline (主標題) + subheadline + body. Do NOT be brief or minimal. Educational/value content: teach, inform, actionable advice.{{/isTextHeavy}}
+Create a {{pageCount}}-page Instagram carousel. Per slide, **imageTextOnImage** is an on-image brief (copy + optional placement), up to {{onImageMaxChars}} characters. **visualAdvice** must be a rich designer layout every time.
+{{#isTextHeavy}}TEXT-HEAVY MODE: Each slide needs substantive on-image copy—multiple lines, clear hierarchy, teaching or persuasive depth. Do not under-write.{{/isTextHeavy}}
 
 ## Enrichment (CRITICAL)
 - If the idea includes "Source: [URL]", the content is from RSS/news. Use the URL and full content for context. Do NOT just repeat the title.
@@ -248,17 +258,17 @@ Create a {{pageCount}}-page Instagram carousel. Be DETAILED—imageTextOnImage (
 - If a [Source Image URL: https...] is provided in the idea, you MUST structure visualAdvice on every page (or at least the cover) to include an explicit layout command: "Leave a clean, distinct rectangular frame/space to allow a real photograph to be overlaid later."
 
 ## Output
-Return valid JSON only. Include postAim: brief brand context + post aim (1-3 sentences, max 500 chars).
+Return valid JSON only. **postAim is required** (1–3 sentences, max 500 characters): brand- and audience-grounded intent for the whole carousel.
 {
-  "postAim": "Brief brand context and post aim (max 500 chars)",
+  "postAim": "Required: context + intent for the carousel",
   "pages": [
-    { "pageIndex": 1, "imageTextOnImage": "主標題：5 Mistakes That Kill Your Growth\\n副標題：Subheadline\\n內文：Body text (use \\n for breaks)", "visualAdvice": "Designer layout: background + text blocks + spacing + cohesive colors (2–4 sentences)" },
+    { "pageIndex": 1, "imageTextOnImage": "Headline: ...\\nSubhead: ...\\nBody: ... (or placement notes as needed)", "visualAdvice": "Designer layout: background + text blocks + spacing + cohesive colors (4–6 sentences)" },
     ...
   ],
-  "igCaption": "COMPREHENSIVE caption up to 2000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags."
+  "igCaption": "Full caption up to 2000 characters: hook, complete narrative across slides, CTA. Max 3 hashtags."
 }
 
-postAim = overall aim for image gen. imageTextOnImage = 2–5 lines per slide. STRICT: each slide's imageTextOnImage must NEVER exceed 200 characters—shorten to fit, do not output truncated text. Use hierarchy labels 主標題：, 副標題：, 內文： so the image generator applies correct typography. visualAdvice = HIGHLY DETAILED DESIGNER LAYOUT per page (4–6 sentences, 80–120 words): background, text blocks, spacing, hierarchy, cohesive palette, optional motifs. Do NOT be brief—each page needs rich detail for the image generator. igCaption = COMPREHENSIVE caption up to 2000 chars: hook + full storytelling (key info from post) + CTA to save/share. Max 3 hashtags. The caption should stand alone and make readers want to save and share.`;
+Field discipline: each slide's imageTextOnImage stays within {{onImageMaxChars}} characters. visualAdvice per page: HIGHLY DETAILED (4–6 sentences, 80–120 words). igCaption: one full story that reflects the entire carousel—not a short teaser.`;
 
 export function getSingleImageDraftPromptLight(vars: {
   idea: string;
@@ -268,7 +278,10 @@ export function getSingleImageDraftPromptLight(vars: {
   contentFrameworkDesc: string;
   aspectNote: string;
 }): string {
-  return replaceAll(DRAFT_SINGLE_LIGHT, vars);
+  return replaceAll(DRAFT_SINGLE_LIGHT, {
+    ...vars,
+    onImageMaxChars: String(MAX_ON_IMAGE_INSTRUCTION_CHARS),
+  });
 }
 
 export function getCarouselDraftPromptLight(vars: {
@@ -290,5 +303,6 @@ export function getCarouselDraftPromptLight(vars: {
     aspectNote: vars.aspectNote,
     contentFrameworkDesc: vars.contentFrameworkDesc,
     layoutGuide: vars.layoutGuide,
+    onImageMaxChars: String(MAX_ON_IMAGE_INSTRUCTION_CHARS),
   });
 }

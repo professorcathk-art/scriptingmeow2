@@ -28,3 +28,19 @@ export function formatBrandDetailsForPrompt(
 
   return parts.join("\n");
 }
+
+/**
+ * When the draft model omits `postAim`, derive a concise aim from the idea brief
+ * so Step 3 never shows an empty Post Aim field.
+ */
+export function defaultPostAimFromBrief(enrichedIdea: string): string {
+  const withoutContext = enrichedIdea.split(/\n--- Brand context/)[0]?.trim() || enrichedIdea;
+  const withoutRef = withoutContext.split(/\n--- Reference/)[0]?.trim() || withoutContext;
+  const normalized = withoutRef.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "Communicate the post idea clearly and support the brand with a cohesive, on-message visual.";
+  }
+  const snippet = normalized.slice(0, 520);
+  const suffix = normalized.length > 520 ? "…" : "";
+  return `Communicate the core message clearly and support the brand; this post should deliver value on: ${snippet}${suffix}`;
+}

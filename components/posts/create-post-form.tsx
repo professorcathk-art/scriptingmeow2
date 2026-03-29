@@ -7,14 +7,18 @@ import { useRouter } from "next/navigation";
 import type { BrandSpace, PostType, PostFormat, PlanTier } from "@/types/database";
 import { PLAN_LIMITS } from "@/types/database";
 
-import { MAX_IG_CAPTION_CHARS, MAX_CONTENT_IDEA_CHARS } from "@/lib/constants";
+import {
+  MAX_IG_CAPTION_CHARS,
+  MAX_CONTENT_IDEA_CHARS,
+  MAX_ON_IMAGE_INSTRUCTION_CHARS,
+} from "@/lib/constants";
 import { parseStructuredIdea, structuredIdeaToBrief, ideaListLabel } from "@/lib/idea-content";
 
 const CREATE_POST_DRAFT_KEY = "createPost_draft";
 const MAX_CAPTION_CHARS = MAX_IG_CAPTION_CHARS;
 const MAX_HASHTAGS = 3;
-/** Text on image limit (20% reduction from 250). */
-const MAX_IMAGE_TEXT_CHARS = 200;
+/** On-image brief: copy + placement instructions (aligned with AI prompts). */
+const MAX_IMAGE_TEXT_CHARS = MAX_ON_IMAGE_INSTRUCTION_CHARS;
 
 /** Enforce max chars and max 3 hashtags on caption input. */
 function enforceCaptionLimits(text: string): string {
@@ -950,7 +954,7 @@ export function CreatePostForm({
 
     const VISUAL_LAYOUT_OPTIONS = [
       { value: "", title: "No specific layout", description: "Let the AI choose composition when generating the image—no fixed layout rules." },
-      { value: "text-image-balanced", title: "圖文並茂", description: "Text woven into the image—integrated with the scene, not only in empty margins." },
+      { value: "text-image-balanced", title: "Integrated text & imagery", description: "Text woven into the image—integrated with the scene, not only in empty margins." },
       { value: "magazine-editorial", title: "Magazine Editorial", description: "Edge-to-edge visual with a massive top masthead and framing text." },
       { value: "cinematic-poster", title: "Cinematic Poster", description: "Dramatic center focus with integrated titles and bottom-heavy text." },
       { value: "immersive-visual", title: "Immersive Visual", description: "Focuses entirely on high-quality graphics with minimal text overlay." },
@@ -1245,6 +1249,9 @@ export function CreatePostForm({
     const setDraftField = (field: "imageTextOnImage" | "visualAdvice" | "igCaption" | "postAim", value: string) => {
       setDraftVariations((prev) => {
         if (!prev) return prev;
+        if (field === "postAim" && !isCarouselDraft) {
+          return prev.map((d) => ({ ...d, postAim: value }));
+        }
         const next = [...prev];
         next[selectedDraftIndex] = { ...next[selectedDraftIndex], [field]: value };
         return next;
@@ -1334,7 +1341,7 @@ export function CreatePostForm({
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">
-                      Text on Image (plain text only) — Use 主標題：, 副標題：, 內文： for hierarchy
+                      Text on Image (plain text) — exact copy, Headline/Subhead/Body lines, and/or where text sits in the frame
                     </label>
                     <textarea
                       value={page.imageTextOnImage}
@@ -1343,9 +1350,12 @@ export function CreatePostForm({
                       }
                       maxLength={MAX_IMAGE_TEXT_CHARS}
                       className="w-full px-3 py-2 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-                      rows={4}
-                      placeholder="主標題：Headline\n副標題：Subheadline\n內文：Body text (2–5 lines, up to 200 chars)"
+                      rows={5}
+                      placeholder={`Headline: Main line\nSubhead: Supporting line\nBody: Detail (use line breaks). Optional: e.g. "Disclaimer lower right." — up to ${MAX_IMAGE_TEXT_CHARS} characters per slide`}
                     />
+                    <p className="text-xs text-zinc-600 mt-1">
+                      {page.imageTextOnImage.length}/{MAX_IMAGE_TEXT_CHARS}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-zinc-500 mb-1">
@@ -1373,8 +1383,8 @@ export function CreatePostForm({
               {!formData.postStyle || formData.postStyle === "immersive-photo"
                 ? "Minimal or no text. Leave blank for pure image."
                 : formData.postStyle === "editorial"
-                  ? "Line 1 = headline, Line 2 = subheadline, Line 3+ = body. Plain text only (no #, ##, ###)."
-                  : "Text to render on the image. Plain text only, no markdown."}
+                  ? "Headline, subhead, and body lines—or describe what to show and where (zones, alignment). Plain text only (no #, ##, ###)."
+                  : "Art-direction brief: exact words to render plus optional placement notes (e.g. upper third, lower right). Plain text only."}
             </p>
             <textarea
               value={draft.imageTextOnImage}
@@ -1383,9 +1393,12 @@ export function CreatePostForm({
               }
               maxLength={MAX_IMAGE_TEXT_CHARS}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800/50 border border-white/10 text-zinc-100 text-sm"
-              rows={5}
-              placeholder={!formData.postStyle || formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : "Headline\nSubheadline\nBody text... (2–4 lines, up to 200 chars)"}
+              rows={6}
+              placeholder={!formData.postStyle || formData.postStyle === "immersive-photo" ? "Leave blank for no text on image" : `Headline: …\nSubhead: …\nBody: …\n(Optional placement: e.g. badge top-left, CTA strip bottom) — up to ${MAX_IMAGE_TEXT_CHARS} characters`}
             />
+            <p className="text-xs text-zinc-500 mt-1">
+              {draft.imageTextOnImage.length}/{MAX_IMAGE_TEXT_CHARS}
+            </p>
           </div>
           )}
 

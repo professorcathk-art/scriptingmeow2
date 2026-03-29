@@ -18,14 +18,14 @@ function stripMarkdown(s: string): string {
 }
 
 /**
- * Parse imageTextOnImage and strip hierarchy labels (主標題：, 副標題：, 內文：) BEFORE
- * passing to the image model. The model was drawing these labels literally.
- * We extract only the content and pass it with explicit hierarchy instructions.
+ * Prepare on-image brief for the image model: strip markdown; strip legacy typography
+ * role labels (Chinese/English) so they are not painted as visible words; preserve
+ * placement lines and freeform instructions verbatim.
  */
-function formatTextForImageModel(rawText: string): string {
+function prepareOnImageBriefForModel(rawText: string): string {
   if (!rawText) return "";
 
-  let cleaned = stripMarkdown(rawText);
+  const cleaned = stripMarkdown(rawText);
   const lines = cleaned.split(/\n/);
   const contentLines: string[] = [];
 
@@ -34,7 +34,7 @@ function formatTextForImageModel(rawText: string): string {
     if (!trimmed) continue;
 
     const headlineMatch = trimmed.match(/^(?:主標題|大標題|Headline)[：:]\s*(.*)$/i);
-    const subheadMatch = trimmed.match(/^(?:副標題|小標題|Subheadline)[：:]\s*(.*)$/i);
+    const subheadMatch = trimmed.match(/^(?:副標題|小標題|Subhead|Subheadline)[：:]\s*(.*)$/i);
     const bodyMatch = trimmed.match(/^(?:內文|Body)[：:]\s*(.*)$/i);
 
     if (headlineMatch) {
@@ -114,7 +114,7 @@ IMMERSIVE VISUAL LAYOUT: Edge-to-edge subject focus. Do not force large blocks o
   unspecified: `
 VISUAL LAYOUT: No fixed template. Compose a balanced, premium Instagram graphic that fits the brand and topic. Let composition follow the subject and message naturally.`,
   "text-image-balanced": `
-VISUAL LAYOUT (圖文並茂): Integrate text and imagery—text weaves through the scene, wraps subjects, or sits in designed pockets within the image (not a separate empty text band). Natural editorial flow, clear hierarchy.`,
+VISUAL LAYOUT (integrated text–image): Integrate text and imagery—text weaves through the scene, wraps subjects, or sits in designed pockets within the image (not a separate empty text band). Natural editorial flow, clear hierarchy.`,
 };
 
 const CONTENT_FRAMEWORK_IMAGE_GUIDE: Record<string, string> = {
@@ -269,14 +269,20 @@ export function buildImagePrompt(options: {
   }
 
   const rawText = (options.imageTextOnImage ?? "").trim();
-  const textOnImage = formatTextForImageModel(rawText);
+  const textOnImage = prepareOnImageBriefForModel(rawText);
   if (textOnImage) {
     parts.push(DESIGNER_TEXT_ARRANGEMENT);
     basePrompt = parts.join("\n\n");
     const escaped = textOnImage.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-    basePrompt += `\n\nEXACT TEXT TO RENDER (CRITICAL): Render ONLY the text below. Do NOT render any labels, colons, or instruction words like "主標題", "副標題", "內文", "Headline", "Subheadline", or "Body". Preserve line breaks.
-TYPOGRAPHY: Line 1 = main headline (LARGEST, boldest). Line 2 = subheadline (medium). Line 3+ = body text (smaller, readable). Apply this hierarchy to the content only.
-Text to render:\n"${escaped}"`;
+    const hasPlacementHints = /placement|upper|lower|left|right|corner|third|center|above|below|zone|align/i.test(
+      rawText
+    );
+    const placementNote = hasPlacementHints
+      ? " If the brief specifies positions or zones, honour them when composing type and imagery."
+      : "";
+    basePrompt += `\n\nON-IMAGE CONTENT BRIEF (CRITICAL): The block below may include exact wording to render, role-separated lines (headline vs subhead vs body), and/or spatial notes.${placementNote} Do not paint meta-labels or role prefixes as visible text unless they are explicitly part of the quoted copy. Preserve line breaks.
+DEFAULT TYPOGRAPHY (when roles are not explicit): first line = main headline (largest); then subhead; then body—unless spatial notes override.
+Brief:\n"${escaped}"`;
   }
 
   return basePrompt + FINAL_DESIGN_COMMANDS;

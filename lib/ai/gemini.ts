@@ -10,7 +10,8 @@ import {
   getSingleImageDraftPromptLight,
   getCarouselDraftPromptLight,
 } from "./load-prompts";
-import { MAX_IG_CAPTION_CHARS, MAX_CONTENT_IDEA_CHARS } from "@/lib/constants";
+import { MAX_IG_CAPTION_CHARS, MAX_CONTENT_IDEA_CHARS, MAX_ON_IMAGE_INSTRUCTION_CHARS } from "@/lib/constants";
+import { defaultPostAimFromBrief } from "@/lib/brand-context";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -124,7 +125,7 @@ export type CarouselDraftOutput = {
   postAim?: string;
 };
 
-/** Strip markdown formatting so it never appears on the image. Keep hierarchy labels (主標題：, 副標題：, 內文：) — the image generator understands them. */
+/** Strip markdown so it never appears on the image. Plain text only for the image model. */
 function stripMarkdownFromText(s: string): string {
   return String(s || "")
     .replace(/^#+\s*/gm, "")
@@ -147,6 +148,32 @@ function parseSingleDraft(post: Record<string, unknown>, postAim?: string): Draf
   };
 }
 
+/** Unescape a JSON string fragment captured by regex (handles \\n, \", \\\\). */
+function unescapeJsonStringFragment(s: string): string {
+  return s
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\");
+}
+
+/**
+ * When JSON.parse drops or misreads `postAim` (newlines in strings, partial output), recover from raw model text.
+ */
+function extractPostAimFromRawModelOutput(raw: string): string | undefined {
+  const noFence = raw.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
+  const m = noFence.match(/"postAim"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  if (!m?.[1]) return undefined;
+  const v = unescapeJsonStringFragment(m[1]).trim();
+  return v || undefined;
+}
+
+function resolvePostAim(parsed: string | undefined, rawModelText: string): string | undefined {
+  if (parsed?.trim()) return parsed.trim();
+  return extractPostAimFromRawModelOutput(rawModelText);
+}
+
 /** Parse JSON from model output, fixing common issues. Returns single draft or null. */
 function parsePostJson(text: string): DraftOutput | null {
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -158,7 +185,10 @@ function parsePostJson(text: string): DraftOutput | null {
   );
   try {
     const parsed = JSON.parse(jsonStr);
-    const postAim = typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined;
+    const postAim = resolvePostAim(
+      typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined,
+      text
+    );
     if (parsed.variation1 && parsed.variation2) {
       return parseSingleDraft(parsed.variation1, postAim);
     }
@@ -179,7 +209,10 @@ function parsePostJsonVariations(text: string): DraftOutput[] | null {
   );
   try {
     const parsed = JSON.parse(jsonStr);
-    const postAim = typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined;
+    const postAim = resolvePostAim(
+      typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined,
+      text
+    );
     if (parsed.variation1 && parsed.variation2) {
       return [
         parseSingleDraft(parsed.variation1, postAim),
@@ -476,45 +509,37 @@ const LAYOUT_SPATIAL_DIRECTIVES: Record<string, string> = {
   unspecified:
     "NO FIXED TEMPLATE: Balance subject, typography, and negative space for the topic—do not force a rigid banded layout.",
   "text-image-balanced":
-    "INTEGRATED 圖文並茂: Weave text with imagery; type may overlay, wrap, or sit in designed pockets within the scene—not only in empty margins.",
+    "INTEGRATED TEXT–IMAGE: Weave type with imagery; text may overlay, wrap, or sit in designed pockets within the scene—not only in empty margins.",
 };
 
-const IMAGE_TEXT_LIMIT = "STRICT: imageTextOnImage must NEVER exceed 200 characters. Shorten to fit—do not crop or truncate in output.";
+const IMAGE_TEXT_LIMIT = `On-image field: plain text only, no markdown. Cap total length at ${MAX_ON_IMAGE_INSTRUCTION_CHARS} characters (exact wording + optional placement notes). Compress thoughtfully—never end mid-sentence.`;
 const LAYOUT_TEXT_GUIDE: Record<string, string> = {
-  "magazine-editorial": `Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown. Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. Plenty of white space, elegant typography. Be substantive—2–4 lines. ${IMAGE_TEXT_LIMIT}`,
-  "cinematic-poster": `Cinematic Poster: Line 1 = title. Line 2+ = supporting text. Bold, dramatic typography. Plain text only, no markdown. ${IMAGE_TEXT_LIMIT}`,
-  "immersive-visual": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
-  "split-screen": `Split Screen: Line 1 = main headline, Line 2+ = body. Be substantive. Plain text only, no markdown. ${IMAGE_TEXT_LIMIT}`,
-  "text-top": `Text Top: Headline and subheadline at top. Line 1 = headline, Line 2 = subheadline, Line 3+ = body. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "text-bottom": `Image Top / Text Bottom: Headline and body at bottom. Line 1 = headline, Line 2+ = body. Plain text only. ${IMAGE_TEXT_LIMIT}`,
-  "text-heavy-infographic": `Text-Heavy / Infographic: Bold typography center stage. imageTextOnImage: 2–5 lines (main headline 主標題 + subheadline + body). ${IMAGE_TEXT_LIMIT} Plain text only, no markdown.`,
-  "quote-card": `Quote / Tweet Card: Stylized quote. imageTextOnImage: the key quote (2–3 lines), plain text only, no markdown. ${IMAGE_TEXT_LIMIT}`,
-  "immersive-photo": "Immersive Visual: No text or minimal (one short tagline). Leave imageTextOnImage blank or a single line. Focus on high-quality photography/graphics.",
-  editorial: `Minimalist Editorial: Clean, magazine-like. Output PLAIN TEXT only—NO markdown. Line 1 = main headline. Line 2 = subheadline. Line 3+ = body. ${IMAGE_TEXT_LIMIT}`,
-  "text-heavy": `Text-Heavy / Infographic: Bold typography center stage. imageTextOnImage: 2–5 lines. ${IMAGE_TEXT_LIMIT} Plain text only, no markdown.`,
-  "tweet-card": `Quote / Tweet Card: Stylized quote. imageTextOnImage: the key quote (2–3 lines), plain text only, no markdown. ${IMAGE_TEXT_LIMIT}`,
-  unspecified: `Balanced graphic: include on-image text only if it serves the idea—2–4 lines when used. Use 主標題：, 副標題：, 內文：. ${IMAGE_TEXT_LIMIT}`,
-  "text-image-balanced": `圖文並茂: integrate text with the scene—overlays, wraps, or pockets inside the image. Clear hierarchy. Use 主標題：, 副標題：, 內文：. ${IMAGE_TEXT_LIMIT}`,
+  "magazine-editorial": `Minimalist editorial: clean, magazine-like. PLAIN TEXT only. You may use Headline: / Subhead: / Body: lines, or a short zone-based brief (where each line sits). ${IMAGE_TEXT_LIMIT}`,
+  "cinematic-poster": `Cinematic poster: title line plus supporting lines; bold, dramatic type. Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "immersive-visual": "Immersive visual: no text or one short tagline. Leave imageTextOnImage blank or a single line. Prioritize photography/illustration.",
+  "split-screen": `Split screen: headline plus supporting copy; substantive. Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "text-top": `Text at top: headline and subhead in upper area; body below as needed. Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "text-bottom": `Image top, text bottom: headline and body anchored low. Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "text-heavy-infographic": `Infographic: dense, structured type. Specify hierarchy (Headline / Subhead / Body) or bullet-style lines; plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "quote-card": `Statement card: the key quote or claim (2–4 lines). Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "immersive-photo": "Immersive photo: no text or one short tagline. Leave imageTextOnImage blank or minimal.",
+  editorial: `Editorial: Headline / Subhead / Body or equivalent; generous negative space implied in your wording. Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "text-heavy": `Text-heavy slide: multiple lines with clear hierarchy. Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  "tweet-card": `Quote-style card: punchy quote or hot take (2–4 lines). Plain text only. ${IMAGE_TEXT_LIMIT}`,
+  unspecified: `Balanced graphic: include on-image copy only when it serves the idea. You may mix exact lines to render with short placement notes (e.g. “Headline centered upper third; disclaimer lower right”). ${IMAGE_TEXT_LIMIT}`,
+  "text-image-balanced": `Integrated text–image: weave copy into the scene—overlays, wraps, or pockets. State what to render and roughly where (zones, alignment) while staying within the character cap. Headline: / Subhead: / Body: optional. ${IMAGE_TEXT_LIMIT}`,
 };
 
-/** Single post (單頁圖表): impress target audience. Carousel (複頁教學貼文): save value. */
+/** Quality bar for single vs carousel (English-only for model instructions). */
 const POST_QUALITY_GUIDE = {
-  single: `【單頁圖表 Single Post】目標：impress 目標受眾
-- 讓陌生人快速明白一個觀念
-- 建立「我有料」的第一印象
-- 令人停一停，覺得「哦，原來係咁」
-- 文字精煉、一圖說清，適合快速滑動時抓住注意力`,
+  single: `Single-image post: make one idea land in a glance—clear hierarchy, scroll-stopping hook on-image, credible and shareable. One strong visual thought, not a laundry list.`,
 
-  carousel: `【複頁教學貼文 Carousel】目標：保存價值
-- 深入解釋一個實用主題
-- 令人想 Save、Share
-- 培養信任，為之後查詢／轉化鋪路
-- 每頁有明確價值，整體有邏輯、可收藏`,
+  carousel: `Carousel: teach or persuade across slides—each slide earns a save; the arc should feel worth sharing and bookmarking. Logical progression, concrete value every page.`,
 
-  outputRules: `### 輸出要求（很重要）：
-- 避免與品牌定位無關的內容（例如旅遊、食譜、純娛樂）
-- 所有建議都必須能夠幫助吸引「正確受眾」
-- 語氣清晰、實用，不需要行銷話術`,
+  outputRules: `Output discipline:
+- Stay on the brand and topic—no random tangents.
+- Every line should help attract the right audience.
+- Clear and useful; avoid empty hype.`,
 };
 
 const CONTENT_FRAMEWORK_GUIDE: Record<string, string> = {
@@ -601,7 +626,11 @@ export async function generatePostLight(
         visualAdvice: `Professional Instagram carousel page ${i + 1}. ${idea}.`,
       });
     }
-    return { pages: fallbackPages, igCaption: `${idea.slice(0, 200)}...\n\n#instagram`, postAim: idea.slice(0, 100) };
+    return {
+      pages: fallbackPages,
+      igCaption: `${idea.replace(/\s+/g, " ").trim().slice(0, MAX_IG_CAPTION_CHARS - 40)}\n\n#instagram`,
+      postAim: defaultPostAimFromBrief(idea),
+    };
   }
 
   const prompt = getSingleImageDraftPromptLight({
@@ -619,7 +648,7 @@ export async function generatePostLight(
       if (isV1BetaModel(modelName)) {
           const response = await generateContentV1Beta(modelName, parts, {
           temperature: 0.9,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
           thinkingLevel: "low",
           safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
         });
@@ -627,7 +656,7 @@ export async function generatePostLight(
       } else {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.8, maxOutputTokens: 2048 },
+          generationConfig: { temperature: 0.8, maxOutputTokens: 4096 },
           safetySettings: [...DEFAULT_SAFETY],
         });
         const result = await model.generateContent(prompt);
@@ -646,8 +675,8 @@ export async function generatePostLight(
   const fallback: DraftOutput = {
     imageTextOnImage: "",
     visualAdvice: `Professional Instagram post. ${idea}. Clean, modern. Aspect ${aspectNote}.`,
-    igCaption: `${idea.slice(0, 200)}...\n\n#instagram`,
-    postAim: idea.slice(0, 100),
+    igCaption: `${idea.replace(/\s+/g, " ").trim().slice(0, MAX_IG_CAPTION_CHARS - 40)}\n\n#instagram`,
+    postAim: defaultPostAimFromBrief(idea),
   };
   return [fallback, { ...fallback }];
 }
@@ -677,7 +706,10 @@ function parseCarouselJson(text: string, pageCount: number): CarouselDraftOutput
     return {
       pages,
       igCaption: String(parsed.igCaption ?? parsed.caption ?? "").trim().slice(0, MAX_IG_CAPTION_CHARS),
-      postAim: typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined,
+      postAim: resolvePostAim(
+        typeof parsed.postAim === "string" ? parsed.postAim.trim() : undefined,
+        text
+      ),
     };
   } catch {
     return null;
@@ -797,7 +829,11 @@ export async function generatePost(
         visualAdvice: `Professional Instagram carousel page ${i + 1}. ${idea}. Clean, modern style.`,
       });
     }
-    return { pages: fallbackPages, igCaption: `${idea.slice(0, 200)}...\n\n#instagram #content`, postAim: idea.slice(0, 150) };
+    return {
+      pages: fallbackPages,
+      igCaption: `${idea.replace(/\s+/g, " ").trim().slice(0, MAX_IG_CAPTION_CHARS - 40)}\n\n#instagram #content`,
+      postAim: defaultPostAimFromBrief(idea),
+    };
   }
 
   const vs = brandbook.visualStyle as {
@@ -909,10 +945,10 @@ export async function generatePost(
   }
   const headline = idea.slice(0, 80).trim() + (idea.length > 80 ? "…" : "");
   const fallback: DraftOutput = {
-    imageTextOnImage: headline ? `主標題：${headline}` : "",
+    imageTextOnImage: headline ? `Headline: ${headline}` : "",
     visualAdvice: `Professional Instagram post image. ${contentIdea}. Clean, modern style. High-quality, scroll-stopping visual. ${format === "portrait" ? "Portrait 4:5." : format === "story" || format === "reel-cover" ? "Vertical 9:16." : "Square 1:1."}`,
-    igCaption: `${contentIdea.slice(0, 200)}${contentIdea.length > 200 ? "..." : ""}\n\nFollow for more.\n\n#instagram #content`,
-    postAim: `Deliver value on this topic in line with the brand voice and audience. ${idea.slice(0, 200)}`,
+    igCaption: `${contentIdea.replace(/\s+/g, " ").trim().slice(0, MAX_IG_CAPTION_CHARS - 40)}\n\nFollow for more.\n\n#instagram #content`,
+    postAim: defaultPostAimFromBrief(idea),
   };
   console.warn("[generatePost] All models failed, using fallback. Last error:", lastError instanceof Error ? lastError.message : lastError);
   return [fallback, { ...fallback }];

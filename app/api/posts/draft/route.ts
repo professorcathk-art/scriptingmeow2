@@ -4,6 +4,7 @@ import { generatePost, generatePostLight, type CarouselDraftOutput } from "@/lib
 import { augmentIdeaWithSourceImage } from "@/lib/rss-image-extract";
 import { formatBrandDetailsForPrompt } from "@/lib/brand-context";
 import { MAX_CONTENT_IDEA_CHARS } from "@/lib/constants";
+import { defaultPostAimFromBrief } from "@/lib/brand-context";
 
 export const maxDuration = 120;
 
@@ -149,8 +150,9 @@ export async function POST(request: Request) {
 
     if ("pages" in result) {
       const carousel = result as CarouselDraftOutput;
+      const postAim = carousel.postAim?.trim() || defaultPostAimFromBrief(enrichedIdea);
       return NextResponse.json({
-        variations: [{ pages: carousel.pages, igCaption: carousel.igCaption, postAim: carousel.postAim }],
+        variations: [{ pages: carousel.pages, igCaption: carousel.igCaption, postAim }],
       });
     }
 
@@ -159,7 +161,7 @@ export async function POST(request: Request) {
         imageTextOnImage: v.imageTextOnImage ?? "",
         visualAdvice: v.visualAdvice ?? "",
         igCaption: v.igCaption ?? "",
-        postAim: v.postAim ?? "",
+        postAim: v.postAim?.trim() || defaultPostAimFromBrief(enrichedIdea),
       })),
     });
   } catch (error) {
