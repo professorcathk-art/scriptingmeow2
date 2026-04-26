@@ -5,6 +5,8 @@
  * @see https://ai.google.dev/gemini-api/docs/image-generation
  */
 
+import { fetchImageAsGeminiInlinePart } from "@/lib/ai/fetch-remote-image-inline";
+
 const MODEL_PRO = "gemini-3-pro-image-preview";
 const MODEL_FLASH = "gemini-2.5-flash-image";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -24,21 +26,6 @@ export interface GenerateImageOptions {
   is4K?: boolean;
 }
 
-async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
-  if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    const base64 = buf.toString("base64");
-    const contentType = res.headers.get("content-type") || "image/jpeg";
-    const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
-    return { inlineData: { mimeType, data: base64 } };
-  } catch {
-    return null;
-  }
-}
-
 async function generateWithModel(
   model: string,
   prompt: string,
@@ -54,9 +41,19 @@ async function generateWithModel(
   const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
 
   const allUrls = [...styleRefUrls, ...importantUrls].slice(0, 5);
+  let fetchedRefs = 0;
   for (let i = 0; i < allUrls.length; i++) {
-    const part = await fetchImagePart(allUrls[i]);
-    if (part) parts.push(part);
+    const part = await fetchImageAsGeminiInlinePart(allUrls[i], { logLabel: "[nano-banana]" });
+    if (part) {
+      parts.push(part);
+      fetchedRefs++;
+    }
+  }
+  if (allUrls.length > 0 && fetchedRefs === 0) {
+    console.warn(
+      "[nano-banana] No reference images could be downloaded (all URLs failed). Generation continues without inline refs.",
+      allUrls.map((u) => u.slice(0, 96))
+    );
   }
 
   let instruction = "";

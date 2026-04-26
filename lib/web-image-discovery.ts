@@ -6,8 +6,12 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { MAX_CONTENT_IDEA_CHARS } from "@/lib/constants";
+import { BROWSER_LIKE_USER_AGENT } from "@/lib/ai/fetch-remote-image-inline";
 
 const WEB_IMAGE_TARGET = 5;
+
+/** After 403 “Custom Search JSON API” unavailable for this GCP project, skip further CSE calls (same Node process). */
+let googleCseJsonApiUnavailable = false;
 const ALLOWED_MIME = /^image\/(jpeg|jpg|png|webp|gif)$/i;
 const WIKI_UA = "designermeow/1.0 (create-post web images)";
 
@@ -587,6 +591,7 @@ async function searchGoogleProgrammableImageSearch(
   num: number,
   ctx?: ImageDiscoverySearchCtx
 ): Promise<string[] | null> {
+  if (googleCseJsonApiUnavailable) return null;
   const apiKey = process.env.GOOGLE_CSE_API_KEY?.trim();
   const cx = process.env.GOOGLE_CSE_CX?.trim();
   if (!apiKey || !cx) return null;
@@ -619,7 +624,18 @@ async function searchGoogleProgrammableImageSearch(
       /* ignore non-JSON error bodies */
     }
     if (ctx) ctx.cseLastError = { status: res.status, message };
-    console.warn("[web-image-discovery] Google CSE error:", res.status, message);
+    if (
+      res.status === 403 &&
+      /does not have the access|custom search json api/i.test(message)
+    ) {
+      googleCseJsonApiUnavailable = true;
+      console.warn(
+        "[web-image-discovery] Google CSE: Custom Search JSON API not available for this project; skipping further CSE attempts this session.",
+        message.slice(0, 200)
+      );
+    } else {
+      console.warn("[web-image-discovery] Google CSE error:", res.status, message);
+    }
     return null;
   }
 
@@ -794,7 +810,7 @@ async function verifyRemoteImageUrl(url: string): Promise<boolean> {
   try {
     let res = await fetch(url, {
       method: "HEAD",
-      headers: { "User-Agent": WIKI_UA, Accept: "image/*,*/*;q=0.8" },
+      headers: { "User-Agent": BROWSER_LIKE_USER_AGENT, Accept: "image/*,*/*;q=0.8" },
       signal: AbortSignal.timeout(12000),
       redirect: "follow",
     });
@@ -803,7 +819,7 @@ async function verifyRemoteImageUrl(url: string): Promise<boolean> {
     res = await fetch(url, {
       method: "GET",
       headers: {
-        "User-Agent": WIKI_UA,
+        "User-Agent": BROWSER_LIKE_USER_AGENT,
         Accept: "image/*,*/*;q=0.8",
         Range: "bytes=0-4095",
       },
@@ -947,6 +963,7 @@ ${searchFocus.slice(0, 500)}`;
       headers: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(90000),

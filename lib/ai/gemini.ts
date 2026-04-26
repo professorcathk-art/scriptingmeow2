@@ -21,6 +21,7 @@ import {
   draftOutputLanguageInstruction,
   DRAFT_CAROUSEL_ON_IMAGE_STYLE,
 } from "@/lib/ai/draft-output-language";
+import { fetchImageAsGeminiInlinePart } from "@/lib/ai/fetch-remote-image-inline";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -240,22 +241,6 @@ function parsePostJsonVariations(text: string): DraftOutput[] | null {
   }
 }
 
-/** Fetch image from URL and return as Gemini inlineData part. Skips blob: or invalid URLs. */
-async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
-  if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    const base64 = buf.toString("base64");
-    const contentType = res.headers.get("content-type") || "image/jpeg";
-    const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
-    return { inlineData: { mimeType, data: base64 } };
-  } catch {
-    return null;
-  }
-}
-
 // Image generation using Gemini's image generation capabilities
 export async function generateImage(prompt: string): Promise<string> {
   try {
@@ -453,7 +438,7 @@ export async function generateBrandbook(
   const imageParts: Array<{ inlineData: { mimeType: string; data: string } }> = [];
   const validUrls = (brandData.referenceImages ?? []).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")));
   for (let i = 0; i < Math.min(validUrls.length, 5); i++) {
-    const part = await fetchImagePart(validUrls[i]);
+    const part = await fetchImageAsGeminiInlinePart(validUrls[i], { logLabel: "[gemini-brandbook]" });
     if (part) imageParts.push(part);
   }
 
