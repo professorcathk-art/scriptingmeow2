@@ -5,8 +5,6 @@
  * @see https://ai.google.dev/gemini-api/docs/image-generation
  */
 
-import { fetchImageAsGeminiInlinePart } from "@/lib/ai/fetch-remote-image-inline";
-
 const MODEL_PRO = "gemini-3-pro-image-preview";
 const MODEL_FLASH = "gemini-2.5-flash-image";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
@@ -26,6 +24,21 @@ export interface GenerateImageOptions {
   is4K?: boolean;
 }
 
+async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const base64 = buf.toString("base64");
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
+    return { inlineData: { mimeType, data: base64 } };
+  } catch {
+    return null;
+  }
+}
+
 async function generateWithModel(
   model: string,
   prompt: string,
@@ -41,23 +54,9 @@ async function generateWithModel(
   const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
 
   const allUrls = [...styleRefUrls, ...importantUrls].slice(0, 5);
-  // Sequential downloads: parallel bursts caused serverless OOM / connection resets → browser "Failed to fetch".
-  const refParts: Array<{ inlineData: { mimeType: string; data: string } }> = [];
-  for (const u of allUrls) {
-    const part = await fetchImageAsGeminiInlinePart(u, {
-      logLabel: "[nano-banana]",
-      timeoutMs: 12_000,
-      maxBytes: 2_500_000,
-    });
-    if (part) refParts.push(part);
-  }
-  parts.push(...refParts);
-  const fetchedRefs = refParts.length;
-  if (allUrls.length > 0 && fetchedRefs === 0) {
-    console.warn(
-      "[nano-banana] No reference images could be downloaded (all URLs failed). Generation continues without inline refs.",
-      allUrls.map((u) => u.slice(0, 96))
-    );
+  for (let i = 0; i < allUrls.length; i++) {
+    const part = await fetchImagePart(allUrls[i]);
+    if (part) parts.push(part);
   }
 
   let instruction = "";
@@ -72,9 +71,7 @@ async function generateWithModel(
       instrParts.push(`Style references: Use for composition, mood, and aesthetic. Derive a cohesive palette—if colors clash, choose harmony over literal matching.`);
     }
     if (importantUrls.length > 0) {
-      instrParts.push(
-        `Important assets (last ${importantUrls.length}): The user chose these as mandatory photo references (e.g. web-found or uploaded). Incorporate them visibly and faithfully when they match the brief—subjects, products, or key visuals. Blend edges and lighting naturally with the rest of the design.`
-      );
+      instrParts.push(`Important assets (last ${importantUrls.length}): Use these when they fit the scene (portraits, products, logos). No need to use on every page—incorporate them when useful. Adjust surrounding colors for visual harmony.`);
     }
     instruction = `${instrParts.join(" ")}\n\n`;
   }
@@ -92,24 +89,10 @@ async function generateWithModel(
     },
   };
 
-  let bodyStr: string;
-  try {
-    bodyStr = JSON.stringify(body);
-  } catch (e) {
-    console.error("[nano-banana] JSON.stringify failed:", e);
-    return null;
-  }
-  // Oversized payloads can abort the serverless request (browser shows "Failed to fetch").
-  const MAX_BODY_CHARS = 19_000_000;
-  if (bodyStr.length > MAX_BODY_CHARS && (styleRefUrls.length > 0 || importantUrls.length > 0)) {
-    console.warn("[nano-banana] Request body too large; retrying without inline reference images.");
-    return generateWithModel(model, prompt, aspectRatio, apiKey, [], [], 0, is4K);
-  }
-
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: bodyStr,
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
