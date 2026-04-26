@@ -148,6 +148,7 @@ export async function POST(
       otherBrandType: brandSpace.brand_details?.otherBrandType,
       contentFramework: (post as { content_framework?: string }).content_framework,
       postAim,
+      contentIdea: post.content_idea?.trim() || undefined,
       language: post.language || "English",
     });
 

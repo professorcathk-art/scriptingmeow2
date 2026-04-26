@@ -361,6 +361,7 @@ export async function POST(request: Request) {
           otherBrandType: brandDetails.brand_details?.otherBrandType,
           contentFramework: contentFramework as string | undefined,
           postAim: postAim?.trim(),
+          contentIdea: contentIdea || undefined,
           language: language || "English",
         });
         const imageBuffer = await safeGeneratePostImage(fullImagePrompt, {
@@ -397,6 +398,7 @@ export async function POST(request: Request) {
         otherBrandType: brandDetails.brand_details?.otherBrandType,
         contentFramework: contentFramework as string | undefined,
         postAim: postAim?.trim(),
+        contentIdea: contentIdea || undefined,
         language: language || "English",
       });
       const imageBuffer = await safeGeneratePostImage(fullImagePrompt, {

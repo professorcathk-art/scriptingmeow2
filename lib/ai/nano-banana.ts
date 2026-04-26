@@ -41,6 +41,8 @@ async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: st
       redirect: "follow",
     });
     if (!res.ok) return null;
+    const ct0 = res.headers.get("content-type") || "";
+    if (/text\/html/i.test(ct0)) return null;
     const cl = res.headers.get("content-length");
     if (cl) {
       const n = parseInt(cl, 10);

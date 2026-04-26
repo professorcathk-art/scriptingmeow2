@@ -774,8 +774,19 @@ export function CreatePostForm({
       router.push(`/posts/${data.id}/review`);
     } catch (error: unknown) {
       console.error("Error generating post:", error);
+      const msg = error instanceof Error ? error.message : String(error);
+      const isLikelyNetworkDrop =
+        msg === "Failed to fetch" ||
+        msg.includes("Failed to fetch") ||
+        msg.includes("NetworkError") ||
+        msg === "Load failed" ||
+        (error instanceof TypeError && msg.toLowerCase().includes("fetch"));
       alert(
-        error instanceof Error ? error.message : "Failed to generate post. Please try again."
+        isLikelyNetworkDrop
+          ? "Your browser lost contact with the server while generating. The job may still have completed—open Library (or your latest posts) to check; your images are often already there. If nothing new appears, try again with fewer reference images."
+          : error instanceof Error
+            ? error.message
+            : "Failed to generate post. Please try again."
       );
     } finally {
       setLoading(false);

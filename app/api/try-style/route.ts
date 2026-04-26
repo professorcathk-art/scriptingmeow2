@@ -185,6 +185,8 @@ export async function POST(request: Request) {
       postStyle: "editorial",
       logoUrl: null,
       logoPlacement: null,
+      contentIdea: idea,
+      language: "English",
     });
 
     const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {

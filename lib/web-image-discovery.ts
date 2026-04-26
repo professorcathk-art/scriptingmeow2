@@ -840,6 +840,21 @@ async function verifyOrTrustAimlImageUrl(url: string): Promise<boolean> {
   return false;
 }
 
+/** Allow https URLs from web search (news articles, social posts) when image HEAD fails. */
+function isReasonablePublicHttpsUrl(url: string): boolean {
+  if (!url.startsWith("https://") || url.length > 2048) return false;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:") return false;
+    const host = u.hostname.toLowerCase();
+    if (!host.includes(".")) return false;
+    if (host === "localhost" || host.endsWith(".local")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Confirm URL returns an image/* we allow (HEAD, then short GET if needed). */
 async function verifyRemoteImageUrl(url: string): Promise<boolean> {
   try {
@@ -965,18 +980,23 @@ async function searchAimlWebForImageUrls(
     process.env.AIMLAPI_WEB_SEARCH_MODEL?.trim() ||
     "perplexity/sonar";
 
-  const userPrompt = `You can search the web. Find up to ${num} HTTPS URLs suitable as REFERENCE PHOTOS for a social media post (portraits, headshots, event photos, logos, product shots — real pages on the public web).
+  const userPrompt = `You can search the web. Find up to ${num} HTTPS URLs for REAL-WORLD reference photos that make the POST STORY credible (news photos, event coverage, product/app press shots, venue photos, founder or exec portraits from reputable sources—not generic stock).
+
+PRIORITIZE (in order):
+1) Direct image file URLs (.jpg .jpeg .png .webp) from news sites, company press pages, Wikipedia/Wikimedia file URLs, or official blogs.
+2) Article or post URLs on trustworthy domains where the page is clearly about the named story, product, app, venue, or person (we can use the page as context).
 
 STRICT RULES:
-- Return ONLY valid JSON on a single line or a small JSON object: {"urls":["https://...","https://..."]}
-- Each URL must be either a direct image file (.jpg .jpeg .png .webp) OR a normal web page URL that clearly hosts the image (we will validate).
-- Use only URLs you actually see in search results. Do NOT invent or guess URLs.
-- If you cannot find reliable URLs, return {"urls":[]}.
+- Return ONLY valid JSON: {"urls":["https://...","https://..."]}
+- Every URL must come from something you actually saw in search results. Do NOT invent URLs.
+- Prefer URLs that mention or depict the SAME entities as the brief (apps, brands, events, people, places).
+- If you only find article pages (not direct .jpg), still include them—they help anchor the story visually.
+- If you cannot find anything relevant, return {"urls":[]}.
 
 Post brief:
 ${brief.slice(0, 2200)}
 
-Search focus (entities / names to prioritize):
+Search focus (entities / names / products to tie to real photos):
 ${searchFocus.slice(0, 500)}`;
 
   const body: Record<string, unknown> = {
@@ -1030,6 +1050,12 @@ ${searchFocus.slice(0, 500)}`;
     return null;
   }
 
+  const priorityPath = (rawUrl: string) => {
+    const pathOnly = (rawUrl.split("?")[0] ?? "").split("#")[0] ?? "";
+    return DIRECT_IMAGE_FILE_PATH.test(pathOnly) ? 0 : 1;
+  };
+  candidates.sort((a, b) => priorityPath(a.url) - priorityPath(b.url));
+
   const out: string[] = [];
   const seen = new Set<string>();
   for (const c of candidates) {
@@ -1043,12 +1069,19 @@ ${searchFocus.slice(0, 500)}`;
     out.push(u);
   }
 
-  if (out.length === 0) {
-    console.warn(
-      "[web-image-discovery] AIML:",
-      candidates.length,
-      "candidate URL(s) from model but none usable after verify/trust — check AIMLAPI_KEY and model output."
+  if (out.length === 0 && candidates.length > 0) {
+    console.info(
+      "[web-image-discovery] AIML: image verify failed for all candidates; accepting HTTPS URLs from search (news/article pages)."
     );
+    for (const c of candidates) {
+      if (out.length >= num) break;
+      let u = c.url.trim().replace(/[),\].;'">]+$/, "");
+      if (u.startsWith("http://")) u = `https://${u.slice(7)}`;
+      if (!isReasonablePublicHttpsUrl(u)) continue;
+      if (seen.has(u)) continue;
+      seen.add(u);
+      out.push(u);
+    }
   }
 
   return out.length > 0 ? out : null;

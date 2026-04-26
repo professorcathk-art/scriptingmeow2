@@ -234,6 +234,7 @@ export async function POST(request: Request) {
             brandType: brandSpace?.brand_type,
             otherBrandType: brandDetails.brand_details?.otherBrandType,
             contentFramework,
+            contentIdea: idea.content,
             language: "English",
           });
           const logoUrlForRef = brandSpace?.logo_url && (brandSpace as { logo_placement?: string | null })?.logo_placement && (brandSpace as { logo_placement?: string }).logo_placement !== "none"
@@ -268,6 +269,7 @@ export async function POST(request: Request) {
           brandType: brandSpace?.brand_type,
           otherBrandType: brandDetails.brand_details?.otherBrandType,
           contentFramework,
+          contentIdea: idea.content,
           language: "English",
         });
         const logoUrlForRef = brandSpace?.logo_url && (brandSpace as { logo_placement?: string | null })?.logo_placement && (brandSpace as { logo_placement?: string }).logo_placement !== "none"

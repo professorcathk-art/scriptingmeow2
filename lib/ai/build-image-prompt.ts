@@ -161,6 +161,8 @@ export type BuildImagePromptInput = {
   otherBrandType?: string;
   contentFramework?: string;
   postAim?: string;
+  /** Original user topic — anchors visuals to named products, news, venues, people */
+  contentIdea?: string;
   language?: string;
 };
 
@@ -280,6 +282,16 @@ export function buildImagePrompt(options: BuildImagePromptInput): string {
 
   if (options.postAim?.trim()) {
     parts.push(`POST AIM & CONTEXT: This post aims to: ${options.postAim.trim()}. The visual should support this intent.`);
+  }
+
+  const contentIdea = (options.contentIdea ?? "").trim().slice(0, 2000);
+  if (contentIdea) {
+    parts.push(
+      `STORY & REAL-WORLD ANCHORS (mandatory for subject matter):\n${contentIdea}\n` +
+        `The image must show concrete elements a viewer can tie to THIS story—not a generic unrelated scene. ` +
+        `Where the brief or idea names apps, brands, venues, people, products, events, or cultural moments, reflect those in the scene (e.g. believable phone/UI cues, packaging, architecture, event setting, or portrait context that matches the named subject). ` +
+        `Important-asset reference photos (if any) should read as part of the same narrative as the text and this topic.`
+    );
   }
 
   if (options.brandType || options.contentFramework) {
