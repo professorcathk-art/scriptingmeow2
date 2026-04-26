@@ -224,78 +224,97 @@ type WikiPage = {
 
 /**
  * Wikimedia: list=search in File namespace, then batched prop=imageinfo (reliable across regions vs generator=search alone).
+ * Tries shorter keyword prefixes when Cirrus returns no hits (AND + filemime is strict).
  */
 async function searchWikimediaCommonsImages(keywords: string, num: number): Promise<string[]> {
-  const srsearch = withCommonsBitmapMimeFilter(keywords);
-  const searchParams = new URLSearchParams({
-    action: "query",
-    format: "json",
-    list: "search",
-    srsearch,
-    srnamespace: "6",
-    srlimit: "25",
-    origin: "*",
-  });
+  const parts = keywords.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return [];
 
-  const res = await fetch(`https://commons.wikimedia.org/w/api.php?${searchParams}`, {
-    headers: { "User-Agent": WIKI_UA },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) {
-    console.warn("[web-image-discovery] Wikimedia search HTTP", res.status);
-    return [];
-  }
-
-  const searchData = (await res.json()) as { query?: { search?: Array<{ title?: string }> } };
-  const titles = (searchData.query?.search ?? [])
-    .map((s) => s.title?.trim())
-    .filter((t): t is string => Boolean(t));
-  if (titles.length === 0) {
-    console.warn("[web-image-discovery] Wikimedia: no File hits for query:", srsearch.slice(0, 120));
-    return [];
+  const maxPrefix = Math.min(8, parts.length);
+  const budgets: number[] = [];
+  for (let w = maxPrefix; w >= 1; w--) {
+    if (!budgets.includes(w)) budgets.push(w);
   }
 
   const out: string[] = [];
   const seen = new Set<string>();
-  const chunkSize = 10;
+  let lastSrsearch = "";
 
-  for (let i = 0; i < titles.length && out.length < num; i += chunkSize) {
-    const chunk = titles.slice(i, i + chunkSize);
-    const infoParams = new URLSearchParams({
+  for (const wordCount of budgets) {
+    if (out.length >= num) break;
+    const chunk = parts.slice(0, wordCount).join(" ").trim();
+    if (!chunk) continue;
+    const srsearch = withCommonsBitmapMimeFilter(chunk);
+    lastSrsearch = srsearch;
+
+    const searchParams = new URLSearchParams({
       action: "query",
       format: "json",
-      titles: chunk.join("|"),
-      prop: "imageinfo",
-      iiprop: "url|mime",
-      iiurlwidth: "1200",
+      list: "search",
+      srsearch,
+      srnamespace: "6",
+      srlimit: "25",
       origin: "*",
     });
 
-    const infoRes = await fetch(`https://commons.wikimedia.org/w/api.php?${infoParams}`, {
+    const res = await fetch(`https://commons.wikimedia.org/w/api.php?${searchParams}`, {
       headers: { "User-Agent": WIKI_UA },
       signal: AbortSignal.timeout(15000),
     });
-    if (!infoRes.ok) continue;
-
-    const infoData = (await infoRes.json()) as { query?: { pages?: Record<string, WikiPage> } };
-    const pages = infoData.query?.pages ?? {};
-
-    for (const page of Object.values(pages)) {
-      if ("missing" in page) continue;
-      const info = page.imageinfo?.[0];
-      const url = info?.url?.trim();
-      const mime = info?.mime || "";
-      if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) continue;
-      if (mime) {
-        if (!ALLOWED_MIME.test(mime)) continue;
-      } else if (!/\.(jpe?g|png|webp|gif)(\?|$)/i.test((url.split("?")[0] ?? ""))) {
-        continue;
-      }
-      if (seen.has(url)) continue;
-      seen.add(url);
-      out.push(url);
-      if (out.length >= num) break;
+    if (!res.ok) {
+      console.warn("[web-image-discovery] Wikimedia search HTTP", res.status);
+      continue;
     }
+
+    const searchData = (await res.json()) as { query?: { search?: Array<{ title?: string }> } };
+    const titles = (searchData.query?.search ?? [])
+      .map((s) => s.title?.trim())
+      .filter((t): t is string => Boolean(t));
+    if (titles.length === 0) continue;
+
+    const chunkSize = 10;
+    for (let i = 0; i < titles.length && out.length < num; i += chunkSize) {
+      const titleChunk = titles.slice(i, i + chunkSize);
+      const infoParams = new URLSearchParams({
+        action: "query",
+        format: "json",
+        titles: titleChunk.join("|"),
+        prop: "imageinfo",
+        iiprop: "url|mime",
+        iiurlwidth: "1200",
+        origin: "*",
+      });
+
+      const infoRes = await fetch(`https://commons.wikimedia.org/w/api.php?${infoParams}`, {
+        headers: { "User-Agent": WIKI_UA },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!infoRes.ok) continue;
+
+      const infoData = (await infoRes.json()) as { query?: { pages?: Record<string, WikiPage> } };
+      const pages = infoData.query?.pages ?? {};
+
+      for (const page of Object.values(pages)) {
+        if ("missing" in page) continue;
+        const info = page.imageinfo?.[0];
+        const url = info?.url?.trim();
+        const mime = info?.mime || "";
+        if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) continue;
+        if (mime) {
+          if (!ALLOWED_MIME.test(mime)) continue;
+        } else if (!/\.(jpe?g|png|webp|gif)(\?|$)/i.test((url.split("?")[0] ?? ""))) {
+          continue;
+        }
+        if (seen.has(url)) continue;
+        seen.add(url);
+        out.push(url);
+        if (out.length >= num) break;
+      }
+    }
+  }
+
+  if (out.length === 0 && lastSrsearch) {
+    console.warn("[web-image-discovery] Wikimedia: no File hits after prefix tries, last query:", lastSrsearch.slice(0, 120));
   }
 
   return out;
