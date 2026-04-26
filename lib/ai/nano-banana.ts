@@ -41,17 +41,16 @@ async function generateWithModel(
   const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
 
   const allUrls = [...styleRefUrls, ...importantUrls].slice(0, 5);
-  const refParts = (
-    await Promise.all(
-      allUrls.map((u) =>
-        fetchImageAsGeminiInlinePart(u, {
-          logLabel: "[nano-banana]",
-          timeoutMs: 12_000,
-          maxBytes: 2_500_000,
-        })
-      )
-    )
-  ).filter((p): p is NonNullable<typeof p> => p != null);
+  // Sequential downloads: parallel bursts caused serverless OOM / connection resets → browser "Failed to fetch".
+  const refParts: Array<{ inlineData: { mimeType: string; data: string } }> = [];
+  for (const u of allUrls) {
+    const part = await fetchImageAsGeminiInlinePart(u, {
+      logLabel: "[nano-banana]",
+      timeoutMs: 12_000,
+      maxBytes: 2_500_000,
+    });
+    if (part) refParts.push(part);
+  }
   parts.push(...refParts);
   const fetchedRefs = refParts.length;
   if (allUrls.length > 0 && fetchedRefs === 0) {

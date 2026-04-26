@@ -808,7 +808,36 @@ async function searchWikimediaCommonsImages(
 }
 
 function getAimlApiKey(): string | null {
-  return process.env.AIMLAPI_KEY?.trim() || process.env.AIML_API_KEY?.trim() || null;
+  return (
+    process.env.AIMLAPI_KEY?.trim() ||
+    process.env.AIML_API_KEY?.trim() ||
+    process.env.AIMLAPI_API_KEY?.trim() ||
+    null
+  );
+}
+
+/** Path looks like a direct image file (used when server-side HEAD/GET verify fails for CDNs). */
+const DIRECT_IMAGE_FILE_PATH = /\.(jpe?g|png|webp|gif)(\?[^#]*)?$/i;
+
+/**
+ * Strict verify first; if that fails, trust HTTPS URLs whose path ends in a known image extension.
+ * Many hosts block datacenter HEAD requests but the browser (and Gemini fetch) can still load the file.
+ */
+async function verifyOrTrustAimlImageUrl(url: string): Promise<boolean> {
+  if (await verifyRemoteImageUrl(url)) return true;
+  try {
+    const pathOnly = (url.split("?")[0] ?? "").split("#")[0] ?? "";
+    if (url.startsWith("https://") && DIRECT_IMAGE_FILE_PATH.test(pathOnly)) {
+      console.warn(
+        "[web-image-discovery] AIML: verify failed; trusting direct image URL for suggestions:",
+        url.slice(0, 160)
+      );
+      return true;
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
 }
 
 /** Confirm URL returns an image/* we allow (HEAD, then short GET if needed). */
@@ -993,24 +1022,30 @@ ${searchFocus.slice(0, 500)}`;
     const filtered = filterAimlCandidatesByIdentity(candidates, canonicalPeople);
     if (filtered.length > 0) candidates = filtered;
   }
-  if (candidates.length === 0) return null;
-
-  const checked = await Promise.all(
-    candidates.map(async (c) => {
-      const u = c.url.trim().replace(/[),\].;'">]+$/, "");
-      if (!u.startsWith("https://")) return null as string | null;
-      const ok = await verifyRemoteImageUrl(u);
-      return ok ? u : null;
-    })
-  );
+  if (candidates.length === 0) {
+    console.warn("[web-image-discovery] AIML: model returned no candidate URLs (check API key, model, and credits).");
+    return null;
+  }
 
   const out: string[] = [];
   const seen = new Set<string>();
-  for (const u of checked) {
-    if (!u || seen.has(u)) continue;
+  for (const c of candidates) {
+    if (out.length >= num) break;
+    let u = c.url.trim().replace(/[),\].;'">]+$/, "");
+    if (u.startsWith("http://")) u = `https://${u.slice(7)}`;
+    if (!u.startsWith("https://")) continue;
+    if (seen.has(u)) continue;
+    if (!(await verifyOrTrustAimlImageUrl(u))) continue;
     seen.add(u);
     out.push(u);
-    if (out.length >= num) break;
+  }
+
+  if (out.length === 0) {
+    console.warn(
+      "[web-image-discovery] AIML:",
+      candidates.length,
+      "candidate URL(s) from model but none usable after verify/trust — check AIMLAPI_KEY and model output."
+    );
   }
 
   return out.length > 0 ? out : null;
