@@ -1251,6 +1251,8 @@ export function CreatePostForm({
                 setUseWebImageSuggestions(on);
                 if (!on) {
                   setWebImageCandidates([]);
+                  setWebImagesFetchedForContentIdea("");
+                  setWebImagesHint(null);
                   setWebImagesLoading(false);
                 }
               }}
