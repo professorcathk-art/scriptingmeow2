@@ -172,8 +172,12 @@ export function CreatePostForm({
   /** Step 2: fetch related web images to offer as Important Asset candidates on Step 3. */
   const [useWebImageSuggestions, setUseWebImageSuggestions] = useState(false);
   const [webImageCandidates, setWebImageCandidates] = useState<string[]>([]);
+  /** Brief (trimmed) that `webImageCandidates` / `webImagesHint` belong to; avoids showing stale thumbnails after edits or session restore. */
+  const [webImagesFetchedForContentIdea, setWebImagesFetchedForContentIdea] = useState("");
   const [webImagesHint, setWebImagesHint] = useState<string | null>(null);
   const [webImagesLoading, setWebImagesLoading] = useState(false);
+  const webImagesGenRef = useRef(0);
+  const webImagesAbortRef = useRef<AbortController | null>(null);
   const saveDraft = useCallback(() => {
     try {
       sessionStorage.setItem(
@@ -190,6 +194,7 @@ export function CreatePostForm({
           referenceText,
           useWebImageSuggestions,
           webImageCandidates,
+          webImagesFetchedForContentIdea,
           webImagesHint,
         })
       );
@@ -208,6 +213,7 @@ export function CreatePostForm({
     referenceText,
     useWebImageSuggestions,
     webImageCandidates,
+    webImagesFetchedForContentIdea,
     webImagesHint,
   ]);
 
@@ -367,14 +373,36 @@ export function CreatePostForm({
           if (typeof data.useWebImageSuggestions === "boolean") {
             setUseWebImageSuggestions(data.useWebImageSuggestions);
           }
-          if (Array.isArray(data.webImageCandidates)) setWebImageCandidates(data.webImageCandidates);
-          if (typeof data.webImagesHint === "string") setWebImagesHint(data.webImagesHint);
+          const savedIdea = (data.formData?.contentIdea ?? "").trim();
+          const snap =
+            typeof data.webImagesFetchedForContentIdea === "string"
+              ? data.webImagesFetchedForContentIdea.trim()
+              : "";
+          if (snap === savedIdea) {
+            if (Array.isArray(data.webImageCandidates)) setWebImageCandidates(data.webImageCandidates);
+            if (typeof data.webImagesHint === "string") setWebImagesHint(data.webImagesHint);
+            setWebImagesFetchedForContentIdea(snap);
+          } else {
+            setWebImageCandidates([]);
+            setWebImagesHint(null);
+            setWebImagesFetchedForContentIdea("");
+          }
         }
       }
     } catch {
       // ignore
     }
   }, [editPost, prefillFromTryStyle, skipDraftRestore, clearPostDraft]);
+
+  useEffect(() => {
+    const idea = formData.contentIdea.trim();
+    if (!webImagesFetchedForContentIdea) return;
+    if (webImagesFetchedForContentIdea !== idea) {
+      setWebImageCandidates([]);
+      setWebImagesHint(null);
+      setWebImagesFetchedForContentIdea("");
+    }
+  }, [formData.contentIdea, webImagesFetchedForContentIdea]);
 
   const fetchReferenceImages = useCallback(() => {
     if (!formData.brandSpaceId) return;
@@ -516,12 +544,18 @@ export function CreatePostForm({
     setLoading(true);
     setDraftVariations(null);
 
+    const ideaSnapshot = formData.contentIdea.trim();
+    webImagesAbortRef.current?.abort();
     const webAbort = new AbortController();
+    webImagesAbortRef.current = webAbort;
+    const webGen = ++webImagesGenRef.current;
+
     let webPromise: Promise<Response> | null = null;
-    if (useWebImageSuggestions && formData.contentIdea.trim()) {
+    if (useWebImageSuggestions && ideaSnapshot) {
       setWebImagesLoading(true);
       setWebImageCandidates([]);
       setWebImagesHint(null);
+      setWebImagesFetchedForContentIdea("");
       webPromise = fetch("/api/posts/web-images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -531,6 +565,7 @@ export function CreatePostForm({
     } else {
       setWebImageCandidates([]);
       setWebImagesHint(null);
+      setWebImagesFetchedForContentIdea("");
       setWebImagesLoading(false);
     }
 
@@ -600,19 +635,31 @@ export function CreatePostForm({
           if (webPromise) {
             webPromise
               .then(async (r) => {
-                if (!r.ok) return;
+                if (webGen !== webImagesGenRef.current) return;
+                if (!r.ok) {
+                  setWebImageCandidates([]);
+                  setWebImagesHint("Could not load suggested images. Try again or add images manually.");
+                  setWebImagesFetchedForContentIdea(ideaSnapshot);
+                  return;
+                }
                 const j = (await r.json().catch(() => ({}))) as { urls?: unknown; hint?: unknown };
+                if (webGen !== webImagesGenRef.current) return;
                 if (Array.isArray(j.urls)) {
                   setWebImageCandidates(
                     j.urls.filter((u): u is string => typeof u === "string" && u.startsWith("http"))
                   );
+                } else {
+                  setWebImageCandidates([]);
                 }
                 setWebImagesHint(typeof j.hint === "string" && j.hint.trim() ? j.hint.trim() : null);
+                setWebImagesFetchedForContentIdea(ideaSnapshot);
               })
               .catch(() => {
                 /* aborted or network */
               })
-              .finally(() => setWebImagesLoading(false));
+              .finally(() => {
+                if (webGen === webImagesGenRef.current) setWebImagesLoading(false);
+              });
           }
           return;
         } catch (error: unknown) {
@@ -631,7 +678,9 @@ export function CreatePostForm({
         }
       }
       webAbort.abort();
-      setWebImagesLoading(false);
+      if (webGen === webImagesGenRef.current) {
+        setWebImagesLoading(false);
+      }
       const msg =
         lastError?.message === "Failed to fetch" ||
         lastError?.message?.includes("ERR_CONNECTION") ||

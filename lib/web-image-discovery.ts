@@ -937,11 +937,16 @@ export async function discoverWebImageUrlsForPostBrief(
   const noCse = !process.env.GOOGLE_CSE_API_KEY?.trim() || !process.env.GOOGLE_CSE_CX?.trim();
   const cseErr = identityCtx.cseLastError;
   const cse403 = cseErr?.status === 403;
+  const msgLower = (cseErr?.message ?? "").toLowerCase();
+  const cseNoJsonApiAccess =
+    cse403 && /does not have the access|custom search json api|json api/i.test(cseErr?.message ?? "");
   const cseBlocked =
-    cse403 && /blocked|not enabled|permission/i.test(cseErr?.message ?? "");
-  const hintCse403 = cseBlocked
-    ? "Google Custom Search returned 403 (“requests … are blocked”). The API is enabled on the project, but this API key is not allowed to call Custom Search. In Google Cloud Console → APIs & Services → Credentials → open the key used as GOOGLE_CSE_API_KEY → API restrictions: either select “Don’t restrict key” (try first) or “Restrict key” and explicitly add “Custom Search API”. Keys used only for Gemini often allow “Generative Language API” only—add Custom Search API to that same key or create a separate key for CSE. Use a server-friendly key (avoid browser referrer restrictions for server env vars)."
-    : "Google image search returned 403. Enable Custom Search API on the billing project, check quota, and ensure GOOGLE_CSE_API_KEY is not restricted to other APIs only. For server-side calls, avoid HTTP referrer–only restrictions on the key.";
+    cse403 && !cseNoJsonApiAccess && /blocked|not enabled|permission/i.test(msgLower);
+  const hintCse403 = cseNoJsonApiAccess
+    ? "Google returned 403: this Cloud project is not allowed to use the Custom Search JSON API. Open Google Cloud Console → select the **same project** that owns your GOOGLE_CSE_API_KEY → APIs & Services → Library → enable **Custom Search API** → ensure **billing** is enabled on that project. Wait a few minutes after enabling. If the key was created in a different project than the one where you enabled the API, create a new key in the correct project or enable the API on the key’s project."
+    : cseBlocked
+      ? "Google Custom Search returned 403 (“requests … are blocked”). The API is enabled on the project, but this API key is not allowed to call Custom Search. In Google Cloud Console → APIs & Services → Credentials → open the key used as GOOGLE_CSE_API_KEY → API restrictions: either select “Don’t restrict key” (try first) or “Restrict key” and explicitly add “Custom Search API”. Keys used only for Gemini often allow “Generative Language API” only—add Custom Search API to that same key or create a separate key for CSE. Use a server-friendly key (avoid browser referrer restrictions for server env vars)."
+      : "Google image search returned 403. Enable Custom Search API on the billing project, check quota, and ensure GOOGLE_CSE_API_KEY is not restricted to other APIs only. For server-side calls, avoid HTTP referrer–only restrictions on the key.";
   const hint =
     urls.length === 0 && cse403
       ? hintCse403
