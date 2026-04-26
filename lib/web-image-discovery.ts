@@ -1,6 +1,7 @@
 /**
  * Discover real image URLs for Important Assets: prioritize people in the story, then org/news context.
- * Order: Google Programmable Search (optional) → Wikimedia Commons → AI/ML API web search (optional, e.g. perplexity/sonar).
+ * Order: If AIMLAPI_KEY is set, AI/ML API web search runs first (skips broken Google CSE when AIML returns URLs).
+ * Otherwise: Google Programmable Search (optional) → Wikimedia Commons → AI/ML API fallback.
  * Web search models return real page/image URLs for post references — not the same as text-to-image generation endpoints.
  */
 
@@ -591,6 +592,9 @@ async function searchGoogleProgrammableImageSearch(
   num: number,
   ctx?: ImageDiscoverySearchCtx
 ): Promise<string[] | null> {
+  if (process.env.SKIP_GOOGLE_CSE === "true" || process.env.DISABLE_GOOGLE_CSE === "true") {
+    return null;
+  }
   if (googleCseJsonApiUnavailable) return null;
   const apiKey = process.env.GOOGLE_CSE_API_KEY?.trim();
   const cx = process.env.GOOGLE_CSE_CX?.trim();
@@ -794,8 +798,11 @@ async function searchWikimediaCommonsImages(
     }
   }
 
-  if (out.length === 0 && lastSrsearch) {
-    console.warn("[web-image-discovery] Wikimedia: no File hits after prefix tries, last query:", lastSrsearch.slice(0, 120));
+  if (out.length === 0 && lastSrsearch && process.env.WEB_IMAGE_DISCOVERY_VERBOSE === "true") {
+    console.info(
+      "[web-image-discovery] Wikimedia: no File hits after prefix tries, last query:",
+      lastSrsearch.slice(0, 120)
+    );
   }
 
   return out;
@@ -1007,7 +1014,8 @@ ${searchFocus.slice(0, 500)}`;
 async function collectUrlsFromQueries(
   queries: string[],
   n: number,
-  ctx: ImageDiscoverySearchCtx
+  ctx: ImageDiscoverySearchCtx,
+  opts?: { skipGoogle?: boolean }
 ): Promise<{ urls: string[]; source: "google" | "wikimedia"; winningQuery: string }> {
   const seen = new Set<string>();
   const urls: string[] = [];
@@ -1021,7 +1029,8 @@ async function collectUrlsFromQueries(
     if (ctx.canonicalPeople.length > 0 && isSingleTokenGivenNameOnlyQuery(q, ctx.canonicalPeople)) continue;
 
     const need = n - urls.length;
-    const google = await searchGoogleProgrammableImageSearch(q, need, ctx);
+    const google =
+      opts?.skipGoogle ? null : await searchGoogleProgrammableImageSearch(q, need, ctx);
     if (google && google.length > 0) {
       if (!sawGoogle) {
         sawGoogle = true;
@@ -1127,7 +1136,32 @@ export async function discoverWebImageUrlsForPostBrief(
   }
 
   const identityCtx: ImageDiscoverySearchCtx = { canonicalPeople };
-  let { urls, source, winningQuery } = await collectUrlsFromQueries(queries, n, identityCtx);
+  const queryLabelSeed = queries[0] || "";
+  const aimlConfigured = Boolean(getAimlApiKey());
+  const skipGoogleBecauseAiml =
+    aimlConfigured && process.env.FORCE_GOOGLE_CSE !== "true";
+
+  if (aimlConfigured) {
+    const aimlFirst = await searchAimlWebForImageUrls(
+      trimmed,
+      queryLabelSeed || trimmed.slice(0, 400),
+      canonicalPeople,
+      n
+    );
+    if (aimlFirst && aimlFirst.length > 0) {
+      return {
+        urls: aimlFirst.slice(0, n),
+        query: queryLabelSeed ? `aiml:${queryLabelSeed}` : "aiml:web-search",
+        queriesAttempted: [...new Set(queries)],
+        source: "aiml",
+        hint: undefined,
+      };
+    }
+  }
+
+  let { urls, source, winningQuery } = await collectUrlsFromQueries(queries, n, identityCtx, {
+    skipGoogle: skipGoogleBecauseAiml,
+  });
 
   if (urls.length === 0) {
     let alt = stripWeakImageQueryTokens(fallbackKeywordsFromBrief(trimmed)).trim();
@@ -1141,7 +1175,9 @@ export async function discoverWebImageUrlsForPostBrief(
       !isStandaloneBannedQuery(alt) &&
       fallbackOkForIdentity
     ) {
-      const second = await collectUrlsFromQueries([alt], n, identityCtx);
+      const second = await collectUrlsFromQueries([alt], n, identityCtx, {
+        skipGoogle: skipGoogleBecauseAiml,
+      });
       urls = second.urls;
       source = second.source;
       winningQuery = second.winningQuery || alt;
@@ -1152,7 +1188,7 @@ export async function discoverWebImageUrlsForPostBrief(
   let queryLabel = winningQuery || queries[0] || "";
   let finalSource: "google" | "wikimedia" | "aiml" = source;
 
-  if (urls.length === 0 && getAimlApiKey()) {
+  if (urls.length === 0 && aimlConfigured) {
     const aimlUrls = await searchAimlWebForImageUrls(
       trimmed,
       queryLabel || trimmed.slice(0, 400),
