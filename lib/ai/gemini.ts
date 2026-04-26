@@ -437,10 +437,19 @@ export async function generateBrandbook(
 
   const imageParts: Array<{ inlineData: { mimeType: string; data: string } }> = [];
   const validUrls = (brandData.referenceImages ?? []).filter((u) => typeof u === "string" && (u.startsWith("http://") || u.startsWith("https://")));
-  for (let i = 0; i < Math.min(validUrls.length, 5); i++) {
-    const part = await fetchImageAsGeminiInlinePart(validUrls[i], { logLabel: "[gemini-brandbook]" });
-    if (part) imageParts.push(part);
-  }
+  const urlsToFetch = validUrls.slice(0, 5);
+  const fetched = (
+    await Promise.all(
+      urlsToFetch.map((u) =>
+        fetchImageAsGeminiInlinePart(u, {
+          logLabel: "[gemini-brandbook]",
+          timeoutMs: 12_000,
+          maxBytes: 2_500_000,
+        })
+      )
+    )
+  ).filter((p): p is NonNullable<typeof p> => p != null);
+  imageParts.push(...fetched);
 
   const contentParts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: prompt }];
   contentParts.push(...imageParts);

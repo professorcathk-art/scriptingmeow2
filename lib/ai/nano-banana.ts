@@ -41,14 +41,19 @@ async function generateWithModel(
   const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
 
   const allUrls = [...styleRefUrls, ...importantUrls].slice(0, 5);
-  let fetchedRefs = 0;
-  for (let i = 0; i < allUrls.length; i++) {
-    const part = await fetchImageAsGeminiInlinePart(allUrls[i], { logLabel: "[nano-banana]" });
-    if (part) {
-      parts.push(part);
-      fetchedRefs++;
-    }
-  }
+  const refParts = (
+    await Promise.all(
+      allUrls.map((u) =>
+        fetchImageAsGeminiInlinePart(u, {
+          logLabel: "[nano-banana]",
+          timeoutMs: 12_000,
+          maxBytes: 2_500_000,
+        })
+      )
+    )
+  ).filter((p): p is NonNullable<typeof p> => p != null);
+  parts.push(...refParts);
+  const fetchedRefs = refParts.length;
   if (allUrls.length > 0 && fetchedRefs === 0) {
     console.warn(
       "[nano-banana] No reference images could be downloaded (all URLs failed). Generation continues without inline refs.",
