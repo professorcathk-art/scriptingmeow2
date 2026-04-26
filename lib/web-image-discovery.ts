@@ -943,7 +943,7 @@ export async function discoverWebImageUrlsForPostBrief(
   const cseBlocked =
     cse403 && !cseNoJsonApiAccess && /blocked|not enabled|permission/i.test(msgLower);
   const hintCse403 = cseNoJsonApiAccess
-    ? "Google returned 403: this Cloud project is not allowed to use the Custom Search JSON API. Open Google Cloud Console → select the **same project** that owns your GOOGLE_CSE_API_KEY → APIs & Services → Library → enable **Custom Search API** → ensure **billing** is enabled on that project. Wait a few minutes after enabling. If the key was created in a different project than the one where you enabled the API, create a new key in the correct project or enable the API on the key’s project."
+    ? "Google returned 403 for Custom Search JSON API. As of Google’s current policy, that API is closed to new customers—enabling the API and billing often still yields this error for new Cloud projects. See: https://developers.google.com/custom-search/v1/overview — only existing API customers (grandfathered) can use it until Jan 1, 2027. This is not something wrong with your Vercel env wiring. Workarounds: paste image URLs manually; rely on Wikimedia when it has files; use an older GCP project that already had Custom Search JSON API access; or integrate a different search/image API (e.g. your own provider)."
     : cseBlocked
       ? "Google Custom Search returned 403 (“requests … are blocked”). The API is enabled on the project, but this API key is not allowed to call Custom Search. In Google Cloud Console → APIs & Services → Credentials → open the key used as GOOGLE_CSE_API_KEY → API restrictions: either select “Don’t restrict key” (try first) or “Restrict key” and explicitly add “Custom Search API”. Keys used only for Gemini often allow “Generative Language API” only—add Custom Search API to that same key or create a separate key for CSE. Use a server-friendly key (avoid browser referrer restrictions for server env vars)."
       : "Google image search returned 403. Enable Custom Search API on the billing project, check quota, and ensure GOOGLE_CSE_API_KEY is not restricted to other APIs only. For server-side calls, avoid HTTP referrer–only restrictions on the key.";
@@ -951,7 +951,7 @@ export async function discoverWebImageUrlsForPostBrief(
     urls.length === 0 && cse403
       ? hintCse403
       : urls.length === 0 && noCse
-        ? "No Wikimedia Commons matches for this specific story (common for small startups). Configure Google Programmable Search (image) for news photos and founder portraits."
+        ? "No Wikimedia Commons matches for this story. Google Custom Search JSON API is closed to new Google Cloud customers, so automated web image search may be unavailable unless you use a grandfathered project or another provider—paste image URLs manually when needed."
         : urls.length === 0
           ? "No images matched these queries. Try a shorter English description with the person or company name, or paste image URLs manually."
           : undefined;
