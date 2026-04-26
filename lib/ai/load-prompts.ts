@@ -149,7 +149,6 @@ export function getCarouselDraftPrompt(vars: {
   colors: string;
   contentFrameworkDesc: string;
   layoutSpatialLine: string;
-  layoutStyleDetail?: string;
   dosDonts?: string;
   overallDesignGuide: string;
   stylingGuide: string;
@@ -165,7 +164,6 @@ export function getCarouselDraftPrompt(vars: {
   template = template.replace(/\{\{isTextHeavy\}\}/g, String(vars.isTextHeavy));
   template = template.replace(/\{\{#isTextHeavy\}\}([\s\S]*?)\{\{\/isTextHeavy\}\}/g, vars.isTextHeavy ? "$1" : "");
   const extraParts: string[] = [];
-  if (vars.layoutStyleDetail) extraParts.push(`Layout: ${vars.layoutStyleDetail}`);
   if (vars.dosDonts) extraParts.push(`Brand rules: ${vars.dosDonts}`);
   const extraContext =
     extraParts.length > 0 ? `\n${extraParts.map((p) => `- ${p}`).join("\n")}` : "";

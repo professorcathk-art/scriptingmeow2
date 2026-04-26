@@ -290,6 +290,68 @@ export async function generateImage(prompt: string): Promise<string> {
   }
 }
 
+/**
+ * Parse a JSON object from model output; tolerate raw newlines inside strings and trailing commas.
+ */
+function parseModelJsonObject(raw: string): Record<string, unknown> {
+  const cleanedText = raw
+    .replace(/```json\n?/gi, "")
+    .replace(/```\n?/g, "")
+    .trim();
+  const match = cleanedText.match(/\{[\s\S]*\}/);
+  let jsonStr = match ? match[0] : cleanedText;
+
+  const stripTrailingCommas = (s: string): string => s.replace(/,\s*([}\]])/g, "$1");
+
+  const escapeNewlinesInStrings = (s: string): string => {
+    let result = "";
+    let inString = false;
+    let escape = false;
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i]!;
+      if (escape) {
+        result += c;
+        escape = false;
+        continue;
+      }
+      if (c === "\\") {
+        result += c;
+        escape = true;
+        continue;
+      }
+      if (c === '"') {
+        inString = !inString;
+        result += c;
+        continue;
+      }
+      if (inString && (c === "\n" || c === "\r")) {
+        result += "\\n";
+        if (c === "\r" && s[i + 1] === "\n") i++;
+        continue;
+      }
+      result += c;
+    }
+    return result;
+  };
+
+  const attempts = [
+    () => JSON.parse(jsonStr) as Record<string, unknown>,
+    () => JSON.parse(stripTrailingCommas(jsonStr)) as Record<string, unknown>,
+    () => JSON.parse(escapeNewlinesInStrings(jsonStr)) as Record<string, unknown>,
+    () => JSON.parse(stripTrailingCommas(escapeNewlinesInStrings(jsonStr))) as Record<string, unknown>,
+  ];
+
+  let lastErr: unknown;
+  for (const fn of attempts) {
+    try {
+      return fn();
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
 const BRAND_TYPE_GUIDANCE: Record<string, string> = {
   "personal-brand": "Personal Brand / Creator: Tailor for individuals building authority. Warm, authentic, thought-leader tone.",
   "ecommerce-retail": "E-commerce / Retail: Product-focused, aspirational. Lifestyle imagery, clear CTAs, shoppable feel.",
@@ -323,13 +385,10 @@ export async function generateBrandbook(
     imageStyle: string;
     carouselInnerStyle?: string;
     colorDescriptionDetailed?: string;
-    visualAura?: string;
     lineStyle?: string;
     layoutTendencies: string;
-    layoutStyle?: string;
     vibe?: string[];
     typographySpec?: string;
-    layoutStyleDetail?: string;
     imageGenerationPrompt?: string;
   };
   /** Kept for DB compatibility; always empty (not generated). */
@@ -411,7 +470,7 @@ export async function generateBrandbook(
       if (isV1BetaModel(modelName)) {
         const response = await generateContentV1Beta(modelName, v1BetaParts, {
           temperature: 1.0,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 8192,
           thinkingLevel: "low",
           safetySettings: safetyToV1Beta(DEFAULT_SAFETY),
         });
@@ -419,7 +478,7 @@ export async function generateBrandbook(
       } else {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
           safetySettings: [...DEFAULT_SAFETY],
         });
         const result = await model.generateContent(contentParts);
@@ -427,40 +486,41 @@ export async function generateBrandbook(
       }
 
       if (text) {
-        const cleanedText = text
-          .replace(/```json\n?/g, "")
-          .replace(/```\n?/g, "")
-          .trim();
-        const match = cleanedText.match(/\{[\s\S]*\}/);
-        const jsonStr = match ? match[0] : cleanedText;
-        const brandbook = JSON.parse(jsonStr);
-        const vs = brandbook.visualStyle || {};
+        const brandbook = parseModelJsonObject(text);
+        const vs = (brandbook.visualStyle || {}) as Record<string, unknown>;
+        const str = (v: unknown) => (typeof v === "string" ? v : "");
+        const dnd = brandbook.dosAndDonts as { dos?: unknown; donts?: unknown } | undefined;
         return {
-          brandPersonality: brandbook.brandPersonality || "",
-          toneOfVoice: brandbook.toneOfVoice || "",
+          brandPersonality: str(brandbook.brandPersonality),
+          toneOfVoice: str(brandbook.toneOfVoice),
           visualStyle: {
             colors: Array.isArray(vs.colors)
               ? (() => {
-                  const arr = vs.colors.slice(0, 5).map((c: unknown) => (c && String(c).trim()) || "");
+                  const raw = vs.colors as unknown[];
+                  const arr = raw
+                    .slice(0, 5)
+                    .map((c: unknown): string => (c != null && String(c).trim()) || "");
                   while (arr.length < 5) arr.push("");
                   return arr;
                 })()
               : ["", "", "", "", ""],
-            primaryColor: vs.primaryColor || (Array.isArray(vs.colors) ? vs.colors[0] : ""),
-            secondaryColor1: vs.secondaryColor1 || (Array.isArray(vs.colors) ? vs.colors[1] : ""),
-            secondaryColor2: vs.secondaryColor2 || (Array.isArray(vs.colors) ? vs.colors[2] : ""),
-            backgroundColor: vs.backgroundColor || "light",
-            imageStyle: (vs as { imageStyle?: string; image_style?: string }).imageStyle || (vs as { image_style?: string }).image_style || "",
-            carouselInnerStyle: (vs as { carouselInnerStyle?: string }).carouselInnerStyle || "",
-            colorDescriptionDetailed: (vs as { colorDescriptionDetailed?: string }).colorDescriptionDetailed || "",
-            visualAura: (vs as { visualAura?: string }).visualAura || "",
-            lineStyle: (vs as { lineStyle?: string }).lineStyle || "",
-            layoutTendencies: vs.layoutTendencies || "",
-            layoutStyle: vs.layoutStyle || "",
-            vibe: Array.isArray(vs.vibe) ? vs.vibe : [],
-            typographySpec: vs.typographySpec || "",
-            layoutStyleDetail: vs.layoutStyleDetail || "",
-            imageGenerationPrompt: (vs as { imageGenerationPrompt?: string }).imageGenerationPrompt || "",
+            primaryColor: str(vs.primaryColor) || (Array.isArray(vs.colors) ? str((vs.colors as unknown[])[0]) : ""),
+            secondaryColor1: str(vs.secondaryColor1) || (Array.isArray(vs.colors) ? str((vs.colors as unknown[])[1]) : ""),
+            secondaryColor2: str(vs.secondaryColor2) || (Array.isArray(vs.colors) ? str((vs.colors as unknown[])[2]) : ""),
+            backgroundColor: str(vs.backgroundColor) || "light",
+            imageStyle:
+              str((vs as { imageStyle?: unknown }).imageStyle) ||
+              str((vs as { image_style?: unknown }).image_style) ||
+              "",
+            carouselInnerStyle: str((vs as { carouselInnerStyle?: unknown }).carouselInnerStyle),
+            colorDescriptionDetailed: str((vs as { colorDescriptionDetailed?: unknown }).colorDescriptionDetailed),
+            lineStyle: str((vs as { lineStyle?: unknown }).lineStyle),
+            layoutTendencies: str(vs.layoutTendencies),
+            vibe: Array.isArray(vs.vibe)
+              ? (vs.vibe as unknown[]).filter((x): x is string => typeof x === "string")
+              : [],
+            typographySpec: str(vs.typographySpec),
+            imageGenerationPrompt: str((vs as { imageGenerationPrompt?: unknown }).imageGenerationPrompt),
           },
           captionStructure: {
             hookPatterns: [],
@@ -469,8 +529,8 @@ export async function generateBrandbook(
             hashtagStyle: "",
           },
           dosAndDonts: {
-            dos: Array.isArray(brandbook.dosAndDonts?.dos) ? brandbook.dosAndDonts.dos : [],
-            donts: Array.isArray(brandbook.dosAndDonts?.donts) ? brandbook.dosAndDonts.donts : [],
+            dos: Array.isArray(dnd?.dos) ? dnd.dos : [],
+            donts: Array.isArray(dnd?.donts) ? dnd.donts : [],
           },
         };
       }
@@ -819,7 +879,6 @@ export async function generatePost(
       imageStyle?: string;
       image_style?: string;
       typographySpec?: string;
-      layoutStyleDetail?: string;
     } | null;
     const colors = vs?.primaryColor
       ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
@@ -852,7 +911,6 @@ export async function generatePost(
         colors: colors || "professional palette",
         contentFrameworkDesc: CONTENT_FRAMEWORK_GUIDE[contentFramework || "educational-value"] || CONTENT_FRAMEWORK_GUIDE["educational-value"],
         layoutSpatialLine,
-        layoutStyleDetail: "",
         dosDonts,
         overallDesignGuide,
         stylingGuide,
@@ -914,15 +972,14 @@ export async function generatePost(
     };
   }
 
-  const vs = brandbook.visualStyle as {
-    primaryColor?: string;
-    secondaryColor1?: string;
-    colors?: string[];
-    imageStyle?: string;
-    image_style?: string;
-    typographySpec?: string;
-    layoutStyleDetail?: string;
-  } | null;
+    const vs = brandbook.visualStyle as {
+      primaryColor?: string;
+      secondaryColor1?: string;
+      colors?: string[];
+      imageStyle?: string;
+      image_style?: string;
+      typographySpec?: string;
+    } | null;
   const colors = vs?.primaryColor
     ? [vs.primaryColor, vs.secondaryColor1].filter(Boolean).join(", ")
     : Array.isArray(vs?.colors) ? vs.colors.filter((c) => c && String(c).trim()).slice(0, 5).join(", ") : "";

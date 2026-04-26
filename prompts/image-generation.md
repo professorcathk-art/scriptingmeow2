@@ -4,7 +4,7 @@ Used by `lib/ai/build-image-prompt.ts` → `buildImagePrompt()`. Combines brandb
 
 ## Inputs
 
-- **brandbook.visual_style** – imageGenerationPrompt (preferred), imageStyle, colors, colorDescriptionDetailed, visualAura, lineStyle, layoutTendencies, layoutStyle, typographySpec, layoutStyleDetail
+- **brandbook.visual_style** – imageGenerationPrompt (preferred), imageStyle, colors, colorDescriptionDetailed, lineStyle, layoutTendencies, typographySpec
 - **visualAdvice** – From draft (視覺建議)
 - **imageTextOnImage** – Text to render on the image
 - **postStyle** – editorial | text-heavy | tweet-card | split-screen | immersive-photo
@@ -26,9 +26,7 @@ Brand image generation prompt (use as primary style): {{imageGenerationPrompt}}
 — OR —
 Brand visual style: {{imageStyle}}. 
 Color palette & lighting: {{colorDescriptionDetailed}}. 
-Visual aura & whitespace rules: {{visualAura}}. 
 Line/stroke characteristics: {{lineStyle}}. 
-Layout rules: {{layoutStyle}}. 
 Typography aesthetic: {{typographySpec}}.
 (Include logo integration seamlessly into the composition if {{logoUrl}} is provided.)
 

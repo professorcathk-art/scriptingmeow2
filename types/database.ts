@@ -60,9 +60,7 @@ export interface Brandbook {
     imageGenerationPrompt?: string;
     layout_tendencies?: string;
     typographySpec?: string;
-    layoutStyleDetail?: string;
     colorDescriptionDetailed?: string;
-    visualAura?: string;
     lineStyle?: string;
   };
   caption_structure: {

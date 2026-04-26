@@ -132,12 +132,9 @@ type BrandbookVisualStyle = {
   carouselInnerStyle?: string;
   imageGenerationPrompt?: string;
   colorDescriptionDetailed?: string;
-  visualAura?: string;
   lineStyle?: string;
   layoutTendencies?: string;
-  layoutStyle?: string;
   typographySpec?: string;
-  layoutStyleDetail?: string;
   vibe?: string[];
 } | null;
 

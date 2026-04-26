@@ -8,6 +8,7 @@ import { MAX_CONTENT_IDEA_CHARS } from "@/lib/constants";
 
 const WEB_IMAGE_TARGET = 5;
 const ALLOWED_MIME = /^image\/(jpeg|jpg|png|webp|gif)$/i;
+const WIKI_UA = "designermeow/1.0 (create-post web images)";
 
 function fallbackKeywordsFromBrief(brief: string): string {
   const t = brief
@@ -101,46 +102,81 @@ type WikiPage = {
   imageinfo?: Array<{ url?: string; mime?: string }>;
 };
 
+/**
+ * Wikimedia: list=search in File namespace, then batched prop=imageinfo (reliable across regions vs generator=search alone).
+ */
 async function searchWikimediaCommonsImages(query: string, num: number): Promise<string[]> {
-  const params = new URLSearchParams({
+  const searchParams = new URLSearchParams({
     action: "query",
     format: "json",
-    generator: "search",
-    gsrsearch: query,
-    gsrlimit: "20",
-    gsrnamespace: "6",
-    prop: "imageinfo",
-    iiprop: "url|mime",
-    iiurlwidth: "1200",
+    list: "search",
+    srsearch: query,
+    srnamespace: "6",
+    srlimit: "20",
     origin: "*",
   });
 
-  const res = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`, {
-    headers: { "User-Agent": "designermeow/1.0 (create-post web images)" },
+  const res = await fetch(`https://commons.wikimedia.org/w/api.php?${searchParams}`, {
+    headers: { "User-Agent": WIKI_UA },
     signal: AbortSignal.timeout(15000),
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    console.warn("[web-image-discovery] Wikimedia search HTTP", res.status);
+    return [];
+  }
 
-  const data = (await res.json()) as { query?: { pages?: Record<string, WikiPage> } };
-  const pages = data.query?.pages ?? {};
+  const searchData = (await res.json()) as { query?: { search?: Array<{ title?: string }> } };
+  const titles = (searchData.query?.search ?? [])
+    .map((s) => s.title?.trim())
+    .filter((t): t is string => Boolean(t));
+  if (titles.length === 0) {
+    console.warn("[web-image-discovery] Wikimedia: no File hits for query:", query.slice(0, 100));
+    return [];
+  }
+
   const out: string[] = [];
   const seen = new Set<string>();
+  const chunkSize = 10;
 
-  for (const page of Object.values(pages)) {
-    const info = page.imageinfo?.[0];
-    const url = info?.url?.trim();
-    const mime = info?.mime || "";
-    if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) continue;
-    if (mime) {
-      if (!ALLOWED_MIME.test(mime)) continue;
-    } else if (!/\.(jpe?g|png|webp|gif)(\?|$)/i.test(url.split("?")[0] ?? "")) {
-      continue;
+  for (let i = 0; i < titles.length && out.length < num; i += chunkSize) {
+    const chunk = titles.slice(i, i + chunkSize);
+    const infoParams = new URLSearchParams({
+      action: "query",
+      format: "json",
+      titles: chunk.join("|"),
+      prop: "imageinfo",
+      iiprop: "url|mime",
+      iiurlwidth: "1200",
+      origin: "*",
+    });
+
+    const infoRes = await fetch(`https://commons.wikimedia.org/w/api.php?${infoParams}`, {
+      headers: { "User-Agent": WIKI_UA },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!infoRes.ok) continue;
+
+    const infoData = (await infoRes.json()) as { query?: { pages?: Record<string, WikiPage> } };
+    const pages = infoData.query?.pages ?? {};
+
+    for (const page of Object.values(pages)) {
+      if ("missing" in page) continue;
+      const info = page.imageinfo?.[0];
+      const url = info?.url?.trim();
+      const mime = info?.mime || "";
+      if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) continue;
+      if (mime) {
+        if (!ALLOWED_MIME.test(mime)) continue;
+      } else if (!/\.(jpe?g|png|webp|gif)(\?|$)/i.test((url.split("?")[0] ?? ""))) {
+        continue;
+      }
+      if (seen.has(url)) continue;
+      seen.add(url);
+      out.push(url);
+      if (out.length >= num) break;
     }
-    if (seen.has(url)) continue;
-    seen.add(url);
-    out.push(url);
-    if (out.length >= num) break;
   }
+
   return out;
 }
 
@@ -165,6 +201,17 @@ export async function discoverWebImageUrlsForPostBrief(
     return { urls: google.slice(0, n), query, source: "google" };
   }
 
-  const wiki = await searchWikimediaCommonsImages(query, n);
+  let wiki = await searchWikimediaCommonsImages(query, n);
+  if (wiki.length === 0) {
+    const fallback = fallbackKeywordsFromBrief(brief);
+    if (fallback !== query) {
+      wiki = await searchWikimediaCommonsImages(fallback, n);
+      if (wiki.length > 0) {
+        return { urls: wiki.slice(0, n), query: fallback, source: "wikimedia" };
+      }
+    }
+    console.warn("[web-image-discovery] Wikimedia: empty after primary and fallback query");
+  }
+
   return { urls: wiki.slice(0, n), query, source: "wikimedia" };
 }

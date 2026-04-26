@@ -581,26 +581,6 @@ export function BrandbookForm({
                 />
               </div>
               <div>
-                <label className={labelClass}>Visual Aura</label>
-                <textarea
-                  value={(brandbook.visual_style as { visualAura?: string })?.visualAura ?? ""}
-                  onChange={(e) => {
-                    setHasEdited(true);
-                    setBrandbook((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            visual_style: { ...prev.visual_style, visualAura: e.target.value },
-                          }
-                        : prev
-                    );
-                  }}
-                  className={inputClass}
-                  rows={2}
-                  placeholder="Layout mood, breathing room, spacing philosophy. Markdown allowed."
-                />
-              </div>
-              <div>
                 <label className={labelClass}>Line Style</label>
                 <textarea
                   value={(brandbook.visual_style as { lineStyle?: string })?.lineStyle ?? ""}
@@ -657,26 +637,6 @@ export function BrandbookForm({
                   className={inputClass}
                   rows={3}
                   placeholder="Headings - font, size, color. Body - font, size. Emphasis style."
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Layout Style</label>
-                <textarea
-                  value={(brandbook.visual_style as { layoutStyleDetail?: string })?.layoutStyleDetail ?? ""}
-                  onChange={(e) => {
-                    setHasEdited(true);
-                    setBrandbook((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            visual_style: { ...prev.visual_style, layoutStyleDetail: e.target.value },
-                          }
-                        : prev
-                    );
-                  }}
-                  className={inputClass}
-                  rows={3}
-                  placeholder="Card/minimal/info-dense. Borders, spacing, text placement."
                 />
               </div>
             </div>
