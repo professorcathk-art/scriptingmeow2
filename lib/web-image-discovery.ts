@@ -1,6 +1,7 @@
 /**
  * Discover real image URLs for Important Assets: prioritize people in the story, then org/news context.
- * Google Programmable Search (optional) or Wikimedia Commons — never generic continent/demographic-only queries.
+ * Order: Google Programmable Search (optional) → Wikimedia Commons → AI/ML API web search (optional, e.g. perplexity/sonar).
+ * Web search models return real page/image URLs for post references — not the same as text-to-image generation endpoints.
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -784,6 +785,208 @@ async function searchWikimediaCommonsImages(
   return out;
 }
 
+function getAimlApiKey(): string | null {
+  return process.env.AIMLAPI_KEY?.trim() || process.env.AIML_API_KEY?.trim() || null;
+}
+
+/** Confirm URL returns an image/* we allow (HEAD, then short GET if needed). */
+async function verifyRemoteImageUrl(url: string): Promise<boolean> {
+  try {
+    let res = await fetch(url, {
+      method: "HEAD",
+      headers: { "User-Agent": WIKI_UA, Accept: "image/*,*/*;q=0.8" },
+      signal: AbortSignal.timeout(12000),
+      redirect: "follow",
+    });
+    let ct = res.headers.get("content-type") || "";
+    if (res.ok && ALLOWED_MIME.test(ct)) return true;
+    res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": WIKI_UA,
+        Accept: "image/*,*/*;q=0.8",
+        Range: "bytes=0-4095",
+      },
+      signal: AbortSignal.timeout(12000),
+      redirect: "follow",
+    });
+    ct = res.headers.get("content-type") || "";
+    return res.ok && ALLOWED_MIME.test(ct);
+  } catch {
+    return false;
+  }
+}
+
+function extractJsonUrlsArrayFromText(text: string): string[] {
+  const cleaned = text.replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  const parse = (s: string): string[] => {
+    try {
+      const o = JSON.parse(s) as { urls?: unknown };
+      if (!Array.isArray(o.urls)) return [];
+      return o.urls.filter((x): x is string => typeof x === "string" && x.startsWith("https://"));
+    } catch {
+      return [];
+    }
+  };
+  const a = parse(cleaned);
+  if (a.length > 0) return a;
+  const m = cleaned.match(/\{[\s\S]*"urls"\s*:\s*\[[\s\S]*\][\s\S]*\}/);
+  return m?.[0] ? parse(m[0]) : [];
+}
+
+type AimlUrlCandidate = { url: string; context: string };
+
+type AimlChatResponse = {
+  choices?: Array<{
+    message?: {
+      content?: string;
+      annotations?: Array<{ type?: string; url_citation?: { url?: string; title?: string } }>;
+    };
+  }>;
+};
+
+function mergeAimlCandidates(raw: AimlUrlCandidate[]): AimlUrlCandidate[] {
+  const map = new Map<string, string>();
+  for (const { url, context } of raw) {
+    let u = url.trim().replace(/[),\].;'">]+$/, "");
+    if (!u.startsWith("https://")) continue;
+    const ctx = (map.get(u) ? `${map.get(u)} | ` : "") + context;
+    map.set(u, ctx.slice(0, 1200));
+  }
+  return [...map.entries()].map(([url, context]) => ({ url, context }));
+}
+
+function aimlResponseToUrlCandidates(data: AimlChatResponse): AimlUrlCandidate[] {
+  const choice = data.choices?.[0];
+  const content = choice?.message?.content ?? "";
+  const anns = choice?.message?.annotations ?? [];
+  const raw: AimlUrlCandidate[] = [];
+  const ctxSnippet = content.slice(0, 900);
+
+  for (const u of extractJsonUrlsArrayFromText(content)) {
+    raw.push({ url: u, context: ctxSnippet });
+  }
+  const inlineImg = /https:\/\/[^\s"'<>]+\.(?:jpe?g|png|webp|gif)(?:\?[^\s"'<>]*)?/gi;
+  for (const m of content.matchAll(inlineImg)) {
+    raw.push({ url: m[0], context: ctxSnippet });
+  }
+  for (const a of anns) {
+    const cite = a.url_citation;
+    if (!cite?.url?.trim()) continue;
+    const u = cite.url.trim();
+    const ctx = [cite.title, cite.url].filter(Boolean).join(" ");
+    raw.push({ url: u, context: ctx });
+  }
+  return mergeAimlCandidates(raw);
+}
+
+function filterAimlCandidatesByIdentity(
+  candidates: AimlUrlCandidate[],
+  canonicalPeople: string[]
+): AimlUrlCandidate[] {
+  const needsStrong =
+    canonicalPeople.length > 0 && canonicalPeople.some((p) => p.trim().split(/\s+/).filter(Boolean).length >= 2);
+  if (!needsStrong) return candidates;
+  const filtered = candidates.filter((c) =>
+    canonicalPeople.some((p) => haystackMatchesPerson(`${c.context} ${c.url}`, p))
+  );
+  return filtered.length > 0 ? filtered : [];
+}
+
+/**
+ * Fallback when Google CSE / Wikimedia yield nothing: AI/ML API chat model with web search (OpenAI-compatible).
+ * Default model `perplexity/sonar` — set AIMLAPI_WEB_IMAGE_MODEL to override (e.g. gpt-4o-mini-search-preview).
+ */
+async function searchAimlWebForImageUrls(
+  brief: string,
+  searchFocus: string,
+  canonicalPeople: string[],
+  num: number
+): Promise<string[] | null> {
+  const key = getAimlApiKey();
+  if (!key) return null;
+
+  const model =
+    process.env.AIMLAPI_WEB_IMAGE_MODEL?.trim() ||
+    process.env.AIMLAPI_WEB_SEARCH_MODEL?.trim() ||
+    "perplexity/sonar";
+
+  const userPrompt = `You can search the web. Find up to ${num} HTTPS URLs suitable as REFERENCE PHOTOS for a social media post (portraits, headshots, event photos, logos, product shots — real pages on the public web).
+
+STRICT RULES:
+- Return ONLY valid JSON on a single line or a small JSON object: {"urls":["https://...","https://..."]}
+- Each URL must be either a direct image file (.jpg .jpeg .png .webp) OR a normal web page URL that clearly hosts the image (we will validate).
+- Use only URLs you actually see in search results. Do NOT invent or guess URLs.
+- If you cannot find reliable URLs, return {"urls":[]}.
+
+Post brief:
+${brief.slice(0, 2200)}
+
+Search focus (entities / names to prioritize):
+${searchFocus.slice(0, 500)}`;
+
+  const body: Record<string, unknown> = {
+    model,
+    messages: [{ role: "user", content: userPrompt }],
+    temperature: 0.15,
+    max_tokens: 1400,
+  };
+
+  if (model.startsWith("perplexity/")) {
+    Object.assign(body, {
+      search_mode: "web",
+      return_images: true,
+      web_search_options: { search_context_size: "high" },
+    });
+  }
+
+  let data: AimlChatResponse;
+  try {
+    const res = await fetch("https://api.aimlapi.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(90000),
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.warn("[web-image-discovery] AI/ML API error:", res.status, errText.slice(0, 400));
+      return null;
+    }
+    data = (await res.json()) as AimlChatResponse;
+  } catch (e) {
+    console.warn("[web-image-discovery] AI/ML API fetch failed:", e);
+    return null;
+  }
+
+  let candidates = aimlResponseToUrlCandidates(data);
+  const needsPersonGrounding =
+    canonicalPeople.length > 0 &&
+    canonicalPeople.some((p) => p.trim().split(/\s+/).filter(Boolean).length >= 2);
+  if (needsPersonGrounding) {
+    const filtered = filterAimlCandidatesByIdentity(candidates, canonicalPeople);
+    if (filtered.length > 0) candidates = filtered;
+  }
+  if (candidates.length === 0) return null;
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const c of candidates) {
+    if (out.length >= num) break;
+    const u = c.url.trim().replace(/[),\].;'">]+$/, "");
+    if (!u.startsWith("https://")) continue;
+    if (seen.has(u)) continue;
+    if (!(await verifyRemoteImageUrl(u))) continue;
+    seen.add(u);
+    out.push(u);
+  }
+
+  return out.length > 0 ? out : null;
+}
+
 async function collectUrlsFromQueries(
   queries: string[],
   n: number,
@@ -838,7 +1041,7 @@ export type WebImageDiscoveryResult = {
   query: string;
   /** All queries attempted in order (for debugging). */
   queriesAttempted: string[];
-  source: "google" | "wikimedia";
+  source: "google" | "wikimedia" | "aiml";
   /** Shown when no URLs; e.g. configure Google Programmable Image Search for news photos. */
   hint?: string;
 };
@@ -901,7 +1104,7 @@ export async function discoverWebImageUrlsForPostBrief(
       source: "wikimedia",
       hint:
         !process.env.GOOGLE_CSE_API_KEY || !process.env.GOOGLE_CSE_CX
-          ? "Could not build safe search terms, or Wikimedia has no files for this story. Add GOOGLE_CSE_API_KEY + GOOGLE_CSE_CX for news and portrait image search."
+          ? "Could not build safe search terms for image search. Add AIMLAPI_KEY (AI/ML API web search) or GOOGLE_CSE_API_KEY + GOOGLE_CSE_CX, or paste image URLs manually."
           : undefined,
     };
   }
@@ -929,11 +1132,27 @@ export async function discoverWebImageUrlsForPostBrief(
     }
   }
 
+  let queryLabel = winningQuery || queries[0] || "";
+  let finalSource: "google" | "wikimedia" | "aiml" = source;
+
+  if (urls.length === 0 && getAimlApiKey()) {
+    const aimlUrls = await searchAimlWebForImageUrls(
+      trimmed,
+      queryLabel || trimmed.slice(0, 400),
+      canonicalPeople,
+      n
+    );
+    if (aimlUrls && aimlUrls.length > 0) {
+      urls = aimlUrls;
+      finalSource = "aiml";
+      queryLabel = queryLabel ? `aiml:${queryLabel}` : "aiml:web-search";
+    }
+  }
+
   if (urls.length === 0) {
     console.warn("[web-image-discovery] No URLs for queries:", queries.map((q) => q.slice(0, 60)));
   }
 
-  const queryLabel = winningQuery || queries[0] || "";
   const noCse = !process.env.GOOGLE_CSE_API_KEY?.trim() || !process.env.GOOGLE_CSE_CX?.trim();
   const cseErr = identityCtx.cseLastError;
   const cse403 = cseErr?.status === 403;
@@ -943,7 +1162,7 @@ export async function discoverWebImageUrlsForPostBrief(
   const cseBlocked =
     cse403 && !cseNoJsonApiAccess && /blocked|not enabled|permission/i.test(msgLower);
   const hintCse403 = cseNoJsonApiAccess
-    ? "Google returned 403 for Custom Search JSON API. As of Google’s current policy, that API is closed to new customers—enabling the API and billing often still yields this error for new Cloud projects. See: https://developers.google.com/custom-search/v1/overview — only existing API customers (grandfathered) can use it until Jan 1, 2027. This is not something wrong with your Vercel env wiring. Workarounds: paste image URLs manually; rely on Wikimedia when it has files; use an older GCP project that already had Custom Search JSON API access; or integrate a different search/image API (e.g. your own provider)."
+    ? "Google returned 403 for Custom Search JSON API. As of Google’s current policy, that API is closed to new customers—enabling the API and billing often still yields this error for new Cloud projects. See: https://developers.google.com/custom-search/v1/overview — only existing API customers (grandfathered) can use it until Jan 1, 2027. Workarounds: set AIMLAPI_KEY for AI/ML API web search (e.g. perplexity/sonar); paste image URLs manually; use an older GCP project that already had Custom Search JSON API access."
     : cseBlocked
       ? "Google Custom Search returned 403 (“requests … are blocked”). The API is enabled on the project, but this API key is not allowed to call Custom Search. In Google Cloud Console → APIs & Services → Credentials → open the key used as GOOGLE_CSE_API_KEY → API restrictions: either select “Don’t restrict key” (try first) or “Restrict key” and explicitly add “Custom Search API”. Keys used only for Gemini often allow “Generative Language API” only—add Custom Search API to that same key or create a separate key for CSE. Use a server-friendly key (avoid browser referrer restrictions for server env vars)."
       : "Google image search returned 403. Enable Custom Search API on the billing project, check quota, and ensure GOOGLE_CSE_API_KEY is not restricted to other APIs only. For server-side calls, avoid HTTP referrer–only restrictions on the key.";
@@ -951,16 +1170,18 @@ export async function discoverWebImageUrlsForPostBrief(
     urls.length === 0 && cse403
       ? hintCse403
       : urls.length === 0 && noCse
-        ? "No Wikimedia Commons matches for this story. Google Custom Search JSON API is closed to new Google Cloud customers, so automated web image search may be unavailable unless you use a grandfathered project or another provider—paste image URLs manually when needed."
+        ? "No Wikimedia Commons matches for this story. Google Custom Search JSON API is closed to new Google Cloud customers. Add AIMLAPI_KEY (AI/ML API) to use web-search models for image URLs, or paste image links manually."
         : urls.length === 0
-          ? "No images matched these queries. Try a shorter English description with the person or company name, or paste image URLs manually."
+          ? getAimlApiKey()
+            ? "No verified image URLs from web search. Try a clearer English name and company in the brief, or paste image URLs manually."
+            : "No images matched these queries. Add AIMLAPI_KEY for AI/ML API web search (e.g. perplexity/sonar), or paste image URLs manually."
           : undefined;
 
   return {
     urls: urls.slice(0, n),
     query: queryLabel,
     queriesAttempted: [...new Set(queries)],
-    source,
+    source: finalSource,
     hint,
   };
 }
