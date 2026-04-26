@@ -32,8 +32,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { urls, query, source } = await discoverWebImageUrlsForPostBrief(contentIdea, 5);
-    return NextResponse.json({ urls, query, source });
+    const { urls, query, source, queriesAttempted, hint } = await discoverWebImageUrlsForPostBrief(
+      contentIdea,
+      5
+    );
+    return NextResponse.json({ urls, query, source, queriesAttempted, hint });
   } catch (e) {
     console.error("[posts/web-images]", e);
     const message = e instanceof Error ? e.message : String(e);

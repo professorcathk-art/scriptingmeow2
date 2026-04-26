@@ -172,6 +172,7 @@ export function CreatePostForm({
   /** Step 2: fetch related web images to offer as Important Asset candidates on Step 3. */
   const [useWebImageSuggestions, setUseWebImageSuggestions] = useState(false);
   const [webImageCandidates, setWebImageCandidates] = useState<string[]>([]);
+  const [webImagesHint, setWebImagesHint] = useState<string | null>(null);
   const [webImagesLoading, setWebImagesLoading] = useState(false);
   const saveDraft = useCallback(() => {
     try {
@@ -189,6 +190,7 @@ export function CreatePostForm({
           referenceText,
           useWebImageSuggestions,
           webImageCandidates,
+          webImagesHint,
         })
       );
     } catch {
@@ -206,6 +208,7 @@ export function CreatePostForm({
     referenceText,
     useWebImageSuggestions,
     webImageCandidates,
+    webImagesHint,
   ]);
 
   const saveDraftAndSetStep = useCallback(
@@ -365,6 +368,7 @@ export function CreatePostForm({
             setUseWebImageSuggestions(data.useWebImageSuggestions);
           }
           if (Array.isArray(data.webImageCandidates)) setWebImageCandidates(data.webImageCandidates);
+          if (typeof data.webImagesHint === "string") setWebImagesHint(data.webImagesHint);
         }
       }
     } catch {
@@ -517,6 +521,7 @@ export function CreatePostForm({
     if (useWebImageSuggestions && formData.contentIdea.trim()) {
       setWebImagesLoading(true);
       setWebImageCandidates([]);
+      setWebImagesHint(null);
       webPromise = fetch("/api/posts/web-images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -525,6 +530,7 @@ export function CreatePostForm({
       });
     } else {
       setWebImageCandidates([]);
+      setWebImagesHint(null);
       setWebImagesLoading(false);
     }
 
@@ -595,12 +601,13 @@ export function CreatePostForm({
             webPromise
               .then(async (r) => {
                 if (!r.ok) return;
-                const j = (await r.json().catch(() => ({}))) as { urls?: unknown };
+                const j = (await r.json().catch(() => ({}))) as { urls?: unknown; hint?: unknown };
                 if (Array.isArray(j.urls)) {
                   setWebImageCandidates(
                     j.urls.filter((u): u is string => typeof u === "string" && u.startsWith("http"))
                   );
                 }
+                setWebImagesHint(typeof j.hint === "string" && j.hint.trim() ? j.hint.trim() : null);
               })
               .catch(() => {
                 /* aborted or network */
@@ -1673,7 +1680,12 @@ export function CreatePostForm({
                   </p>
                 )}
                 {!webImagesLoading && webImageCandidates.length === 0 && useWebImageSuggestions && (
-                  <p className="text-xs text-zinc-500">No images returned. You can still upload assets below.</p>
+                  <div className="space-y-2">
+                    <p className="text-xs text-zinc-500">No images returned. You can still upload assets below.</p>
+                    {webImagesHint ? (
+                      <p className="text-xs text-amber-200/90 leading-relaxed">{webImagesHint}</p>
+                    ) : null}
+                  </div>
                 )}
                 {webImageCandidates.length > 0 && (
                   <>
