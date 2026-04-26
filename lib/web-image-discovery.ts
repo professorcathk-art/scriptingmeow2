@@ -185,18 +185,29 @@ function normalizeForIdentityMatch(s: string): string {
  */
 export function extractLikelyPersonNamesFromBrief(brief: string): string[] {
   const cleaned = stripNoiseForSearch(brief).slice(0, 3500);
-  const re = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})\b/g;
   const seen = new Set<string>();
   const out: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(cleaned)) !== null) {
-    const phrase = m[1]!.trim();
-    const low = phrase.toLowerCase();
-    if (NAME_EXTRACTION_BLOCKLIST.has(low)) continue;
-    if (seen.has(low)) continue;
+  const pushPhrase = (phrase: string) => {
+    const p = phrase.trim();
+    const low = p.toLowerCase();
+    if (NAME_EXTRACTION_BLOCKLIST.has(low)) return;
+    if (seen.has(low)) return;
     seen.add(low);
-    out.push(phrase);
-    if (out.length >= 6) break;
+    out.push(p);
+  };
+
+  const patterns = [
+    /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})\b/g, // Title Case
+    /\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,2})\b/g, // ALL CAPS / mixed (e.g. McDonald)
+  ];
+
+  for (const re of patterns) {
+    let m: RegExpExecArray | null;
+    re.lastIndex = 0;
+    while ((m = re.exec(cleaned)) !== null) {
+      pushPhrase(m[1]!);
+      if (out.length >= 8) return out;
+    }
   }
   return out;
 }
@@ -206,11 +217,25 @@ function filterNamesGroundedInBrief(names: string[], brief: string): string[] {
   const b = normalizeForIdentityMatch(brief);
   return names.filter((n) => {
     const nl = normalizeForIdentityMatch(n);
-    if (b.includes(nl)) return true;
     const parts = n.trim().split(/\s+/).filter((p) => p.length > 1);
-    if (parts.length < 2) return false;
-    return parts.every((p) => b.includes(normalizeForIdentityMatch(p)));
+    if (parts.length >= 2) {
+      if (b.includes(nl)) return true;
+      return parts.every((p) => b.includes(normalizeForIdentityMatch(p)));
+    }
+    // Single-token "names" are not reliable (e.g. given name only); require multi-word after expansion.
+    return false;
   });
+}
+
+/**
+ * Single-token "names" often match only a first name substring in the brief and produce useless one-word image searches.
+ * Drop them unless the brief truly has no multi-word Latin name to pair with.
+ */
+function dropLoneGivenNamesWhenBriefHasFullName(names: string[], brief: string): string[] {
+  const hasMulti = names.some((n) => n.trim().split(/\s+/).filter(Boolean).length >= 2);
+  const briefHasLikelyFullName = /\b[a-zA-Z]+\s+[a-zA-Z]{2,}\b/.test(stripNoiseForSearch(brief));
+  if (!hasMulti && !briefHasLikelyFullName) return names;
+  return names.filter((n) => n.trim().split(/\s+/).filter(Boolean).length >= 2);
 }
 
 function dedupeNamesCaseInsensitive(names: string[]): string[] {
@@ -258,13 +283,47 @@ function queryMentionsAnyCanonicalPerson(q: string, canonicalPeople: string[]): 
   return canonicalPeople.some((p) => ql.includes(normalizeForIdentityMatch(p)));
 }
 
+/** One-word search when we know the subject is "First Last" → random wrong portraits (e.g. "Aubrey" alone). */
+function isSingleTokenGivenNameOnlyQuery(q: string, canonicalPeople: string[]): boolean {
+  const tokens = q.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length !== 1) return false;
+  const qt = normalizeForIdentityMatch(tokens[0]!);
+  return canonicalPeople.some((p) => {
+    const pts = p.trim().split(/\s+/).filter(Boolean);
+    if (pts.length < 2) return false;
+    return normalizeForIdentityMatch(pts[0] ?? "") === qt && qt.length >= 3;
+  });
+}
+
+/** If the model (or grounding) left a lone given name, pull "Given Surname" from the brief when obvious. */
+function expandSingleGivenNameToFullFromBrief(given: string, brief: string): string {
+  const g = given.trim();
+  if (!g || g.includes(" ")) return given;
+  const b = stripNoiseForSearch(brief);
+  const esc = g.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`\\b${esc}\\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.-]{0,48})`, "iu");
+  const m = b.match(re);
+  if (!m?.[1]) return given;
+  let next = m[1].replace(/[.,;:)\]]+$/, "");
+  if (next.length < 2) return given;
+  const badFollow = new Set([
+    "the", "and", "for", "was", "has", "said", "says", "told", "from", "with", "that", "this", "startup",
+    "company", "founder", "ceo", "cfo", "raised", "seed", "series", "million", "funding", "launch",
+  ]);
+  if (badFollow.has(next.toLowerCase())) return given;
+  return `${g} ${next}`;
+}
+
 /** Merge regex-extracted names (ground truth from brief) before model output; drop ungrounded model names. */
 function reconcileCanonicalPeople(plan: ImageSearchPlan | null, brief: string): string[] {
   const extracted = extractLikelyPersonNamesFromBrief(brief);
   const groundedExtracted = filterNamesGroundedInBrief(extracted, brief);
-  const modelNames = plan?.namedPeopleEnglish ?? [];
-  const groundedModel = filterNamesGroundedInBrief(modelNames, brief);
-  return dedupeNamesCaseInsensitive([...groundedExtracted, ...groundedModel]).slice(0, 4);
+  const modelExpanded = (plan?.namedPeopleEnglish ?? []).map((n) => expandSingleGivenNameToFullFromBrief(n, brief));
+  const groundedModel = filterNamesGroundedInBrief(modelExpanded, brief);
+  const merged = dedupeNamesCaseInsensitive([...groundedExtracted, ...groundedModel]).map((n) =>
+    expandSingleGivenNameToFullFromBrief(n, brief)
+  );
+  return dropLoneGivenNamesWhenBriefHasFullName(dedupeNamesCaseInsensitive(merged), brief).slice(0, 4);
 }
 
 function stripWeakImageQueryTokens(q: string): string {
@@ -516,10 +575,16 @@ type CseImageItem = {
   displayLink?: string;
 };
 
+type ImageDiscoverySearchCtx = {
+  canonicalPeople: string[];
+  /** Latest Custom Search API failure (for user-facing hints). */
+  cseLastError?: { status: number; message: string };
+};
+
 async function searchGoogleProgrammableImageSearch(
   query: string,
   num: number,
-  ctx?: { canonicalPeople: string[] }
+  ctx?: ImageDiscoverySearchCtx
 ): Promise<string[] | null> {
   const apiKey = process.env.GOOGLE_CSE_API_KEY?.trim();
   const cx = process.env.GOOGLE_CSE_CX?.trim();
@@ -542,7 +607,18 @@ async function searchGoogleProgrammableImageSearch(
     signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) {
-    console.warn("[web-image-discovery] Google CSE error:", res.status);
+    let message = res.statusText;
+    try {
+      const errJson = (await res.json()) as { error?: { message?: string; errors?: Array<{ message?: string }> } };
+      message =
+        errJson.error?.message ??
+        errJson.error?.errors?.map((e) => e.message).filter(Boolean).join("; ") ??
+        message;
+    } catch {
+      /* ignore non-JSON error bodies */
+    }
+    if (ctx) ctx.cseLastError = { status: res.status, message };
+    console.warn("[web-image-discovery] Google CSE error:", res.status, message);
     return null;
   }
 
@@ -583,10 +659,13 @@ function sanitizeWikimediaSearchKeywords(q: string): string {
 async function searchWikimediaCommonsImages(
   keywords: string,
   num: number,
-  ctx?: { canonicalPeople: string[] }
+  ctx?: ImageDiscoverySearchCtx
 ): Promise<string[]> {
   const parts = sanitizeWikimediaSearchKeywords(keywords).split(/\s+/).filter(Boolean);
   if (!parts.length) return [];
+
+  const strictPerson =
+    Boolean(ctx?.canonicalPeople?.length) && queryMentionsAnyCanonicalPerson(keywords, ctx!.canonicalPeople);
 
   const firstTok = (parts[0] ?? "").replace(/[^a-zA-Z]/g, "").toLowerCase();
   const ambiguousLead = AMBIGUOUS_BRAND_SINGLETON.has(firstTok);
@@ -598,6 +677,18 @@ async function searchWikimediaCommonsImages(
   } else {
     for (let w = maxPrefix; w >= 1; w--) {
       if (!budgets.includes(w)) budgets.push(w);
+    }
+  }
+
+  const multiWordCanonical = (ctx?.canonicalPeople ?? []).filter((p) => p.trim().split(/\s+/).filter(Boolean).length >= 2);
+  if (strictPerson && multiWordCanonical.length > 0) {
+    const minLen = Math.min(...multiWordCanonical.map((p) => p.trim().split(/\s+/).filter(Boolean).length));
+    if (maxPrefix < minLen) return [];
+    const floor = Math.min(minLen, maxPrefix);
+    const filtered = budgets.filter((w) => w >= floor);
+    if (filtered.length > 0) {
+      budgets.length = 0;
+      budgets.push(...filtered);
     }
   }
 
@@ -638,9 +729,9 @@ async function searchWikimediaCommonsImages(
     if (ambiguousLead) {
       titles = titles.filter((t) => !AIRLINE_FILE_TITLE.test(t));
     }
-    const strictPerson =
+    const strictPersonTitles =
       Boolean(ctx?.canonicalPeople?.length) && queryMentionsAnyCanonicalPerson(keywords, ctx!.canonicalPeople);
-    if (strictPerson && ctx?.canonicalPeople?.length) {
+    if (strictPersonTitles && ctx?.canonicalPeople?.length) {
       titles = titles.filter((t) => ctx.canonicalPeople!.some((p) => haystackMatchesPerson(t, p)));
     }
     if (titles.length === 0) continue;
@@ -696,7 +787,7 @@ async function searchWikimediaCommonsImages(
 async function collectUrlsFromQueries(
   queries: string[],
   n: number,
-  ctx: { canonicalPeople: string[] }
+  ctx: ImageDiscoverySearchCtx
 ): Promise<{ urls: string[]; source: "google" | "wikimedia"; winningQuery: string }> {
   const seen = new Set<string>();
   const urls: string[] = [];
@@ -707,6 +798,7 @@ async function collectUrlsFromQueries(
   for (const q of queries) {
     if (urls.length >= n) break;
     if (isUnsuitableImageSearchQuery(q) || isStandaloneBannedQuery(q)) continue;
+    if (ctx.canonicalPeople.length > 0 && isSingleTokenGivenNameOnlyQuery(q, ctx.canonicalPeople)) continue;
 
     const need = n - urls.length;
     const google = await searchGoogleProgrammableImageSearch(q, need, ctx);
@@ -814,13 +906,21 @@ export async function discoverWebImageUrlsForPostBrief(
     };
   }
 
-  const identityCtx = { canonicalPeople };
+  const identityCtx: ImageDiscoverySearchCtx = { canonicalPeople };
   let { urls, source, winningQuery } = await collectUrlsFromQueries(queries, n, identityCtx);
 
   if (urls.length === 0) {
     let alt = stripWeakImageQueryTokens(fallbackKeywordsFromBrief(trimmed)).trim();
     alt = expandAmbiguousBrandQuery(alt, trimmed);
-    if (alt && !queries.includes(alt) && !isStandaloneBannedQuery(alt)) {
+    const needsNamedFallback =
+      canonicalPeople.length > 0 && canonicalPeople.some((p) => p.trim().split(/\s+/).filter(Boolean).length >= 2);
+    const fallbackOkForIdentity = !needsNamedFallback || queryMentionsAnyCanonicalPerson(alt, canonicalPeople);
+    if (
+      alt &&
+      !queries.includes(alt) &&
+      !isStandaloneBannedQuery(alt) &&
+      fallbackOkForIdentity
+    ) {
       const second = await collectUrlsFromQueries([alt], n, identityCtx);
       urls = second.urls;
       source = second.source;
@@ -835,12 +935,15 @@ export async function discoverWebImageUrlsForPostBrief(
 
   const queryLabel = winningQuery || queries[0] || "";
   const noCse = !process.env.GOOGLE_CSE_API_KEY?.trim() || !process.env.GOOGLE_CSE_CX?.trim();
+  const cse403 = identityCtx.cseLastError?.status === 403;
   const hint =
-    urls.length === 0 && noCse
-      ? "No Wikimedia Commons matches for this specific story (common for small startups). Configure Google Programmable Search (image) for news photos and founder portraits."
-      : urls.length === 0
-        ? "No images matched these queries. Try a shorter English description with the person or company name, or paste image URLs manually."
-        : undefined;
+    urls.length === 0 && cse403
+      ? "Google image search returned access denied (403). In Google Cloud Console, enable the Custom Search API, ensure billing/quota are OK, and use an API key without HTTP referrer restrictions (server-side keys). Then verify GOOGLE_CSE_API_KEY and GOOGLE_CSE_CX."
+      : urls.length === 0 && noCse
+        ? "No Wikimedia Commons matches for this specific story (common for small startups). Configure Google Programmable Search (image) for news photos and founder portraits."
+        : urls.length === 0
+          ? "No images matched these queries. Try a shorter English description with the person or company name, or paste image URLs manually."
+          : undefined;
 
   return {
     urls: urls.slice(0, n),
