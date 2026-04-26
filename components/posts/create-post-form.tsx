@@ -21,6 +21,8 @@ import {
 import { parseStructuredIdea, structuredIdeaToBrief, ideaListLabel } from "@/lib/idea-content";
 
 const CREATE_POST_DRAFT_KEY = "createPost_draft";
+/** Bumps when web-suggestion session shape changes; older drafts must not restore thumbnails (avoids stale/wrong images). */
+const WEB_IMAGE_SUGGESTIONS_STORAGE_VERSION = 2;
 const MAX_CAPTION_CHARS = MAX_IG_CAPTION_CHARS;
 const MAX_HASHTAGS = 3;
 
@@ -196,6 +198,7 @@ export function CreatePostForm({
           webImageCandidates,
           webImagesFetchedForContentIdea,
           webImagesHint,
+          webImageSuggestionsStorageVersion: WEB_IMAGE_SUGGESTIONS_STORAGE_VERSION,
         })
       );
     } catch {
@@ -378,7 +381,11 @@ export function CreatePostForm({
             typeof data.webImagesFetchedForContentIdea === "string"
               ? data.webImagesFetchedForContentIdea.trim()
               : "";
-          if (snap === savedIdea) {
+          const storageOk = data.webImageSuggestionsStorageVersion === WEB_IMAGE_SUGGESTIONS_STORAGE_VERSION;
+          // Never restore thumbnails when brief fingerprint is missing, empty, or mismatched — `"" === ""` used to resurrect stale garbage.
+          const mayRestoreWebSuggestions =
+            storageOk && savedIdea.length > 0 && snap.length > 0 && snap === savedIdea;
+          if (mayRestoreWebSuggestions) {
             if (Array.isArray(data.webImageCandidates)) setWebImageCandidates(data.webImageCandidates);
             if (typeof data.webImagesHint === "string") setWebImagesHint(data.webImagesHint);
             setWebImagesFetchedForContentIdea(snap);
