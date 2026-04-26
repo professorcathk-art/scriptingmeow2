@@ -11,6 +11,18 @@ import { mergeLegacyDraftToOverall, normalizeDraftPageRow } from "@/lib/draft-da
 
 export const maxDuration = 300;
 
+/** Never let an unexpected throw from the image SDK kill the whole route (client sees Failed to fetch). */
+async function safeGeneratePostImage(
+  ...args: Parameters<typeof generateImageWithNanoBanana>
+): Promise<Buffer | null> {
+  try {
+    return await generateImageWithNanoBanana(...args);
+  } catch (e) {
+    console.error("[posts/generate] generateImageWithNanoBanana threw:", e);
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
@@ -351,7 +363,7 @@ export async function POST(request: Request) {
           postAim: postAim?.trim(),
           language: language || "English",
         });
-        const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
+        const imageBuffer = await safeGeneratePostImage(fullImagePrompt, {
           aspectRatio,
           styleReferenceUrls: styleRefsWithContext,
           importantAssetUrls: importantUrls,
@@ -387,7 +399,7 @@ export async function POST(request: Request) {
         postAim: postAim?.trim(),
         language: language || "English",
       });
-      const imageBuffer = await generateImageWithNanoBanana(fullImagePrompt, {
+      const imageBuffer = await safeGeneratePostImage(fullImagePrompt, {
         aspectRatio,
         styleReferenceUrls: styleRefUrls,
         importantAssetUrls: importantUrls,

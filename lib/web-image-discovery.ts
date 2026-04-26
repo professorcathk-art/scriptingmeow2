@@ -828,8 +828,8 @@ async function verifyOrTrustAimlImageUrl(url: string): Promise<boolean> {
   try {
     const pathOnly = (url.split("?")[0] ?? "").split("#")[0] ?? "";
     if (url.startsWith("https://") && DIRECT_IMAGE_FILE_PATH.test(pathOnly)) {
-      console.warn(
-        "[web-image-discovery] AIML: verify failed; trusting direct image URL for suggestions:",
+      console.info(
+        "[web-image-discovery] AIML: verify skipped for direct image URL:",
         url.slice(0, 160)
       );
       return true;
@@ -874,7 +874,10 @@ function extractJsonUrlsArrayFromText(text: string): string[] {
     try {
       const o = JSON.parse(s) as { urls?: unknown };
       if (!Array.isArray(o.urls)) return [];
-      return o.urls.filter((x): x is string => typeof x === "string" && x.startsWith("https://"));
+      return o.urls.filter(
+        (x): x is string =>
+          typeof x === "string" && (x.startsWith("https://") || x.startsWith("http://"))
+      );
     } catch {
       return [];
     }
@@ -900,7 +903,7 @@ function mergeAimlCandidates(raw: AimlUrlCandidate[]): AimlUrlCandidate[] {
   const map = new Map<string, string>();
   for (const { url, context } of raw) {
     let u = url.trim().replace(/[),\].;'">]+$/, "");
-    if (!u.startsWith("https://")) continue;
+    if (!u.startsWith("https://") && !u.startsWith("http://")) continue;
     const ctx = (map.get(u) ? `${map.get(u)} | ` : "") + context;
     map.set(u, ctx.slice(0, 1200));
   }
@@ -1178,8 +1181,11 @@ export async function discoverWebImageUrlsForPostBrief(
   const identityCtx: ImageDiscoverySearchCtx = { canonicalPeople };
   const queryLabelSeed = queries[0] || "";
   const aimlConfigured = Boolean(getAimlApiKey());
+  /** With AIML configured, skip Google CSE by default (avoids repeated JSON API 403 noise). Set FORCE_GOOGLE_CSE=true to also call CSE. */
   const skipGoogle =
-    process.env.SKIP_GOOGLE_CSE === "true" || process.env.DISABLE_GOOGLE_CSE === "true";
+    process.env.SKIP_GOOGLE_CSE === "true" ||
+    process.env.DISABLE_GOOGLE_CSE === "true" ||
+    (aimlConfigured && process.env.FORCE_GOOGLE_CSE !== "true");
 
   if (aimlConfigured) {
     const aimlFirst = await searchAimlWebForImageUrls(

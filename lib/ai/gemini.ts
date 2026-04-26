@@ -240,13 +240,31 @@ function parsePostJsonVariations(text: string): DraftOutput[] | null {
   }
 }
 
+/** Same strategy as nano-banana: browser-like UA + size cap for reference downloads. */
+const BRAND_REF_IMAGE_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+const MAX_BRAND_REF_IMAGE_BYTES = 5_000_000;
+
 /** Fetch image from URL and return as Gemini inlineData part. Skips blob: or invalid URLs. */
 async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
   if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": BRAND_REF_IMAGE_UA,
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(12000),
+      redirect: "follow",
+    });
     if (!res.ok) return null;
+    const cl = res.headers.get("content-length");
+    if (cl) {
+      const n = parseInt(cl, 10);
+      if (!Number.isNaN(n) && n > MAX_BRAND_REF_IMAGE_BYTES) return null;
+    }
     const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > MAX_BRAND_REF_IMAGE_BYTES) return null;
     const base64 = buf.toString("base64");
     const contentType = res.headers.get("content-type") || "image/jpeg";
     const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";

@@ -24,12 +24,30 @@ export interface GenerateImageOptions {
   is4K?: boolean;
 }
 
+/** Many CDNs block requests with no User-Agent; cap size to avoid OOM / huge Gemini JSON. */
+const REF_IMAGE_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+const MAX_REF_IMAGE_BYTES = 5_000_000;
+
 async function fetchImagePart(url: string): Promise<{ inlineData: { mimeType: string; data: string } } | null> {
   if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": REF_IMAGE_UA,
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(12000),
+      redirect: "follow",
+    });
     if (!res.ok) return null;
+    const cl = res.headers.get("content-length");
+    if (cl) {
+      const n = parseInt(cl, 10);
+      if (!Number.isNaN(n) && n > MAX_REF_IMAGE_BYTES) return null;
+    }
     const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > MAX_REF_IMAGE_BYTES) return null;
     const base64 = buf.toString("base64");
     const contentType = res.headers.get("content-type") || "image/jpeg";
     const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
@@ -89,10 +107,23 @@ async function generateWithModel(
     },
   };
 
+  let bodyStr: string;
+  try {
+    bodyStr = JSON.stringify(body);
+  } catch (e) {
+    console.error("[nano-banana] JSON.stringify failed:", e);
+    return null;
+  }
+  const MAX_BODY_CHARS = 14_000_000;
+  if (bodyStr.length > MAX_BODY_CHARS && (styleRefUrls.length > 0 || importantUrls.length > 0)) {
+    console.warn("[nano-banana] Request body too large; retrying without reference images.");
+    return generateWithModel(model, prompt, aspectRatio, apiKey, [], [], 0, is4K);
+  }
+
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: bodyStr,
   });
 
   if (!res.ok) {
@@ -101,13 +132,19 @@ async function generateWithModel(
     return null;
   }
 
-  const data = (await res.json()) as {
+  let data: {
     candidates?: Array<{
       content?: {
         parts?: Array<{ inlineData?: { data?: string } }>;
       };
     }>;
   };
+  try {
+    data = (await res.json()) as typeof data;
+  } catch (e) {
+    console.error(`[nano-banana] ${model} response JSON parse failed:`, e);
+    return null;
+  }
 
   const responseParts = data.candidates?.[0]?.content?.parts ?? [];
   for (const part of responseParts) {
