@@ -10,16 +10,114 @@ const WEB_IMAGE_TARGET = 5;
 const ALLOWED_MIME = /^image\/(jpeg|jpg|png|webp|gif)$/i;
 const WIKI_UA = "designermeow/1.0 (create-post web images)";
 
-function fallbackKeywordsFromBrief(brief: string): string {
-  const t = brief
+const LATIN_STOPWORDS = new Set([
+  "the", "and", "for", "are", "but", "not", "you", "all", "can", "her", "was", "one", "our", "out",
+  "day", "get", "has", "him", "his", "how", "its", "may", "new", "now", "old", "see", "two", "way",
+  "who", "did", "let", "put", "say", "she", "too", "use", "www", "com", "org", "txt", "amp",
+  "story", "stories", "hook", "hooks", "slide", "slides", "post", "caption",
+]);
+
+/** Generic social / template words that hurt Commons image search. */
+const IMAGE_QUERY_NOISE = new Set([
+  "story", "stories", "hook", "hooks", "slide", "slides", "carousel", "post", "posts", "caption",
+  "instagram", "reel", "reels", "content", "brief", "template", "cta", "engagement", "viral",
+]);
+
+function stripNoiseForSearch(s: string): string {
+  return s
     .replace(/https?:\/\/[^\s]+/g, " ")
     .replace(/\[Source Image URL:[^\]]+\]/gi, " ")
     .replace(/Source:\s*[^\n]+/gi, " ")
+    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, " ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 200);
+    .trim();
+}
+
+/** True when the string is unsuitable as a Commons / image-API query (model echoed the brief, CJK blob, etc.). */
+function isUnsuitableImageSearchQuery(q: string): boolean {
+  const t = q.trim();
+  if (t.length < 2 || t.length > 96) return true;
+  const nonSpace = t.replace(/\s/g, "");
+  if (!nonSpace.length) return true;
+  let cjk = 0;
+  for (const ch of nonSpace) {
+    if (/[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/.test(ch)) cjk++;
+  }
+  if (cjk > 0 && cjk / nonSpace.length > 0.08) return true;
+  const wordish = t.split(/\s+/).filter(Boolean);
+  if (wordish.length > 14) return true;
+  return false;
+}
+
+/** Model sometimes returns the user's brief instead of keywords — unusable for Commons. */
+function queryLooksLikeEchoOfBrief(query: string, brief: string): boolean {
+  const q = query.trim();
+  const b = brief.trim();
+  if (q.length < 24 || b.length < 24) return false;
+  if (q.length > 180) return true;
+  const head = q.slice(0, Math.min(48, q.length));
+  return b.includes(head);
+}
+
+/**
+ * Pull Latin tokens from a mixed brief (brand names, places) when the model returns garbage.
+ */
+function latinKeywordsFromBrief(brief: string): string {
+  const cleaned = stripNoiseForSearch(brief).slice(0, 800);
+  const matches = cleaned.match(/[A-Za-z][A-Za-z0-9.-]{1,}/g) ?? [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const w of matches) {
+    const low = w.toLowerCase();
+    if (w.length < 2 || LATIN_STOPWORDS.has(low)) continue;
+    if (seen.has(low)) continue;
+    seen.add(low);
+    out.push(w);
+    if (out.length >= 10) break;
+  }
+  return out.join(" ").trim();
+}
+
+function fallbackKeywordsFromBrief(brief: string): string {
+  const latin = latinKeywordsFromBrief(brief);
+  if (latin.length >= 3) return latin.slice(0, 96);
+
+  const t = stripNoiseForSearch(brief).slice(0, 200);
   const words = t.split(/\s+/).filter((w) => w.length > 1).slice(0, 12);
-  return words.join(" ").trim() || "photography";
+  const joined = words.join(" ").trim();
+  return joined.slice(0, 96) || "photography";
+}
+
+function normalizeOneLineModelOutput(raw: string): string {
+  return stripNoiseForSearch(
+    raw
+      .trim()
+      .replace(/^["'`]+|["'`]+$/g, "")
+      .split(/\n/)[0]!
+      .replace(/^[^:]+:\s*/, "")
+  ).slice(0, 96);
+}
+
+/** Remove low-value tokens so Commons gets e.g. "Swoop Africa funding" not "Story Swoop Hook". */
+function stripWeakImageQueryTokens(q: string): string {
+  const parts = q
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter(Boolean)
+    .filter((w) => !IMAGE_QUERY_NOISE.has(w.replace(/[^a-zA-Z0-9.-]/g, "").toLowerCase()));
+  const out = parts.join(" ").trim();
+  return out.length >= 3 ? out : q.trim();
+}
+
+/**
+ * Commons File search returns many PDFs; Cirrus filemime filter surfaces real bitmaps.
+ * @see https://www.mediawiki.org/wiki/Help:CirrusSearch#filemime
+ */
+function withCommonsBitmapMimeFilter(keywords: string): string {
+  const k = keywords.trim();
+  if (!k) return "filemime:image/jpeg";
+  if (/filemime:/i.test(k)) return k;
+  return `${k} filemime:image/jpeg`.slice(0, 280);
 }
 
 /**
@@ -30,30 +128,52 @@ export async function extractImageSearchQueryFromBrief(brief: string): Promise<s
   if (!trimmed) return "photography";
 
   const key = process.env.GEMINI_API_KEY?.trim();
-  if (!key) return fallbackKeywordsFromBrief(trimmed);
+  if (!key) {
+    return (
+      stripWeakImageQueryTokens(fallbackKeywordsFromBrief(trimmed)).slice(0, 96).trim() || "photography"
+    );
+  }
+
+  const genAI = new GoogleGenerativeAI(key);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+  const runPrompt = async (instruction: string) => {
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: instruction }] }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 128 },
+    });
+    return normalizeOneLineModelOutput(result.response.text());
+  };
 
   try {
-    const genAI = new GoogleGenerativeAI(key);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const prompt = `You output exactly one line: a concise image search query in English (max 10 words) to find real photographs or illustrations relevant to this social media post brief. No quotes, no explanation.
+    const primary = await runPrompt(`Output ONLY a short English image search query (5–10 words, space-separated). Use Latin letters only. No Chinese, Japanese, or Korean. No emojis, labels, or explanation—just the keywords. Good for Wikimedia Commons photos.
+
+Include scene context (e.g. startup office, Africa business, university campus)—not a brand name alone if that name is a common English word.
 
 Brief:
-${trimmed}`;
+${trimmed}`);
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.25, maxOutputTokens: 64 },
-    });
-    const text = result.response
-      .text()
-      .trim()
-      .replace(/^["']|["']$/g, "")
-      .split(/\n/)[0]
-      .slice(0, 120)
-      .trim();
-    return text || fallbackKeywordsFromBrief(trimmed);
+    let q = primary;
+    if (!q || isUnsuitableImageSearchQuery(q) || queryLooksLikeEchoOfBrief(q, trimmed)) {
+      const strict = await runPrompt(`The text below may be Chinese or mixed. Output ONLY 5–8 English words to find relevant stock-style photographs (people, cities, technology, business). Latin letters and spaces only. Nothing else.
+
+${trimmed}`);
+      q = strict;
+    }
+
+    if (!q || isUnsuitableImageSearchQuery(q) || queryLooksLikeEchoOfBrief(q, trimmed)) {
+      const latin = latinKeywordsFromBrief(trimmed);
+      q = latin.length >= 3 ? latin : fallbackKeywordsFromBrief(trimmed);
+      console.warn(
+        "[web-image-discovery] Model query unusable; using Latin/fallback keywords:",
+        q.slice(0, 80)
+      );
+    }
+
+    return stripWeakImageQueryTokens(q).slice(0, 96).trim() || "photography";
   } catch {
-    return fallbackKeywordsFromBrief(trimmed);
+    const fb = fallbackKeywordsFromBrief(trimmed);
+    return stripWeakImageQueryTokens(fb).slice(0, 96).trim() || "photography";
   }
 }
 
@@ -105,14 +225,15 @@ type WikiPage = {
 /**
  * Wikimedia: list=search in File namespace, then batched prop=imageinfo (reliable across regions vs generator=search alone).
  */
-async function searchWikimediaCommonsImages(query: string, num: number): Promise<string[]> {
+async function searchWikimediaCommonsImages(keywords: string, num: number): Promise<string[]> {
+  const srsearch = withCommonsBitmapMimeFilter(keywords);
   const searchParams = new URLSearchParams({
     action: "query",
     format: "json",
     list: "search",
-    srsearch: query,
+    srsearch,
     srnamespace: "6",
-    srlimit: "20",
+    srlimit: "25",
     origin: "*",
   });
 
@@ -130,7 +251,7 @@ async function searchWikimediaCommonsImages(query: string, num: number): Promise
     .map((s) => s.title?.trim())
     .filter((t): t is string => Boolean(t));
   if (titles.length === 0) {
-    console.warn("[web-image-discovery] Wikimedia: no File hits for query:", query.slice(0, 100));
+    console.warn("[web-image-discovery] Wikimedia: no File hits for query:", srsearch.slice(0, 120));
     return [];
   }
 
@@ -193,7 +314,13 @@ export async function discoverWebImageUrlsForPostBrief(
   brief: string,
   maxResults = WEB_IMAGE_TARGET
 ): Promise<WebImageDiscoveryResult> {
-  const query = await extractImageSearchQueryFromBrief(brief);
+  let query = stripWeakImageQueryTokens(await extractImageSearchQueryFromBrief(brief)).slice(0, 96).trim();
+  if (!query || isUnsuitableImageSearchQuery(query) || queryLooksLikeEchoOfBrief(query, brief)) {
+    const latin = latinKeywordsFromBrief(brief);
+    const fb = latin.length >= 3 ? latin : fallbackKeywordsFromBrief(brief);
+    query = stripWeakImageQueryTokens(fb).slice(0, 96).trim() || "photography";
+    console.warn("[web-image-discovery] Sanitized search query after extract:", query.slice(0, 80));
+  }
   const n = Math.min(10, Math.max(1, maxResults));
 
   const google = await searchGoogleProgrammableImageSearch(query, n);
