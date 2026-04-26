@@ -711,9 +711,12 @@ export function CreatePostForm({
 
     setLoading(true);
     try {
+      const genController = new AbortController();
+      const genTimeout = setTimeout(() => genController.abort(), 280_000);
       const response = await fetch("/api/posts/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: genController.signal,
         body: JSON.stringify({
           brandSpaceId: formData.brandSpaceId,
           postType: formData.postType,
@@ -741,7 +744,7 @@ export function CreatePostForm({
           referenceImageUrls,
           is4KEnabled,
         }),
-      });
+      }).finally(() => clearTimeout(genTimeout));
 
       if (!response.ok) {
         let errMsg = "Failed to generate post";
@@ -774,8 +777,15 @@ export function CreatePostForm({
       router.push(`/posts/${data.id}/review`);
     } catch (error: unknown) {
       console.error("Error generating post:", error);
+      const aborted =
+        error instanceof Error &&
+        (error.name === "AbortError" || error.message === "The operation was aborted.");
       alert(
-        error instanceof Error ? error.message : "Failed to generate post. Please try again."
+        aborted
+          ? "Image generation is taking too long or the connection dropped. Please try again with fewer reference images or a shorter carousel."
+          : error instanceof Error
+            ? error.message
+            : "Failed to generate post. Please try again."
       );
     } finally {
       setLoading(false);

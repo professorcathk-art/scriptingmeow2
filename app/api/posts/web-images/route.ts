@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { discoverWebImageUrlsForPostBrief } from "@/lib/web-image-discovery";
 import { MAX_CONTENT_IDEA_CHARS } from "@/lib/constants";
 
-export const maxDuration = 60;
+/** Discovery runs Gemini plan + optional AIML (up to ~50s) + Wikimedia; 60s was too tight on Pro. */
+export const maxDuration = 120;
 
 /**
  * POST /api/posts/web-images

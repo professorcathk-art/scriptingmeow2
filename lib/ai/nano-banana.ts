@@ -93,10 +93,24 @@ async function generateWithModel(
     },
   };
 
+  let bodyStr: string;
+  try {
+    bodyStr = JSON.stringify(body);
+  } catch (e) {
+    console.error("[nano-banana] JSON.stringify failed:", e);
+    return null;
+  }
+  // Oversized payloads can abort the serverless request (browser shows "Failed to fetch").
+  const MAX_BODY_CHARS = 19_000_000;
+  if (bodyStr.length > MAX_BODY_CHARS && (styleRefUrls.length > 0 || importantUrls.length > 0)) {
+    console.warn("[nano-banana] Request body too large; retrying without inline reference images.");
+    return generateWithModel(model, prompt, aspectRatio, apiKey, [], [], 0, is4K);
+  }
+
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: bodyStr,
   });
 
   if (!res.ok) {

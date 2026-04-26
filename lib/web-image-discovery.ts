@@ -1,7 +1,6 @@
 /**
  * Discover real image URLs for Important Assets: prioritize people in the story, then org/news context.
- * Order: If AIMLAPI_KEY is set, AI/ML API web search runs first (skips broken Google CSE when AIML returns URLs).
- * Otherwise: Google Programmable Search (optional) → Wikimedia Commons → AI/ML API fallback.
+ * Order: If AIMLAPI_KEY is set, AI/ML web search runs first. Then Google CSE (unless SKIP_GOOGLE_CSE) → Wikimedia → AIML retry if still empty.
  * Web search models return real page/image URLs for post references — not the same as text-to-image generation endpoints.
  */
 
@@ -818,7 +817,7 @@ async function verifyRemoteImageUrl(url: string): Promise<boolean> {
     let res = await fetch(url, {
       method: "HEAD",
       headers: { "User-Agent": BROWSER_LIKE_USER_AGENT, Accept: "image/*,*/*;q=0.8" },
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(9000),
       redirect: "follow",
     });
     let ct = res.headers.get("content-type") || "";
@@ -830,7 +829,7 @@ async function verifyRemoteImageUrl(url: string): Promise<boolean> {
         Accept: "image/*,*/*;q=0.8",
         Range: "bytes=0-4095",
       },
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(9000),
       redirect: "follow",
     });
     ct = res.headers.get("content-type") || "";
@@ -973,7 +972,7 @@ ${searchFocus.slice(0, 500)}`;
         Accept: "application/json",
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(90000),
+      signal: AbortSignal.timeout(50_000),
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
@@ -996,16 +995,22 @@ ${searchFocus.slice(0, 500)}`;
   }
   if (candidates.length === 0) return null;
 
+  const checked = await Promise.all(
+    candidates.map(async (c) => {
+      const u = c.url.trim().replace(/[),\].;'">]+$/, "");
+      if (!u.startsWith("https://")) return null as string | null;
+      const ok = await verifyRemoteImageUrl(u);
+      return ok ? u : null;
+    })
+  );
+
   const out: string[] = [];
   const seen = new Set<string>();
-  for (const c of candidates) {
-    if (out.length >= num) break;
-    const u = c.url.trim().replace(/[),\].;'">]+$/, "");
-    if (!u.startsWith("https://")) continue;
-    if (seen.has(u)) continue;
-    if (!(await verifyRemoteImageUrl(u))) continue;
+  for (const u of checked) {
+    if (!u || seen.has(u)) continue;
     seen.add(u);
     out.push(u);
+    if (out.length >= num) break;
   }
 
   return out.length > 0 ? out : null;
@@ -1138,8 +1143,8 @@ export async function discoverWebImageUrlsForPostBrief(
   const identityCtx: ImageDiscoverySearchCtx = { canonicalPeople };
   const queryLabelSeed = queries[0] || "";
   const aimlConfigured = Boolean(getAimlApiKey());
-  const skipGoogleBecauseAiml =
-    aimlConfigured && process.env.FORCE_GOOGLE_CSE !== "true";
+  const skipGoogle =
+    process.env.SKIP_GOOGLE_CSE === "true" || process.env.DISABLE_GOOGLE_CSE === "true";
 
   if (aimlConfigured) {
     const aimlFirst = await searchAimlWebForImageUrls(
@@ -1160,7 +1165,7 @@ export async function discoverWebImageUrlsForPostBrief(
   }
 
   let { urls, source, winningQuery } = await collectUrlsFromQueries(queries, n, identityCtx, {
-    skipGoogle: skipGoogleBecauseAiml,
+    skipGoogle,
   });
 
   if (urls.length === 0) {
@@ -1176,7 +1181,7 @@ export async function discoverWebImageUrlsForPostBrief(
       fallbackOkForIdentity
     ) {
       const second = await collectUrlsFromQueries([alt], n, identityCtx, {
-        skipGoogle: skipGoogleBecauseAiml,
+        skipGoogle,
       });
       urls = second.urls;
       source = second.source;
