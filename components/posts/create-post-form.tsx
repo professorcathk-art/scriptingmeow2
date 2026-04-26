@@ -169,6 +169,10 @@ export function CreatePostForm({
   const [referenceUploading, setReferenceUploading] = useState(false);
   const [carouselPages, setCarouselPages] = useState<DraftCarouselPageFields[]>([]);
   const [is4KEnabled, setIs4KEnabled] = useState(false);
+  /** Step 2: fetch related web images to offer as Important Asset candidates on Step 3. */
+  const [useWebImageSuggestions, setUseWebImageSuggestions] = useState(false);
+  const [webImageCandidates, setWebImageCandidates] = useState<string[]>([]);
+  const [webImagesLoading, setWebImagesLoading] = useState(false);
   const saveDraft = useCallback(() => {
     try {
       sessionStorage.setItem(
@@ -183,12 +187,26 @@ export function CreatePostForm({
           importantAssetUrls,
           referenceImageUrls,
           referenceText,
+          useWebImageSuggestions,
+          webImageCandidates,
         })
       );
     } catch {
       // ignore
     }
-  }, [formData, step, draftVariations, selectedDraftIndex, carouselPages, selectedSampleUrls, importantAssetUrls, referenceImageUrls, referenceText]);
+  }, [
+    formData,
+    step,
+    draftVariations,
+    selectedDraftIndex,
+    carouselPages,
+    selectedSampleUrls,
+    importantAssetUrls,
+    referenceImageUrls,
+    referenceText,
+    useWebImageSuggestions,
+    webImageCandidates,
+  ]);
 
   const saveDraftAndSetStep = useCallback(
     (nextStep: 1 | 2 | 3) => {
@@ -343,6 +361,10 @@ export function CreatePostForm({
           if (Array.isArray(data.importantAssetUrls)) setImportantAssetUrls(data.importantAssetUrls);
           if (Array.isArray(data.referenceImageUrls)) setReferenceImageUrls(data.referenceImageUrls);
           if (typeof data.referenceText === "string") setReferenceText(data.referenceText);
+          if (typeof data.useWebImageSuggestions === "boolean") {
+            setUseWebImageSuggestions(data.useWebImageSuggestions);
+          }
+          if (Array.isArray(data.webImageCandidates)) setWebImageCandidates(data.webImageCandidates);
         }
       }
     } catch {
@@ -444,6 +466,14 @@ export function CreatePostForm({
     setImportantAssetUrls((prev) => prev.filter((u) => u !== url));
   };
 
+  const toggleWebImageCandidate = (url: string) => {
+    setImportantAssetUrls((prev) => {
+      if (prev.includes(url)) return prev.filter((u) => u !== url);
+      if (prev.length >= 5) return prev;
+      return [...prev, url];
+    });
+  };
+
   const removeReferenceImage = (url: string) => {
     setReferenceImageUrls((prev) => prev.filter((u) => u !== url));
   };
@@ -481,6 +511,23 @@ export function CreatePostForm({
   const handleGenerateDraft = async () => {
     setLoading(true);
     setDraftVariations(null);
+
+    const webAbort = new AbortController();
+    let webPromise: Promise<Response> | null = null;
+    if (useWebImageSuggestions && formData.contentIdea.trim()) {
+      setWebImagesLoading(true);
+      setWebImageCandidates([]);
+      webPromise = fetch("/api/posts/web-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentIdea: formData.contentIdea }),
+        signal: webAbort.signal,
+      });
+    } else {
+      setWebImageCandidates([]);
+      setWebImagesLoading(false);
+    }
+
     const payload = {
       brandSpaceId: formData.brandSpaceId,
       postType: formData.postType,
@@ -543,6 +590,23 @@ export function CreatePostForm({
             setSelectedDraftIndex(0);
           }
           setStep(3);
+
+          if (webPromise) {
+            webPromise
+              .then(async (r) => {
+                if (!r.ok) return;
+                const j = (await r.json().catch(() => ({}))) as { urls?: unknown };
+                if (Array.isArray(j.urls)) {
+                  setWebImageCandidates(
+                    j.urls.filter((u): u is string => typeof u === "string" && u.startsWith("http"))
+                  );
+                }
+              })
+              .catch(() => {
+                /* aborted or network */
+              })
+              .finally(() => setWebImagesLoading(false));
+          }
           return;
         } catch (error: unknown) {
           lastError = error instanceof Error ? error : new Error(String(error));
@@ -559,6 +623,8 @@ export function CreatePostForm({
           break;
         }
       }
+      webAbort.abort();
+      setWebImagesLoading(false);
       const msg =
         lastError?.message === "Failed to fetch" ||
         lastError?.message?.includes("ERR_CONNECTION") ||
@@ -1113,6 +1179,29 @@ export function CreatePostForm({
             {formData.contentIdea.length}/{MAX_CONTENT_IDEA_CHARS}
           </p>
 
+          <label className="mt-4 flex items-start gap-3 cursor-pointer rounded-xl border border-white/10 bg-zinc-800/30 p-4 hover:bg-zinc-800/50 transition-colors">
+            <input
+              type="checkbox"
+              checked={useWebImageSuggestions}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setUseWebImageSuggestions(on);
+                if (!on) {
+                  setWebImageCandidates([]);
+                  setWebImagesLoading(false);
+                }
+              }}
+              className="mt-1 rounded border-white/20 bg-zinc-800 text-violet-500 focus:ring-violet-500/50"
+            />
+            <span>
+              <span className="block text-sm font-medium text-zinc-200">
+                Find related web images for this post
+              </span>
+              <span className="block text-xs text-zinc-500 mt-1">
+                After you generate the draft, we suggest up to five images from the web that match your brief. On the next step, add the ones you want under Important Assets so they are passed into image generation. You are responsible for usage rights—prefer openly licensed sources when possible.
+              </span>
+            </span>
+          </label>
         </div>
 
         <div>
@@ -1573,6 +1662,58 @@ export function CreatePostForm({
             <p className="text-xs text-zinc-500 mb-2">
               Images that MUST appear inside the generated image—e.g. portraits, product photos, or business assets that AI cannot produce.
             </p>
+
+            {(useWebImageSuggestions || webImageCandidates.length > 0 || webImagesLoading) && (
+              <div className="mb-4 p-4 rounded-xl bg-zinc-800/40 border border-white/10">
+                <p className="text-xs font-medium text-zinc-400 mb-2">Suggested web images</p>
+                {webImagesLoading && (
+                  <p className="text-xs text-zinc-500 flex items-center gap-2">
+                    <span className="inline-block w-4 h-4 border-2 border-violet-500/40 border-t-violet-500 rounded-full animate-spin" />
+                    Finding related images…
+                  </p>
+                )}
+                {!webImagesLoading && webImageCandidates.length === 0 && useWebImageSuggestions && (
+                  <p className="text-xs text-zinc-500">No images returned. You can still upload assets below.</p>
+                )}
+                {webImageCandidates.length > 0 && (
+                  <>
+                    <p className="text-xs text-zinc-500 mb-3">
+                      Tap to include in Important Assets (max 5 total with uploads). Selected images are sent to the image model as required references.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      {webImageCandidates.map((url) => {
+                        const selected = importantAssetUrls.includes(url);
+                        const atLimit = importantAssetUrls.length >= 5 && !selected;
+                        return (
+                          <button
+                            key={url}
+                            type="button"
+                            title={url}
+                            disabled={atLimit}
+                            onClick={() => !atLimit && toggleWebImageCandidate(url)}
+                            className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
+                              selected
+                                ? "border-violet-500 ring-2 ring-violet-500/50"
+                                : atLimit
+                                  ? "border-white/10 opacity-40 cursor-not-allowed"
+                                  : "border-white/10 hover:border-violet-500/50"
+                            }`}
+                          >
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            {selected && (
+                              <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center text-white text-xs">
+                                ✓
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-3 items-center">
               {importantAssetUrls.map((url) => (
                 <div key={url} className="relative group">

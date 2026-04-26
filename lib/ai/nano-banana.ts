@@ -71,7 +71,9 @@ async function generateWithModel(
       instrParts.push(`Style references: Use for composition, mood, and aesthetic. Derive a cohesive palette—if colors clash, choose harmony over literal matching.`);
     }
     if (importantUrls.length > 0) {
-      instrParts.push(`Important assets (last ${importantUrls.length}): Use these when they fit the scene (portraits, products, logos). No need to use on every page—incorporate them when useful. Adjust surrounding colors for visual harmony.`);
+      instrParts.push(
+        `Important assets (last ${importantUrls.length}): The user chose these as mandatory photo references (e.g. web-found or uploaded). Incorporate them visibly and faithfully when they match the brief—subjects, products, or key visuals. Blend edges and lighting naturally with the rest of the design.`
+      );
     }
     instruction = `${instrParts.join(" ")}\n\n`;
   }
