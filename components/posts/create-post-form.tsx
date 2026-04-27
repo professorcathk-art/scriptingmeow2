@@ -122,6 +122,73 @@ function SquaresIcon({ className }: { className?: string }) {
   );
 }
 
+/** Many news/CDN URLs block browser hotlinking; same-origin proxy loads previews reliably. */
+function webImageThumbnailSrc(remoteUrl: string): string {
+  if (remoteUrl.startsWith("/")) return remoteUrl;
+  if (remoteUrl.startsWith("http://") || remoteUrl.startsWith("https://")) {
+    return `/api/image-proxy?url=${encodeURIComponent(remoteUrl)}`;
+  }
+  return remoteUrl;
+}
+
+function WebImageSuggestionThumb({
+  remoteUrl,
+  selected,
+  atLimit,
+  onToggle,
+}: {
+  remoteUrl: string;
+  selected: boolean;
+  atLimit: boolean;
+  onToggle: () => void;
+}) {
+  const [broken, setBroken] = useState(false);
+  const thumbSrc = webImageThumbnailSrc(remoteUrl);
+  let host = "Image";
+  try {
+    host = new URL(remoteUrl).hostname.replace(/^www\./, "");
+  } catch {
+    /* keep default */
+  }
+  return (
+    <button
+      type="button"
+      title={`${remoteUrl}`}
+      disabled={atLimit}
+      onClick={() => !atLimit && onToggle()}
+      className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
+        selected
+          ? "border-violet-500 ring-2 ring-violet-500/50"
+          : atLimit
+            ? "border-white/10 opacity-40 cursor-not-allowed"
+            : "border-white/10 hover:border-violet-500/50"
+      }`}
+    >
+      {!broken ? (
+        <img
+          src={thumbSrc}
+          alt=""
+          className="w-full h-full object-cover bg-zinc-800"
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-zinc-800 px-1 text-center">
+          <span className="text-[9px] text-zinc-300 leading-tight font-medium">Tap to use</span>
+          <span className="text-[8px] text-zinc-500 truncate max-w-full" title={remoteUrl}>
+            {host}
+          </span>
+        </div>
+      )}
+      {selected && (
+        <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center text-white text-xs z-10">
+          ✓
+        </span>
+      )}
+    </button>
+  );
+}
+
 export function CreatePostForm({
   brandSpaces,
   userCredits: initialCredits,
@@ -781,13 +848,14 @@ export function CreatePostForm({
         msg.includes("NetworkError") ||
         msg === "Load failed" ||
         (error instanceof TypeError && msg.toLowerCase().includes("fetch"));
-      alert(
-        isLikelyNetworkDrop
-          ? "Your browser lost contact with the server while generating. The job may still have completed—open Library (or your latest posts) to check; your images are often already there. If nothing new appears, try again with fewer reference images."
-          : error instanceof Error
-            ? error.message
-            : "Failed to generate post. Please try again."
-      );
+      if (isLikelyNetworkDrop) {
+        window.alert("Your post may already be in Library. Opening Library now.");
+        router.push("/library");
+      } else {
+        window.alert(
+          error instanceof Error ? error.message : "Failed to generate post. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -1759,34 +1827,20 @@ export function CreatePostForm({
                 {webImageCandidates.length > 0 && (
                   <>
                     <p className="text-xs text-zinc-500 mb-3">
-                      Tap to include in Important Assets (max 5 total with uploads). Selected images are sent to the image model as required references.
+                      Tap a thumbnail to add it to Important Assets (max 5 with uploads). Previews load through our server so blocked sites still show.
                     </p>
                     <div className="flex flex-wrap gap-3">
                       {webImageCandidates.map((url) => {
                         const selected = importantAssetUrls.includes(url);
                         const atLimit = importantAssetUrls.length >= 5 && !selected;
                         return (
-                          <button
+                          <WebImageSuggestionThumb
                             key={url}
-                            type="button"
-                            title={url}
-                            disabled={atLimit}
-                            onClick={() => !atLimit && toggleWebImageCandidate(url)}
-                            className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
-                              selected
-                                ? "border-violet-500 ring-2 ring-violet-500/50"
-                                : atLimit
-                                  ? "border-white/10 opacity-40 cursor-not-allowed"
-                                  : "border-white/10 hover:border-violet-500/50"
-                            }`}
-                          >
-                            <img src={url} alt="" className="w-full h-full object-cover" />
-                            {selected && (
-                              <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center text-white text-xs">
-                                ✓
-                              </span>
-                            )}
-                          </button>
+                            remoteUrl={url}
+                            selected={selected}
+                            atLimit={atLimit}
+                            onToggle={() => toggleWebImageCandidate(url)}
+                          />
                         );
                       })}
                     </div>
@@ -1799,9 +1853,9 @@ export function CreatePostForm({
               {importantAssetUrls.map((url) => (
                 <div key={url} className="relative group">
                   <img
-                    src={url}
+                    src={webImageThumbnailSrc(url)}
                     alt="Asset"
-                    className="w-20 h-20 object-cover rounded-xl border-2 border-violet-500/50"
+                    className="w-20 h-20 object-cover rounded-xl border-2 border-violet-500/50 bg-zinc-800"
                   />
                   <button
                     type="button"
